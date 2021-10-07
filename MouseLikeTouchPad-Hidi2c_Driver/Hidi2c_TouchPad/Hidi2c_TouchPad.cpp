@@ -3009,8 +3009,17 @@ AnalyzeHidReportDescriptor(
     tp->PointerSensitivity_y = tp->TouchPad_DPMM_y / 25;
 
     tp->StartY_TOP = (ULONG)(10 * tp->TouchPad_DPMM_y);////起点误触横线Y值为距离触摸板顶部10mm处的Y坐标
-    tp->StartX_LEFT = (ULONG)(16 * tp->TouchPad_DPMM_x);; //起点误触竖线X值为距离触摸板左右边缘16mm处的X坐标
-    tp->StartX_RIGHT = tp->logicalMax_X - tp->StartX_LEFT; //起点误触竖线X值为距离触摸板左右边缘16mm处的X坐标
+    ULONG halfwidth = (ULONG)(43.2 * tp->TouchPad_DPMM_x);//起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
+
+    if (tp->logicalMax_X / 2 > halfwidth) {//触摸板宽度大于正常触摸起点区域宽度
+        tp->StartX_LEFT = tp->logicalMax_X / 2 - halfwidth;
+        tp->StartX_RIGHT = tp->logicalMax_X / 2 + halfwidth;
+    }
+    else {
+        tp->StartX_LEFT = 0;
+        tp->StartX_RIGHT = tp->logicalMax_X;
+    }
+    
     RegDebug(L"AnalyzeHidReportDescriptor tp->StartTop_Y =", NULL, tp->StartY_TOP);
     RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_LEFT =", NULL, tp->StartX_LEFT);
     RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_RIGHT =", NULL, tp->StartX_RIGHT);

@@ -25,7 +25,7 @@ Hidi2c_TouchPad.sys  = 99,,
 
 [Hidi2c_TouchPad.NTamd64...1]
 %Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, Hid\Hidi2c_TouchPad
-;%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, ACPI\PNP0C50
+%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, ACPI\PNP0C50
 %Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, ACPI\MSFT0001
 ;%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, *MSFT0001
 
