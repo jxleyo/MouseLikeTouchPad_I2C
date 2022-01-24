@@ -52,6 +52,9 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 #define Jitter_Offset         10    // 修正触摸点轻微抖动的位移阈值
 
+#define SCROLL_OFFSET_THRESHOLD_X      100   // 滚动位移量X阈值 
+#define SCROLL_OFFSET_THRESHOLD_Y      100   // 滚动位移量Y阈值 
+
 
 #pragma pack(push)
 #pragma pack(1)
@@ -103,7 +106,8 @@ typedef struct _PTP_PARSER {
 
     LARGE_INTEGER JitterFixStartTime; // 修正触摸点抖动修正时间计时器
 
-    BYTE Scroll_IntervalCount; //定义鼠标滚动间隔计数
+    float Scroll_TotalDistanceX; //定义鼠标累计滚动距离X
+    float Scroll_TotalDistanceY; //定义鼠标累计滚动距离Y
 
     ULONG tick_count;
     LARGE_INTEGER last_ticktime; //上次报告计时

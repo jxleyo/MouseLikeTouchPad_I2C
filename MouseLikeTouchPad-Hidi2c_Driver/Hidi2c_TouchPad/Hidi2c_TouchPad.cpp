@@ -3213,6 +3213,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             if (abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerClosedThresholdDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC) {//指针左右侧有并拢的手指按下并且与指针手指起始定义时间间隔小于阈值
                 tp->Mouse_Wheel_mode = TRUE;  //开启滚轮模式
                 tp->Mouse_Wheel_CurrentIndexNUM = i;//滚轮辅助参考手指索引值
+                //手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
+                tp->JitterFixStartTime = tp->current_ticktime;//抖动修正开始计时
+                tp->Scroll_TotalDistanceX = 0;//累计滚动位移量重置
+                tp->Scroll_TotalDistanceY = 0;//累计滚动位移量重置
+
 
                 tp->Mouse_LButton_CurrentIndexNUM = -1;
                 tp->Mouse_RButton_CurrentIndexNUM = -1;
@@ -3277,71 +3282,57 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
     else if (tp->Mouse_Pointer_CurrentIndexNUM != -1 && tp->Mouse_Wheel_mode) {//滚轮操作模式
         //鼠标指针位移设置
-        if (currentfinger_count != lastfinger_count) {//手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
-            tp->JitterFixStartTime = tp->current_ticktime;//抖动修正开始计时
+        LARGE_INTEGER FixTimer;
+        FixTimer.QuadPart = (tp->current_ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
+        float JitterFixTimer = (float)FixTimer.LowPart;//当前抖动时间计时
+
+        float px = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].X - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].X) / tp->thumb_scale;
+        float py = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].Y - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].Y) / tp->thumb_scale;
+
+        if (JitterFixTimer < STABLE_INTERVAL_FingerClosed_MSEC) {//只需在触摸点稳定前修正
+            if (abs(px) <= Jitter_Offset) {//指针轻微抖动修正
+                px = 0;
+            }
+            if (abs(py) <= Jitter_Offset) {//指针轻微抖动修正
+                py = 0;
+            }
         }
-        else {
-            LARGE_INTEGER FixTimer;
-            FixTimer.QuadPart = (tp->current_ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
-            float JitterFixTimer = (float)FixTimer.LowPart;//当前抖动时间计时
-      
-            float px = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].X - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].X) / tp->thumb_scale;
-            float py = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].Y - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].Y) / tp->thumb_scale;
 
-            if (JitterFixTimer < STABLE_INTERVAL_FingerClosed_MSEC) {//只需在触摸点稳定前修正
-                if (abs(px) <= Jitter_Offset) {//指针轻微抖动修正
-                    px = 0;
-                }
-                if (abs(py) <= Jitter_Offset) {//指针轻微抖动修正
-                    py = 0;
-                }
-            }
+        int direction_hscale = 1;//滚动方向缩放比例
+        int direction_vscale = 1;//滚动方向缩放比例
 
-            int direction_hscale = 1;//滚动方向缩放比例
-            int direction_vscale = 1;//滚动方向缩放比例
+        if (abs(px) > abs(py) / 4) {//滚动方向稳定性修正
+            direction_hscale = 1;
+            direction_vscale = 8;
+        }
+        if (abs(py) > abs(px) / 4) {//滚动方向稳定性修正
+            direction_hscale = 8;
+            direction_vscale = 1;
+        }
 
-            if (abs(px) > abs(py) / 4) {//滚动方向稳定性修正
-                direction_hscale = 1;
-                direction_vscale = 8;
-            }
-            if (abs(py) > abs(px) / 4) {//滚动方向稳定性修正
-                direction_hscale = 8;
-                direction_vscale = 1;
-            }
+        px = px / direction_hscale;
+        py = py / direction_vscale;
 
-            px = px / direction_hscale;
-            py = py / direction_vscale;
+        px = (float)(pDevContext->MouseSensitivityValue * px / tp->PointerSensitivity_x);
+        py = (float)(pDevContext->MouseSensitivityValue * py / tp->PointerSensitivity_y);
 
-            px = (float)(pDevContext->MouseSensitivityValue * px / tp->PointerSensitivity_x);
-            py = (float)(pDevContext->MouseSensitivityValue * py / tp->PointerSensitivity_y);
+        tp->Scroll_TotalDistanceX += px;//累计滚动位移量
+        tp->Scroll_TotalDistanceY += py;//累计滚动位移量
 
-            if (abs(px) > 4 && abs(px) < 16) {//32
-                if (tp->Scroll_IntervalCount == 0) {//先滚动一次再间隔计数
-                    pMouseReport->h_wheel = (char)(px > 0 ? 1 : -1);
-                    tp->Scroll_IntervalCount = 16;//8
-                }
-                else {
-                    tp->Scroll_IntervalCount--;
-                }
-            }
-            else if (abs(px) >= 16) {//32
-                pMouseReport->h_wheel = (char)(px > 0 ? 1 : -1);
-                tp->Scroll_IntervalCount = 0;
-            }
-            if (abs(py) > 4 && abs(py) < 16) {//32
-                if (tp->Scroll_IntervalCount == 0) {
-                    pMouseReport->v_wheel = (char)(py > 0 ? 1 : -1);
-                    tp->Scroll_IntervalCount = 16;//8
-                }
-                else {
-                    tp->Scroll_IntervalCount--;
-                }
-            }
-            else if (abs(py) >= 16) {//32
-                pMouseReport->v_wheel = (char)(py > 0 ? 1 : -1);
-                tp->Scroll_IntervalCount = 0;
-            }
-            
+        //判断滚动量
+        if (abs(tp->Scroll_TotalDistanceX) > SCROLL_OFFSET_THRESHOLD_X) {//位移量超过阈值
+            int h = (int)(abs(tp->Scroll_TotalDistanceX) / SCROLL_OFFSET_THRESHOLD_X);
+            pMouseReport->h_wheel = (char)(tp->Scroll_TotalDistanceX > 0 ? h : -h);//滚动行数
+
+            float r = abs(tp->Scroll_TotalDistanceX) - SCROLL_OFFSET_THRESHOLD_X * h;// 滚动位移量余数绝对值
+            tp->Scroll_TotalDistanceX = tp->Scroll_TotalDistanceX > 0 ? r : -r;//滚动位移量余数
+        }
+        if (abs(tp->Scroll_TotalDistanceY) > SCROLL_OFFSET_THRESHOLD_Y) {//位移量超过阈值
+            int v = (int)(abs(tp->Scroll_TotalDistanceY) / SCROLL_OFFSET_THRESHOLD_Y);
+            pMouseReport->v_wheel = (char)(tp->Scroll_TotalDistanceY > 0 ? v : -v);//滚动行数
+
+            float r = abs(tp->Scroll_TotalDistanceY) - SCROLL_OFFSET_THRESHOLD_Y * v;// 滚动位移量余数绝对值
+            tp->Scroll_TotalDistanceY = tp->Scroll_TotalDistanceY > 0 ? r : -r;//滚动位移量余数
         }
     }
     else {
@@ -3392,7 +3383,9 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    RtlZeroMemory(&tp->lastfinger, sizeof(PTP_REPORT));
    RtlZeroMemory(&tp->currentfinger, sizeof(PTP_REPORT));
 
-    tp->Scroll_IntervalCount = 0;
+    tp->Scroll_TotalDistanceX = 0;
+    tp->Scroll_TotalDistanceY = 0;
+
     tp->tick_count = KeQueryTimeIncrement();
     KeQueryTickCount(&tp->last_ticktime);
 
