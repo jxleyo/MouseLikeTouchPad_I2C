@@ -5,7 +5,7 @@ ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = Hidi2c_TouchPad.cat
 PnpLockdown=1	
-DriverVer = 01/25/2022,12.3.28.772
+DriverVer = 01/25/2022,19.14.26.968
 
 [DestinationDirs]
 DefaultDestDir = 12

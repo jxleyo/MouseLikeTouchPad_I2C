@@ -3342,16 +3342,6 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
 
     pMouseReport->button = Mouse_LButton_Status + (Mouse_RButton_Status << 1) + (Mouse_MButton_Status << 2);  //左中右键状态合成
-   
-
-    //测试鼠标额外功能键
-    if (currentfinger_count==3)
-    pMouseReport->button = 0 + pMouseReport->button;
-    if (currentfinger_count == 4)
-        pMouseReport->button = 8 + pMouseReport->button;
-
-    if (currentfinger_count == 5)
-        pMouseReport->button = 16 + pMouseReport->button;
 
     //保存下一轮所有触摸点的初始坐标及功能定义索引号
     tp->lastfinger = tp->currentfinger;
