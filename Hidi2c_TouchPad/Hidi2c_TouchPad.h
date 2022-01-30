@@ -84,22 +84,23 @@ double MouseSensitivityTable[3] = { 0.8,1.0,1.25};
 typedef struct _PTP_PARSER {
 
     //保存追踪的手指数据
-    PTP_REPORT lastfinger;
-    PTP_REPORT currentfinger;
+    PTP_REPORT lastFinger;
+    PTP_REPORT currentFinger;
 
-    char Mouse_Pointer_CurrentIndexNUM; //定义当前鼠标指针触摸点坐标的数据索引号，-1为未定义
-    char Mouse_LButton_CurrentIndexNUM; //定义当前鼠标左键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_RButton_CurrentIndexNUM; //定义当前鼠标右键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_MButton_CurrentIndexNUM; //定义当前鼠标中键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_Wheel_CurrentIndexNUM; //定义当前鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
+    char nMouse_Pointer_CurrentIndex; //定义当前鼠标指针触摸点坐标的数据索引号，-1为未定义
+    char nMouse_LButton_CurrentIndex; //定义当前鼠标左键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_RButton_CurrentIndex; //定义当前鼠标右键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_MButton_CurrentIndex; //定义当前鼠标中键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_Wheel_CurrentIndex; //定义当前鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
-    char Mouse_Pointer_LastIndexNUM; //定义上次鼠标指针触摸点坐标的数据索引号，-1为未定义
-    char Mouse_LButton_LastIndexNUM; //定义上次鼠标左键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_RButton_LastIndexNUM; //定义上次鼠标右键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_MButton_LastIndexNUM; //定义上次鼠标中键触摸点坐标的数据索引号，-1为未定义
-    char Mouse_Wheel_LastIndexNUM; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
+    char nMouse_Pointer_LastIndex; //定义上次鼠标指针触摸点坐标的数据索引号，-1为未定义
+    char nMouse_LButton_LastIndex; //定义上次鼠标左键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_RButton_LastIndex; //定义上次鼠标右键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_MButton_LastIndex; //定义上次鼠标中键触摸点坐标的数据索引号，-1为未定义
+    char nMouse_Wheel_LastIndex; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
-    BOOLEAN Mouse_Wheel_mode; //定义鼠标滚轮状态，0为滚轮未激活，1为滚轮激活
+    BOOLEAN bMouse_Wheel_Mode; //定义鼠标滚轮状态，0为滚轮未激活，1为滚轮激活
+    BOOLEAN bMouse_Wheel_Mode_JudgeEnable;//定义是否开启滚轮判别
 
     LARGE_INTEGER MousePointer_DefineTime;//鼠标指针定义时间，用于计算按键间隔时间来区分判定鼠标中间和滚轮操作
     float TouchPad_ReportInterval;//定义触摸板报告间隔时间
@@ -109,9 +110,9 @@ typedef struct _PTP_PARSER {
     float Scroll_TotalDistanceX; //定义鼠标累计滚动距离X
     float Scroll_TotalDistanceY; //定义鼠标累计滚动距离Y
 
-    ULONG tick_count;
-    LARGE_INTEGER last_ticktime; //上次报告计时
-    LARGE_INTEGER current_ticktime;//当前报告计时
+    ULONG tick_Count;
+    LARGE_INTEGER last_Ticktime; //上次报告计时
+    LARGE_INTEGER current_Ticktime;//当前报告计时
     LARGE_INTEGER ticktime_Interval;//报告间隔时间
 
     //
@@ -126,9 +127,9 @@ typedef struct _PTP_PARSER {
     DOUBLE  physical_Height_mm;
 
     //定义手指头尺寸大小
-    float thumb_width;//手指头宽度
-    float thumb_height;//手指头高度
-    float thumb_scale;//手指头尺寸缩放比例
+    float thumb_Width;//手指头宽度
+    float thumb_Height;//手指头高度
+    float thumb_Scale;//手指头尺寸缩放比例
     float FingerMinDistance;//定义有效的相邻手指最小距离
     float FingerClosedThresholdDistance;//定义相邻手指合拢时的最小距离
     float FingerMaxDistance;//定义有效的相邻手指最大距离
@@ -140,7 +141,7 @@ typedef struct _PTP_PARSER {
     ULONG StartY_TOP; //起点误触横线Y值为距离触摸板顶部10mm处的Y坐标
     ULONG StartX_LEFT; //起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
     ULONG StartX_RIGHT; //起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
-    BOOLEAN PhysicalButtonUp;//物理按键状态
+    BOOLEAN bPhysicalButtonUp;//物理按键状态
 
 } PTP_PARSER, * PPTP_PARSER;
 

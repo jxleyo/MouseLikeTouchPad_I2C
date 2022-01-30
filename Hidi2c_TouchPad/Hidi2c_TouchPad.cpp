@@ -2999,10 +2999,10 @@ AnalyzeHidReportDescriptor(
     RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_y=", NULL, (ULONG)tp->TouchPad_DPMM_y);
 
     //动态调整手指头大小常量
-    tp->thumb_width = 18;//手指头宽度,默认以中指18mm宽为基准
-    tp->thumb_scale = 1.0;//手指头尺寸缩放比例，
-    tp->FingerMinDistance = 12 * tp->TouchPad_DPMM_x * tp->thumb_scale;//定义有效的相邻手指最小距离
-    tp->FingerClosedThresholdDistance = 16 * tp->TouchPad_DPMM_x * tp->thumb_scale;//定义相邻手指合拢时的最小距离
+    tp->thumb_Width = 18;//手指头宽度,默认以中指18mm宽为基准
+    tp->thumb_Scale = 1.0;//手指头尺寸缩放比例，
+    tp->FingerMinDistance = 12 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义有效的相邻手指最小距离
+    tp->FingerClosedThresholdDistance = 16 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义相邻手指合拢时的最小距离
     tp->FingerMaxDistance = tp->FingerMinDistance * 4;//定义有效的相邻手指最大距离(FingerMinDistance*4) 
 
     tp->PointerSensitivity_x = tp->TouchPad_DPMM_x / 25;
@@ -3078,27 +3078,27 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     PTP_PARSER* tp = &pDevContext->tp_settings;
 
     //计算报告频率和时间间隔
-    KeQueryTickCount(&tp->current_ticktime);
-    tp->ticktime_Interval.QuadPart = (tp->current_ticktime.QuadPart - tp->last_ticktime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
+    KeQueryTickCount(&tp->current_Ticktime);
+    tp->ticktime_Interval.QuadPart = (tp->current_Ticktime.QuadPart - tp->last_Ticktime.QuadPart) * tp->tick_Count / 10000;//单位ms毫秒
     tp->TouchPad_ReportInterval = (float)tp->ticktime_Interval.LowPart;//触摸板报告间隔时间ms
-    tp->last_ticktime = tp->current_ticktime;
+    tp->last_Ticktime = tp->current_Ticktime;
 
 
     //保存当前手指坐标
-    tp->currentfinger = *pPtpReport;
-    UCHAR currentfinger_count = tp->currentfinger.ContactCount;//当前触摸点数量
-    UCHAR lastfinger_count=tp->lastfinger.ContactCount; //上次触摸点数量
+    tp->currentFinger = *pPtpReport;
+    UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//当前触摸点数量
+    UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //上次触摸点数量
 
     BOOLEAN allFingerDetached = TRUE;
     for (UCHAR i = 0; i < MAXFINGER_CNT; i++) {//所有TipSwitch为0时判定为手指全部离开，因为最后一个点离开时ContactCount和Confidence始终为1不会置0。
-        if (tp->currentfinger.Contacts[i].TipSwitch) {
+        if (tp->currentFinger.Contacts[i].TipSwitch) {
             allFingerDetached = FALSE;
-            currentfinger_count = tp->currentfinger.ContactCount;//重新定义当前触摸点数量
+            currentFinger_Count = tp->currentFinger.ContactCount;//重新定义当前触摸点数量
             break;
         }
     }
     if (allFingerDetached) {
-        currentfinger_count = 0;
+        currentFinger_Count = 0;
     }
 
 
@@ -3110,135 +3110,139 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     pMouseReport->h_wheel = 0;
     pMouseReport->v_wheel = 0;
 
-    BOOLEAN Mouse_LButton_Status = 0; //定义临时鼠标左键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
-    BOOLEAN Mouse_MButton_Status = 0; //定义临时鼠标中键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
-    BOOLEAN Mouse_RButton_Status = 0; //定义临时鼠标右键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+    BOOLEAN bMouse_LButton_Status = 0; //定义临时鼠标左键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+    BOOLEAN bMouse_MButton_Status = 0; //定义临时鼠标中键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+    BOOLEAN bMouse_RButton_Status = 0; //定义临时鼠标右键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
 
     //初始化当前触摸点索引号，跟踪后未再赋值的表示不存在了
-    tp->Mouse_Pointer_CurrentIndexNUM = -1;
-    tp->Mouse_LButton_CurrentIndexNUM = -1;
-    tp->Mouse_RButton_CurrentIndexNUM = -1;
-    tp->Mouse_MButton_CurrentIndexNUM = -1;
-    tp->Mouse_Wheel_CurrentIndexNUM = -1;
+    tp->nMouse_Pointer_CurrentIndex = -1;
+    tp->nMouse_LButton_CurrentIndex = -1;
+    tp->nMouse_RButton_CurrentIndex = -1;
+    tp->nMouse_MButton_CurrentIndex = -1;
+    tp->nMouse_Wheel_CurrentIndex = -1;
 
 
     //所有手指触摸点的索引号跟踪
-    for (char i = 0; i < currentfinger_count; i++) {
-        if (tp->Mouse_Pointer_LastIndexNUM != -1) {
-            if (tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].ContactID == tp->currentfinger.Contacts[i].ContactID) {
-                tp->Mouse_Pointer_CurrentIndexNUM = i;//找到指针
+    for (char i = 0; i < currentFinger_Count; i++) {
+        if (tp->nMouse_Pointer_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+                tp->nMouse_Pointer_CurrentIndex = i;//找到指针
                 continue;//查找其他功能
             }
         }
 
-        if (tp->Mouse_Wheel_LastIndexNUM != -1) {
-            if (tp->lastfinger.Contacts[tp->Mouse_Wheel_LastIndexNUM].ContactID == tp->currentfinger.Contacts[i].ContactID) {
-                tp->Mouse_Wheel_CurrentIndexNUM = i;//找到滚轮辅助键
+        if (tp->nMouse_Wheel_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_Wheel_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+                tp->nMouse_Wheel_CurrentIndex = i;//找到滚轮辅助键
                 continue;//查找其他功能
             }
         }
 
-        if (tp->Mouse_Pointer_LastIndexNUM != -1) {
-            if (tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].ContactID == tp->currentfinger.Contacts[i].ContactID) {
-                Mouse_LButton_Status = 1; //找到左键，
-                tp->Mouse_LButton_CurrentIndexNUM = i;//赋值左键触摸点新索引号
+        if (tp->nMouse_Pointer_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+                bMouse_LButton_Status = 1; //找到左键，
+                tp->nMouse_LButton_CurrentIndex = i;//赋值左键触摸点新索引号
                 continue;//查找其他功能
             }
         }
 
-        if (tp->Mouse_RButton_LastIndexNUM != -1) {
-            if (tp->lastfinger.Contacts[tp->Mouse_RButton_LastIndexNUM].ContactID == tp->currentfinger.Contacts[i].ContactID) {
-                Mouse_RButton_Status = 1; //找到右键，
-                tp->Mouse_RButton_CurrentIndexNUM = i;//赋值右键触摸点新索引号
+        if (tp->nMouse_RButton_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_RButton_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+                bMouse_RButton_Status = 1; //找到右键，
+                tp->nMouse_RButton_CurrentIndex = i;//赋值右键触摸点新索引号
                 continue;//查找其他功能
             }
         }
 
-        if (tp->Mouse_MButton_LastIndexNUM != -1) {
-            if (tp->lastfinger.Contacts[tp->Mouse_MButton_LastIndexNUM].ContactID == tp->currentfinger.Contacts[i].ContactID) {
-                Mouse_MButton_Status = 1; //找到中键，
-                tp->Mouse_MButton_CurrentIndexNUM = i;//赋值中键触摸点新索引号
+        if (tp->nMouse_MButton_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_MButton_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+                bMouse_MButton_Status = 1; //找到中键，
+                tp->nMouse_MButton_CurrentIndex = i;//赋值中键触摸点新索引号
                 continue;//查找其他功能
             }
         }     
     }
 
-    if (tp->currentfinger.IsButtonClicked) {//触摸板物理按键功能,切换触控板灵敏度,需要进行离开判定，因为按键报告会一直发送直到释放
-        tp->PhysicalButtonUp = FALSE;//准备设置灵敏度
+    if (tp->currentFinger.IsButtonClicked) {//触摸板物理按键功能,切换触控板灵敏度,需要进行离开判定，因为按键报告会一直发送直到释放
+        tp->bPhysicalButtonUp = FALSE;//准备设置灵敏度
     }
     else {
-        if (!tp->PhysicalButtonUp) {
-            tp->PhysicalButtonUp = TRUE;
+        if (!tp->bPhysicalButtonUp) {
+            tp->bPhysicalButtonUp = TRUE;
             SetNextSensitivity(pDevContext);//循环设置灵敏度
         }
     }
 
     //开始鼠标事件逻辑判定
     //注意多手指非同时快速接触触摸板时触摸板报告可能存在一帧中同时新增多个触摸点的情况所以不能用当前只有一个触摸点作为定义指针的判断条件
-    if (tp->Mouse_Pointer_LastIndexNUM == -1 && currentfinger_count > 0) {//鼠标指针、左键、右键、中键都未定义,
+    if (tp->nMouse_Pointer_LastIndex == -1 && currentFinger_Count > 0) {//鼠标指针、左键、右键、中键都未定义,
         //指针触摸点压力、接触面长宽比阈值特征区分判定手掌打字误触和正常操作,压力越小接触面长宽比阈值越大、长度阈值越小
-        for (UCHAR i = 0; i < currentfinger_count; i++) {
-            if (tp->currentfinger.Contacts[i].ContactID == 0 && tp->currentfinger.Contacts[i].Confidence && tp->currentfinger.Contacts[i].TipSwitch\
-                && tp->currentfinger.Contacts[i].Y > tp->StartY_TOP && tp->currentfinger.Contacts[i].X > tp->StartX_LEFT && tp->currentfinger.Contacts[i].X < tp->StartX_RIGHT) {//起点坐标在误触横竖线以内
-                tp->Mouse_Pointer_CurrentIndexNUM = i;  //首个触摸点作为指针
-                tp->MousePointer_DefineTime = tp->current_ticktime;//定义当前指针起始时间
+        for (UCHAR i = 0; i < currentFinger_Count; i++) {
+            if (tp->currentFinger.Contacts[i].ContactID == 0 && tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch\
+                && tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT) {//起点坐标在误触横竖线以内
+                tp->nMouse_Pointer_CurrentIndex = i;  //首个触摸点作为指针
+                tp->MousePointer_DefineTime = tp->current_Ticktime;//定义当前指针起始时间
                 break;
             }
         }
     }
-    else if (tp->Mouse_Pointer_CurrentIndexNUM == -1 && tp->Mouse_Pointer_LastIndexNUM != -1) {//指针消失
-        tp->Mouse_Wheel_mode = FALSE;//结束滚轮模式
+    else if (tp->nMouse_Pointer_CurrentIndex == -1 && tp->nMouse_Pointer_LastIndex != -1) {//指针消失
+        tp->bMouse_Wheel_Mode = FALSE;//结束滚轮模式
+        tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
 
-        tp->Mouse_Pointer_CurrentIndexNUM = -1;
-        tp->Mouse_LButton_CurrentIndexNUM = -1;
-        tp->Mouse_RButton_CurrentIndexNUM = -1;
-        tp->Mouse_MButton_CurrentIndexNUM = -1;
-        tp->Mouse_Wheel_CurrentIndexNUM = -1;
+        tp->nMouse_Pointer_CurrentIndex = -1;
+        tp->nMouse_LButton_CurrentIndex = -1;
+        tp->nMouse_RButton_CurrentIndex = -1;
+        tp->nMouse_MButton_CurrentIndex = -1;
+        tp->nMouse_Wheel_CurrentIndex = -1;
     }
-    else if (tp->Mouse_Pointer_CurrentIndexNUM != -1 && !tp->Mouse_Wheel_mode) {  //指针已定义的非滚轮事件处理
+    else if (tp->nMouse_Pointer_CurrentIndex != -1 && !tp->bMouse_Wheel_Mode) {  //指针已定义的非滚轮事件处理
         //查找指针左侧或者右侧是否有并拢的手指作为滚轮模式或者按键模式，当指针左侧/右侧的手指按下时间与指针手指定义时间间隔小于设定阈值时判定为鼠标滚轮否则为鼠标按键，这一规则能有效区别按键与滚轮操作,但鼠标按键和滚轮不能一起使用
         //按键定义后会跟踪坐标所以左键和中键不能滑动食指互相切换需要抬起食指后进行改变，左键/中键/右键按下的情况下不能转变为滚轮模式，
         LARGE_INTEGER MouseButton_Interval;
-        MouseButton_Interval.QuadPart = (tp->current_ticktime.QuadPart - tp->MousePointer_DefineTime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
+        MouseButton_Interval.QuadPart = (tp->current_Ticktime.QuadPart - tp->MousePointer_DefineTime.QuadPart) * tp->tick_Count / 10000;//单位ms毫秒
         float Mouse_Button_Interval = (float)MouseButton_Interval.LowPart;//指针左右侧的手指按下时间与指针定义起始时间的间隔ms
         
-        if (currentfinger_count > 1) {//触摸点数量超过1才需要判断按键操作
-            for (char i = 0; i < currentfinger_count; i++) {
-                if (i == tp->Mouse_Pointer_CurrentIndexNUM || i == tp->Mouse_LButton_CurrentIndexNUM || i == tp->Mouse_RButton_CurrentIndexNUM || i == tp->Mouse_MButton_CurrentIndexNUM || i == tp->Mouse_Wheel_CurrentIndexNUM) {//i为正值所以无需检查索引号是否为-1
+        if (currentFinger_Count > 1) {//触摸点数量超过1才需要判断按键操作
+            for (char i = 0; i < currentFinger_Count; i++) {
+                if (i == tp->nMouse_Pointer_CurrentIndex || i == tp->nMouse_LButton_CurrentIndex || i == tp->nMouse_RButton_CurrentIndex || i == tp->nMouse_MButton_CurrentIndex || i == tp->nMouse_Wheel_CurrentIndex) {//i为正值所以无需检查索引号是否为-1
                     continue;  // 已经定义的跳过
                 }
-                float dx = (float)(tp->currentfinger.Contacts[i].X - tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].X);
-                float dy = (float)(tp->currentfinger.Contacts[i].Y - tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].Y);
+                float dx = (float)(tp->currentFinger.Contacts[i].X - tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X);
+                float dy = (float)(tp->currentFinger.Contacts[i].Y - tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y);
                 float distance = sqrt(dx * dx + dy * dy);//触摸点与指针的距离
 
-                if (abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC) {//指针左右侧有手指按下并且与指针手指起始定义时间间隔小于阈值
-                    tp->Mouse_Wheel_mode = TRUE;  //开启滚轮模式
-                    tp->Mouse_Wheel_CurrentIndexNUM = i;//滚轮辅助参考手指索引值
+                //指针左右侧有手指按下并且与指针手指起始定义时间间隔小于阈值，指针被定义后区分滚轮操作只需判断一次直到指针消失，后续按键操作判断不会被时间阈值约束使得响应速度不受影响
+                if (tp->bMouse_Wheel_Mode_JudgeEnable && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC) {
+                    tp->bMouse_Wheel_Mode = TRUE;  //开启滚轮模式
+                    tp->bMouse_Wheel_Mode_JudgeEnable = FALSE;//关闭滚轮判别
+
+                    tp->nMouse_Wheel_CurrentIndex = i;//滚轮辅助参考手指索引值
                     //手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
-                    tp->JitterFixStartTime = tp->current_ticktime;//抖动修正开始计时
+                    tp->JitterFixStartTime = tp->current_Ticktime;//抖动修正开始计时
                     tp->Scroll_TotalDistanceX = 0;//累计滚动位移量重置
                     tp->Scroll_TotalDistanceY = 0;//累计滚动位移量重置
 
 
-                    tp->Mouse_LButton_CurrentIndexNUM = -1;
-                    tp->Mouse_RButton_CurrentIndexNUM = -1;
-                    tp->Mouse_MButton_CurrentIndexNUM = -1;
+                    tp->nMouse_LButton_CurrentIndex = -1;
+                    tp->nMouse_RButton_CurrentIndex = -1;
+                    tp->nMouse_MButton_CurrentIndex = -1;
                     break;
                 }
                 else {//前面滚轮模式条件判断已经排除了所以不需要考虑与指针手指起始定义时间间隔，
-                    if (tp->Mouse_MButton_CurrentIndexNUM == -1 && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerClosedThresholdDistance && dx < 0) {//指针左侧有并拢的手指按下
-                        Mouse_MButton_Status = 1; //找到中键
-                        tp->Mouse_MButton_CurrentIndexNUM = i;//赋值中键触摸点新索引号
+                    if (tp->nMouse_MButton_CurrentIndex == -1 && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerClosedThresholdDistance && dx < 0) {//指针左侧有并拢的手指按下
+                        bMouse_MButton_Status = 1; //找到中键
+                        tp->nMouse_MButton_CurrentIndex = i;//赋值中键触摸点新索引号
                         continue;  //继续找其他按键，食指已经被中键占用所以原则上左键已经不可用
                     }
-                    else if (tp->Mouse_LButton_CurrentIndexNUM == -1 && abs(distance) > tp->FingerClosedThresholdDistance && abs(distance) < tp->FingerMaxDistance && dx < 0) {//指针左侧有分开的手指按下
-                        Mouse_LButton_Status = 1; //找到左键
-                        tp->Mouse_LButton_CurrentIndexNUM = i;//赋值左键触摸点新索引号
+                    else if (tp->nMouse_LButton_CurrentIndex == -1 && abs(distance) > tp->FingerClosedThresholdDistance && abs(distance) < tp->FingerMaxDistance && dx < 0) {//指针左侧有分开的手指按下
+                        bMouse_LButton_Status = 1; //找到左键
+                        tp->nMouse_LButton_CurrentIndex = i;//赋值左键触摸点新索引号
                         continue;  //继续找其他按键
                     }
-                    else if (tp->Mouse_RButton_CurrentIndexNUM == -1 && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && dx > 0) {//指针右侧有手指按下
-                        Mouse_RButton_Status = 1; //找到右键
-                        tp->Mouse_RButton_CurrentIndexNUM = i;//赋值右键触摸点新索引号
+                    else if (tp->nMouse_RButton_CurrentIndex == -1 && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && dx > 0) {//指针右侧有手指按下
+                        bMouse_RButton_Status = 1; //找到右键
+                        tp->nMouse_RButton_CurrentIndex = i;//赋值右键触摸点新索引号
                         continue;  //继续找其他按键
                     }
                 }
@@ -3247,27 +3251,27 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }
         
         //鼠标指针位移设置
-        if (currentfinger_count != lastfinger_count) {//手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
-            tp->JitterFixStartTime = tp->current_ticktime;//抖动修正开始计时
+        if (currentFinger_Count != lastFinger_Count) {//手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
+            tp->JitterFixStartTime = tp->current_Ticktime;//抖动修正开始计时
         }
         else {
             LARGE_INTEGER FixTimer;
-            FixTimer.QuadPart = (tp->current_ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
+            FixTimer.QuadPart = (tp->current_Ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_Count / 10000;//单位ms毫秒
             float JitterFixTimer = (float)FixTimer.LowPart;//当前抖动时间计时
 
             float STABLE_INTERVAL;
-            if (tp->Mouse_MButton_CurrentIndexNUM != -1) {//中键状态下手指并拢的抖动修正值区别处理
+            if (tp->nMouse_MButton_CurrentIndex != -1) {//中键状态下手指并拢的抖动修正值区别处理
                 STABLE_INTERVAL = STABLE_INTERVAL_FingerClosed_MSEC;
             }
             else {
                 STABLE_INTERVAL = STABLE_INTERVAL_FingerSeparated_MSEC;
             }
 
-            float px = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].X - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].X) / tp->thumb_scale;
-            float py = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].Y - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].Y) / tp->thumb_scale;
+            float px = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X) / tp->thumb_Scale;
+            float py = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y) / tp->thumb_Scale;
 
             if (JitterFixTimer < STABLE_INTERVAL) {//触摸点稳定前修正
-                if (tp->Mouse_LButton_CurrentIndexNUM != -1 || tp->Mouse_RButton_CurrentIndexNUM != -1 || tp->Mouse_MButton_CurrentIndexNUM != -1) {//有按键时修正，单指针时不需要使得指针更精确
+                if (tp->nMouse_LButton_CurrentIndex != -1 || tp->nMouse_RButton_CurrentIndex != -1 || tp->nMouse_MButton_CurrentIndex != -1) {//有按键时修正，单指针时不需要使得指针更精确
                     if (abs(px) <= Jitter_Offset) {//指针轻微抖动修正
                         px = 0;
                     }
@@ -3282,14 +3286,14 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
         }
     }
-    else if (tp->Mouse_Pointer_CurrentIndexNUM != -1 && tp->Mouse_Wheel_mode) {//滚轮操作模式
+    else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//滚轮操作模式
         //鼠标指针位移设置
         LARGE_INTEGER FixTimer;
-        FixTimer.QuadPart = (tp->current_ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_count / 10000;//单位ms毫秒
+        FixTimer.QuadPart = (tp->current_Ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_Count / 10000;//单位ms毫秒
         float JitterFixTimer = (float)FixTimer.LowPart;//当前抖动时间计时
 
-        float px = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].X - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].X) / tp->thumb_scale;
-        float py = (float)(tp->currentfinger.Contacts[tp->Mouse_Pointer_CurrentIndexNUM].Y - tp->lastfinger.Contacts[tp->Mouse_Pointer_LastIndexNUM].Y) / tp->thumb_scale;
+        float px = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X) / tp->thumb_Scale;
+        float py = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y) / tp->thumb_Scale;
 
         if (JitterFixTimer < STABLE_INTERVAL_FingerClosed_MSEC) {//只需在触摸点稳定前修正
             if (abs(px) <= Jitter_Offset) {//指针轻微抖动修正
@@ -3341,17 +3345,17 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //其他组合无效
     }
 
-    pMouseReport->button = Mouse_LButton_Status + (Mouse_RButton_Status << 1) + (Mouse_MButton_Status << 2);  //左中右键状态合成
+    pMouseReport->button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2);  //左中右键状态合成
 
     //保存下一轮所有触摸点的初始坐标及功能定义索引号
-    tp->lastfinger = tp->currentfinger;
+    tp->lastFinger = tp->currentFinger;
 
-    lastfinger_count = currentfinger_count;
-    tp->Mouse_Pointer_LastIndexNUM = tp->Mouse_Pointer_CurrentIndexNUM;
-    tp->Mouse_LButton_LastIndexNUM = tp->Mouse_LButton_CurrentIndexNUM;
-    tp->Mouse_RButton_LastIndexNUM = tp->Mouse_RButton_CurrentIndexNUM;
-    tp->Mouse_MButton_LastIndexNUM = tp->Mouse_MButton_CurrentIndexNUM;
-    tp->Mouse_Wheel_LastIndexNUM = tp->Mouse_Wheel_CurrentIndexNUM;
+    lastFinger_Count = currentFinger_Count;
+    tp->nMouse_Pointer_LastIndex = tp->nMouse_Pointer_CurrentIndex;
+    tp->nMouse_LButton_LastIndex = tp->nMouse_LButton_CurrentIndex;
+    tp->nMouse_RButton_LastIndex = tp->nMouse_RButton_CurrentIndex;
+    tp->nMouse_MButton_LastIndex = tp->nMouse_MButton_CurrentIndex;
+    tp->nMouse_Wheel_LastIndex = tp->nMouse_Wheel_CurrentIndex;
 
 }
 
@@ -3367,30 +3371,31 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
 {
     PTP_PARSER* tp= &pDevContext->tp_settings;
 
-    tp->Mouse_Pointer_CurrentIndexNUM = -1; //定义当前鼠标指针触摸点坐标的数据索引号，-1为未定义
-    tp->Mouse_LButton_CurrentIndexNUM = -1; //定义当前鼠标左键触摸点坐标的数据索引号，-1为未定义
-    tp->Mouse_RButton_CurrentIndexNUM = -1; //定义当前鼠标右键触摸点坐标的数据索引号，-1为未定义
-    tp->Mouse_MButton_CurrentIndexNUM = -1; //定义当前鼠标中键触摸点坐标的数据索引号，-1为未定义
-    tp->Mouse_Wheel_CurrentIndexNUM = -1; //定义当前鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
+    tp->nMouse_Pointer_CurrentIndex = -1; //定义当前鼠标指针触摸点坐标的数据索引号，-1为未定义
+    tp->nMouse_LButton_CurrentIndex = -1; //定义当前鼠标左键触摸点坐标的数据索引号，-1为未定义
+    tp->nMouse_RButton_CurrentIndex = -1; //定义当前鼠标右键触摸点坐标的数据索引号，-1为未定义
+    tp->nMouse_MButton_CurrentIndex = -1; //定义当前鼠标中键触摸点坐标的数据索引号，-1为未定义
+    tp->nMouse_Wheel_CurrentIndex = -1; //定义当前鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
-   tp-> Mouse_Pointer_LastIndexNUM = -1; //定义上次鼠标指针触摸点坐标的数据索引号，-1为未定义
-   tp->Mouse_LButton_LastIndexNUM = -1; //定义上次鼠标左键触摸点坐标的数据索引号，-1为未定义
-   tp->Mouse_RButton_LastIndexNUM = -1; //定义上次鼠标右键触摸点坐标的数据索引号，-1为未定义
-   tp->Mouse_MButton_LastIndexNUM = -1; //定义上次鼠标中键触摸点坐标的数据索引号，-1为未定义
-   tp->Mouse_Wheel_LastIndexNUM = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
+   tp-> nMouse_Pointer_LastIndex = -1; //定义上次鼠标指针触摸点坐标的数据索引号，-1为未定义
+   tp->nMouse_LButton_LastIndex = -1; //定义上次鼠标左键触摸点坐标的数据索引号，-1为未定义
+   tp->nMouse_RButton_LastIndex = -1; //定义上次鼠标右键触摸点坐标的数据索引号，-1为未定义
+   tp->nMouse_MButton_LastIndex = -1; //定义上次鼠标中键触摸点坐标的数据索引号，-1为未定义
+   tp->nMouse_Wheel_LastIndex = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
-   tp->Mouse_Wheel_mode = FALSE;
+   tp->bMouse_Wheel_Mode = FALSE;
+   tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
 
-   RtlZeroMemory(&tp->lastfinger, sizeof(PTP_REPORT));
-   RtlZeroMemory(&tp->currentfinger, sizeof(PTP_REPORT));
+   RtlZeroMemory(&tp->lastFinger, sizeof(PTP_REPORT));
+   RtlZeroMemory(&tp->currentFinger, sizeof(PTP_REPORT));
 
     tp->Scroll_TotalDistanceX = 0;
     tp->Scroll_TotalDistanceY = 0;
 
-    tp->tick_count = KeQueryTimeIncrement();
-    KeQueryTickCount(&tp->last_ticktime);
+    tp->tick_Count = KeQueryTimeIncrement();
+    KeQueryTickCount(&tp->last_Ticktime);
 
-    tp->PhysicalButtonUp = TRUE;
+    tp->bPhysicalButtonUp = TRUE;
 
 }
 
