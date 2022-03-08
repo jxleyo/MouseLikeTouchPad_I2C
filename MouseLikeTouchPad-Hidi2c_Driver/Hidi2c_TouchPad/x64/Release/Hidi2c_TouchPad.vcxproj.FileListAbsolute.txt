@@ -1,0 +1,1 @@
+D:\MouseLikeTouchPad-Hidi2c_Driver构造描述符\Hidi2c_TouchPad\x64\Release\Hidi2c_TouchPad.sys
