@@ -42,8 +42,6 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 #include "pshpack1.h"
 
-#define MAXFINGER_CNT 5
-
 #define STABLE_INTERVAL_FingerSeparated_MSEC   20   // 手指分开按到触摸板的稳定时间间隔
 #define STABLE_INTERVAL_FingerClosed_MSEC      100   // 手指并拢按到触摸板的稳定时间间隔 
 
@@ -54,6 +52,27 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 #define SCROLL_OFFSET_THRESHOLD_X      100   // 滚动位移量X阈值 
 #define SCROLL_OFFSET_THRESHOLD_Y      100   // 滚动位移量Y阈值 
+
+
+
+#pragma pack(push)
+#pragma pack(1)
+typedef struct _HYBRID_REPORT {
+    UCHAR       ReportID;
+    UCHAR		Confidence : 1;
+    UCHAR		TipSwitch : 1;
+    UCHAR		Padding1 : 2;
+    UCHAR		ContactID : 4;
+    USHORT		X;
+    USHORT		Y;
+    USHORT      ScanTime;
+    UCHAR       ContactCount;
+    UCHAR       IsButtonClicked : 1;
+    UCHAR		Padding2 : 7;
+    USHORT      C5_BLOB;
+
+} HYBRID_REPORT, * PHYBRID_REPORT;
+#pragma pack(pop)
 
 
 #pragma pack(push)
@@ -235,21 +254,45 @@ typedef struct _DEVICE_CONTEXT
     BOOLEAN                     HostInitiatedResetActive;
 
     // Windows PTP context
-    BOOLEAN PtpInputOn;
-    BOOLEAN PtpReportTouch;
-    BOOLEAN PtpReportButton;
-
+    PBYTE pReportDesciptorData;
     BOOLEAN  HidReportDescriptorSaved;
-    BOOLEAN  SetFeatureReady;
 
+    UCHAR CONTACT_COUNT_MAXIMUM;
+    UCHAR PAD_TYPE;
+    UCHAR INPUT_MODE;
+    UCHAR FUNCTION_SWITCH;
+
+    UCHAR REPORTID_MULTITOUCH_COLLECTION;
+    UCHAR REPORTID_MOUSE_COLLECTION;
+
+    UCHAR REPORTID_DEVICE_CAPS; 
+    UCHAR REPORTSIZE_DEVICE_CAPS;
+
+    UCHAR REPORTID_PTPHQA;
+    USHORT REPORTSIZE_PTPHQA;
+
+    UCHAR REPORTID_INPUT_MODE;
+    UCHAR REPORTSIZE_INPUT_MODE;
+
+    UCHAR REPORTID_FUNCTION_SWITCH;
+    UCHAR REPORTSIZE_FUNCTION_SWITCH;
+
+    UCHAR REPORTID_LATENCY;//延迟模式
+    UCHAR REPORTID_CONFIG_PTP_HAPTICS_ID;//触控反馈配置SimpleHapticsController
+
+    HYBRID_REPORT currentFrame;
+    PTP_REPORT combinedPacket;
+    BYTE contactCount;
+
+    BOOLEAN  SetFeatureReady; 
+    BOOLEAN  SetInputModeOK;
+    BOOLEAN  SetFunSwicthOK;
+    UCHAR   GetStringStep;
+
+    BOOLEAN PtpInputModeOn;
+
+    //MouseLikeTouchpad Paser context
     PTP_PARSER  tp_settings;  //PTP_PARSER数据
-    UCHAR inputModeReportSize;
-    UCHAR inputModeReportId;
-    UCHAR funswitchReportSize;
-    UCHAR funswitchReportId;
-
-    PBYTE pReportDesciptorData;  
-
     UCHAR MouseSensitivityIndex;
     double MouseSensitivityValue;
 
@@ -618,53 +661,75 @@ HidSetReport(
     HID_REPORT_TYPE ReportType
 );
 
+//大部分usage已经在hidusage.h定义了,hidsdi.h包含了hidusage.h
+// HID report descriptor constants
+#define HID_TYPE_BEGIN_COLLECTION 0xA1
+#define HID_TYPE_END_COLLECTION 0xC0
+#define HID_TYPE_USAGE_PAGE 0x05
+#define HID_TYPE_USAGE_PAGE_1 0x06
+#define HID_TYPE_USAGE 0x09
+#define HID_TYPE_REPORT_ID 0x85
+#define HID_TYPE_REPORT_SIZE 0x75
+#define HID_TYPE_REPORT_COUNT 0x95
+#define HID_TYPE_REPORT_COUNT_2	0x96
+#define HID_TYPE_INPUT   0x81
+#define HID_TYPE_FEATURE 0xB1
 
-//鼠标HID描述符, 两个按键（左，右）， 滚轮（水平滚动和垂直滚动）, X,Y采用相对值
-#define REPORTID_MOUSE  0x02
-#define REPORTID_FEATURE 0x03
-#define REPORTID_TOUCHPAD 0x04
-#define REPORTID_MAX_COUNT 0x05
-#define REPORTID_PTPHQA 0x08
-#define REPORTID_STANDARDMOUSE 0x02
-#define REPORTID_MULTITOUCH 0x05
-#define REPORTID_REPORTMODE 0x04
-#define REPORTID_FUNCTION_SWITCH 0x06   
-#define REPORTID_DEVICE_CAPS 0x07
-#define REPORTID_UMAPP_CONF  0x09
+#define HID_TYPE_USAGE_MINIMUM 0x19
+#define HID_TYPE_USAGE_MAXIMUM 0x29
+#define HID_TYPE_LOGICAL_MINIMUM 0x15
+#define HID_TYPE_LOGICAL_MAXIMUM 0x25
+#define HID_TYPE_LOGICAL_MAXIMUM_2 0x26
+#define HID_TYPE_LOGICAL_MAXIMUM_3 0x27
+#define HID_TYPE_PHYSICAL_MINIMUM 0x35
+#define HID_TYPE_PHYSICAL_MAXIMUM 0x45
+#define HID_TYPE_PHYSICAL_MAXIMUM_2 0x46
+#define HID_TYPE_PHYSICAL_MAXIMUM_3 0x47
+#define HID_TYPE_UNIT_EXPONENT 0x55
+#define HID_TYPE_UNIT 0x65
+#define HID_TYPE_UNIT_2 0x66
+
+#define HID_USAGE_PAGE_VENDOR_DEFINED_DEVICE_CERTIFICATION 0xC5
+#define HID_USAGE_CONFIGURATION 0x0E
+
+#define HID_USAGE_BUTTON_STATE 0x01
+#define HID_USAGE_X 0x30
+#define HID_USAGE_Y 0x31
+#define HID_USAGE_TIP 0x42
+#define HID_USAGE_CONFIDENCE 0x47
+#define HID_USAGE_WIDTH 0x48
+#define HID_USAGE_HEIGHT 0x49
+
+#define HID_USAGE_INPUT_MODE 0x52
+#define HID_USAGE_CONTACT_COUNT	0x54
+#define HID_USAGE_CONTACT_COUNT_MAXIMUM	0x55
+#define HID_USAGE_SCAN_TIME	0x56
+#define HID_USAGE_BUTTON_SWITCH 0x57
+#define HID_USAGE_SURFACE_SWITCH 0x58
+#define HID_USAGE_PAD_TYPE	0x59
+
+#define HID_USAGE_LATENCY_MODE 0x60
+//#define HID_USAGE_HAPTIC_INTENSITY 0x23
+
+#define HID_COLLECTION_APPLICATION 0x01
+#define HID_COLLECTION_LOGICAL 0x02
 
 
-#define REPORTID_STANDARDMOUSE 0x02
-#define REPORTID_FUNCSWITCH 0x06
+//PTP Setting Values
+#define PTP_MAX_CONTACT_POINTS 5
+#define PTP_BUTTON_TYPE_CLICK_PAD 0
+#define PTP_BUTTON_TYPE_PRESSURE_PAD 1
 
-#define BUTTON_SWITCH 0x57
-#define SURFACE_SWITCH 0x58
+#define PTP_COLLECTION_MOUSE 0
+#define PTP_COLLECTION_WINDOWS 3
 
-#define USAGE_PAGE 0x05
-#define USAGE_PAGE_1 0x06
-#define USAGE      0x09
-#define USAGE_MINIMUM 0x19
-#define USAGE_MAXIMUM 0x29
-#define LOGICAL_MINIMUM 0x15
-#define LOGICAL_MAXIMUM 0x25
-#define LOGICAL_MAXIMUM_2 0x26
-#define LOGICAL_MAXIMUM_3 0x27
-#define PHYSICAL_MINIMUM 0x35
-#define PHYSICAL_MAXIMUM 0x45
-#define PHYSICAL_MAXIMUM_2 0x46
-#define PHYSICAL_MAXIMUM_3 0x47
-#define UNIT_EXPONENT 0x55
-#define UNIT 0x65
-#define UNIT_2 0x66
+#define PTP_FEATURE_INPUT_COLLECTION   0
+#define PTP_FEATURE_SELECTIVE_REPORTING   1
+#define PTP_SELECTIVE_REPORT_Button_Surface_ON 3
 
-#define REPORT_ID       0x85
-#define REPORT_COUNT    0x95
-#define REPORT_COUNT_2	0x96
-#define REPORT_SIZE     0x75
-#define INPUT           0x81
-#define FEATURE         0xb1
+#define PTP_CONTACT_CONFIDENCE_BIT   1
+#define PTP_CONTACT_TIPSWITCH_BIT    2
 
-#define BEGIN_COLLECTION 0xa1
-#define END_COLLECTION   0xc0
 
 #define DEFAULT_PTP_HQA_BLOB \
 	0xfc, 0x28, 0xfe, 0x84, 0x40, 0xcb, 0x9a, 0x87, \
@@ -700,26 +765,186 @@ HidSetReport(
 	0xcf, 0x17, 0xb7, 0xb8, 0xf4, 0xe1, 0x33, 0x08, \
 	0x24, 0x8b, 0xc4, 0x43, 0xa5, 0xe5, 0x24, 0xc2
 
-///////
-const unsigned char MouseReportDescriptor[] = {
+
+
+//ReportID为本驱动为上层类驱动提供的报告id，上层类发送给下层驱动的report经过本驱动时需要替换成实际的ReportID并且报告数据格式也要按照实际的下层描述符重新封装,本驱动需要提前获取hid描述符报告来确定正确的数值
+//每个REPORTID_必须不同以区分报告类别，并且值在1 - 255之间
+#define TEMPORARY_REPORTID_MOUSE 0x02
+#define TEMPORARY_REPORTID_MULTITOUCH 0x05
+#define TEMPORARY_REPORTID_DEVICE_CAPS 0x05
+#define TEMPORARY_REPORTID_INPUTMODE 0x03
+#define TEMPORARY_REPORTID_FUNCTION_SWITCH 0x06   
+#define TEMPORARY_REPORTID_PTPHQA 0x08
+
+//touchpad描述符
+const unsigned char TouchpadReportDescriptor[] = {//本描述符只作为上层客户端驱动使用，实际hid描述符应该以下层驱动读取的数据为准
+    //MOUSE TLC
+            0x05, 0x01, // USAGE_PAGE(Generic Desktop)
+            0x09, 0x02, //   USAGE(Mouse)
+            0xA1, 0x01, //   COLLECTION(APPlication)
+            0x85, TEMPORARY_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //临时占位用途，实际使用读写Report时需要提前获取hid描述符报告来确定正确的数值
+            0x09, 0x01, //   USAGE(Pointer)
+            0xA1, 0x00, //     COLLECTION(Physical)
+            0x05, 0x09, //     USAGE_PAGE(Button)
+            0x19, 0x01, //     USAGE_MINIMUM(button 1)   Button 按键， 位 0 左键， 位1 右键， 位2 中键
+            0x29, 0x03, //     USAGE_MAXMUM(button 3)  //0x03限制最大的鼠标按键数量
+            0x15, 0x00, //     LOGICAL_MINIMUM(0)
+            0x25, 0x01, //     LOGICAL_MAXIMUM(1)
+            0x75, 0x01, //     REPORT_SIZE(1)
+            0x95, 0x03, //     REPORT_COUNT(3)  //0x03鼠标按键数量
+            0x81, 0x02, //     INPUT(Data,Var,Abs)
+            0x95, 0x05, //     REPORT_COUNT(5) //需要补足多少个bit使得加上鼠标按键数量的3个bit位成1个字节8bit
+            0x81, 0x03, //     INPUT (Cnst,Var,Abs)////一般pending补位的input用Cnst常量0x03
+            0x05, 0x01, //     USAGE_PAGE(Generic Desktop)
+            0x09, 0x30, //     USAGE(X)       X移动
+            0x09, 0x31, //     USAGE(Y)       Y移动
+            0x09, 0x38, //     USAGE(Wheel)   垂直滚动
+            0x15, 0x81, //     LOGICAL_MINIMUM(-127)
+            0x25, 0x7F, //     LOGICAL_MAXIMUM(127)
+            0x75, 0x08, //     REPORT_SIZE(8)
+            0x95, 0x03, //     REPORT_COUNT(3)
+            0x81, 0x06, //     INPUT(Data,Var, Rel) //X,Y,垂直滚轮三个参数， 相对值
+
+            //下边水平滚动
+            0x05, 0x0C, //     USAGE_PAGE (Consumer Devices)
+            0x0A, 0x38, 0x02, // USAGE(AC Pan)
+            0x15, 0x81, //       LOGICAL_MINIMUM(-127)
+            0x25, 0x7F, //       LOGICAL_MAXIMUM(127)
+            0x75, 0x08, //       REPORT_SIZE(8)
+            0x95, 0x01, //       REPORT_COUNT(1)
+            0x81, 0x06, //       INPUT(data,Var, Rel) //水平滚轮，相对值
+            0xC0,       //       End Connection(PhySical)
+            0xC0,       //     End Connection
+
+    //TOUCH PAD input TLC
+        0x05, 0x0d,                         // USAGE_PAGE (Digitizers)          
+        0x09, 0x05,                         // USAGE (Touch Pad)             
+        0xa1, 0x01,                         // COLLECTION (Application)         
+        0x85, TEMPORARY_REPORTID_MULTITOUCH,            //   REPORT_ID (Touch pad)      //REPORTID_MULTITOUCH               
+        0x09, 0x22,                         //   USAGE (Finger)                 
+        0xa1, 0x02,                         //   COLLECTION (Logical)  
+        0x15, 0x00,                         //       LOGICAL_MINIMUM (0)
+        0x25, 0x01,                         //       LOGICAL_MAXIMUM (1)
+        0x09, 0x47,                         //       USAGE (Confidence) 
+        0x09, 0x42,                         //       USAGE (Tip switch)
+        0x95, 0x02,                         //       REPORT_COUNT (2)
+        0x75, 0x01,                         //       REPORT_SIZE (1)
+        0x81, 0x02,                         //       INPUT (Data,Var,Abs)
+        0x95, 0x01,                         //       REPORT_COUNT (1)
+        0x75, 0x02,                         //       REPORT_SIZE (2)
+        0x25, 0x02,                         //       LOGICAL_MAXIMUM (2)
+        0x09, 0x51,                         //       USAGE (Contact Identifier)
+        0x81, 0x02,                         //       INPUT (Data,Var,Abs)
+        0x75, 0x01,                         //       REPORT_SIZE (1)
+        0x95, 0x04,                         //       REPORT_COUNT (4)             
+        0x81, 0x03,                         //       INPUT (Cnst,Var,Abs)
+        0x05, 0x01,                         //       USAGE_PAGE (Generic Desk..
+        0x15, 0x00,                         //       LOGICAL_MINIMUM (0)
+        0x26, 0xff, 0x0f,                   //       LOGICAL_MAXIMUM (4095)         
+        0x75, 0x10,                         //       REPORT_SIZE (16)             
+        0x55, 0x0e,                         //       UNIT_EXPONENT (-2)           
+        0x65, 0x13,                         //       UNIT(Inch,EngLinear)                  
+        0x09, 0x30,                         //       USAGE (X)                    
+        0x35, 0x00,                         //       PHYSICAL_MINIMUM (0)         
+        0x46, 0x90, 0x01,                   //       PHYSICAL_MAXIMUM (400)
+        0x95, 0x01,                         //       REPORT_COUNT (1)         
+        0x81, 0x02,                         //       INPUT (Data,Var,Abs)         
+        0x46, 0x13, 0x01,                   //       PHYSICAL_MAXIMUM (275)
+        0x09, 0x31,                         //       USAGE (Y)                    
+        0x81, 0x02,                         //       INPUT (Data,Var,Abs)    
+        0xc0,                               //    END_COLLECTION
+        0x55, 0x0C,                         //    UNIT_EXPONENT (-4)           
+        0x66, 0x01, 0x10,                   //    UNIT (Seconds)        
+        0x47, 0xff, 0xff, 0x00, 0x00,      //     PHYSICAL_MAXIMUM (65535)
+        0x27, 0xff, 0xff, 0x00, 0x00,         //  LOGICAL_MAXIMUM (65535) 
+        0x75, 0x10,                           //  REPORT_SIZE (16)             
+        0x95, 0x01,                           //  REPORT_COUNT (1) 
+        0x05, 0x0d,                         //    USAGE_PAGE (Digitizers)
+        0x09, 0x56,                         //    USAGE (Scan Time)    
+        0x81, 0x02,                           //  INPUT (Data,Var,Abs)         
+        0x09, 0x54,                         //    USAGE (Contact count)
+        0x25, 0x7f,                           //  LOGICAL_MAXIMUM (127) 
+        0x95, 0x01,                         //    REPORT_COUNT (1)
+        0x75, 0x08,                         //    REPORT_SIZE (8)    
+        0x81, 0x02,                         //    INPUT (Data,Var,Abs)
+        0x05, 0x09,                         //    USAGE_PAGE (Button)         
+        0x09, 0x01,                         //    USAGE_(Button 1)     
+        0x25, 0x01,                         //    LOGICAL_MAXIMUM (1)          
+        0x75, 0x01,                         //    REPORT_SIZE (1)              
+        0x95, 0x01,                         //    REPORT_COUNT (1)             
+        0x81, 0x02,                         //    INPUT (Data,Var,Abs)
+        0x95, 0x07,                          //   REPORT_COUNT (7)                 
+        0x81, 0x03,                         //    INPUT (Cnst,Var,Abs)
+        0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
+        0x85, TEMPORARY_REPORTID_DEVICE_CAPS,            //   REPORT_ID (Feature)  /硬件支持点数    REPORTID_DEVICE_CAPS，REPORTID_MAX_COUNT,                   
+        0x09, 0x55,                         //    USAGE (Contact Count Maximum)
+        0x09, 0x59,                         //    USAGE (Pad TYpe)
+        0x75, 0x04,                         //    REPORT_SIZE (4) 
+        0x95, 0x02,                         //    REPORT_COUNT (2)
+        0x25, 0x0f,                         //    LOGICAL_MAXIMUM (15)
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        0x06, 0x00, 0xff,                   //    USAGE_PAGE (Vendor Defined)
+        0x85, TEMPORARY_REPORTID_PTPHQA,               //    REPORT_ID (PTPHQA)  
+        0x09, 0xC5,                         //    USAGE (Vendor Usage 0xC5)    
+        0x15, 0x00,                         //    LOGICAL_MINIMUM (0)          
+        0x26, 0xff, 0x00,                   //    LOGICAL_MAXIMUM (0xff) 
+        0x75, 0x08,                         //    REPORT_SIZE (8)             
+        0x96, 0x00, 0x01,                   //    REPORT_COUNT (0x100 (256))             
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        0xc0,                               // END_COLLECTION
+
+        //CONFIG TLC
+        0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
+        0x09, 0x0E,                         //    USAGE (Configuration)
+        0xa1, 0x01,                         //   COLLECTION (Application)
+        0x85, TEMPORARY_REPORTID_INPUTMODE,             //   REPORT_ID (Feature)      REPORTID_FEATURE       
+        0x09, 0x22,                         //   USAGE (Finger)              
+        0xa1, 0x02,                         //   COLLECTION (logical)     
+        0x09, 0x52,                         //    USAGE (Input Mode)         
+        0x15, 0x00,                         //    LOGICAL_MINIMUM (0)      
+        0x25, 0x0a,                         //    LOGICAL_MAXIMUM (10)
+        0x75, 0x08,                         //    REPORT_SIZE (8)         
+        0x95, 0x01,                         //    REPORT_COUNT (1)         
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs    
+        0xc0,                               //   END_COLLECTION
+        0x09, 0x22,                         //   USAGE (Finger)              
+        0xa1, 0x00,                         //   COLLECTION (physical)     
+        0x85, TEMPORARY_REPORTID_FUNCTION_SWITCH,     //     REPORT_ID (Feature)              
+        0x09, 0x57,                         //     USAGE(Surface switch)
+        0x09, 0x58,                         //     USAGE(Button switch)
+        0x75, 0x01,                         //     REPORT_SIZE (1)
+        0x95, 0x02,                         //     REPORT_COUNT (2)
+        0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+        0xb1, 0x02,                         //     FEATURE (Data,Var,Abs)
+        0x95, 0x06,                         //     REPORT_COUNT (6)             
+        0xb1, 0x03,                         //     FEATURE (Cnst,Var,Abs)
+        0xc0,                               //   END_COLLECTION
+        0xc0,                               // END_COLLECTION
+
+        
+
+};
+    
+
+/////////鼠标HID描述符, 两个按键（左，右）， 滚轮（水平滚动和垂直滚动）, X,Y采用相对值
+const unsigned char MouseReportDescriptor[] = {//本描述符只作为上层客户端驱动使用，实际hid描述符应该以下层驱动读取的数据为准
     ///
     0x05, 0x01, // USAGE_PAGE(Generic Desktop)
     0x09, 0x02, //   USAGE(Mouse)
     0xA1, 0x01, //   COLLECTION(APPlication)
+    0x85, TEMPORARY_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //临时占位用途，实际使用读写Report时需要提前获取hid描述符报告来确定正确的数值
     0x09, 0x01, //   USAGE(Pointer)
         0xA1, 0x00, //     COLLECTION(Physical)
-        0x85, REPORTID_MOUSE, //     ReportID(Mouse ReportID)
         0x05, 0x09, //     USAGE_PAGE(Button)
         0x19, 0x01, //     USAGE_MINIMUM(button 1)   Button 按键， 位 0 左键， 位1 右键， 位2 中键
         0x29, 0x03, //     USAGE_MAXMUM(button 3)  //0x03限制最大的鼠标按键数量
         0x15, 0x00, //     LOGICAL_MINIMUM(0)
         0x25, 0x01, //     LOGICAL_MAXIMUM(1)
-        0x95, 0x03, //     REPORT_COUNT(3)  //0x03鼠标按键数量
         0x75, 0x01, //     REPORT_SIZE(1)
+        0x95, 0x03, //     REPORT_COUNT(3)  //0x03鼠标按键数量
         0x81, 0x02, //     INPUT(Data,Var,Abs)
-        0x95, 0x01, //     REPORT_COUNT(1)
-        0x75, 0x05, //     REPORT_SIZE(5)  //需要补足多少个bit使得加上鼠标按键数量的3个bit位成1个字节8bit
-        0x81, 0x03, //     INPUT(Data,Var, Abs)
+        0x95, 0x05, //     REPORT_COUNT(5) //需要补足多少个bit使得加上鼠标按键数量的3个bit位成1个字节8bit
+        0x81, 0x03, //     INPUT (Cnst,Var,Abs)////一般pending补位的input用Cnst常量0x03
         0x05, 0x01, //     USAGE_PAGE(Generic Desktop)
         0x09, 0x30, //     USAGE(X)       X移动
         0x09, 0x31, //     USAGE(Y)       Y移动
@@ -751,7 +976,7 @@ CONST HID_DESCRIPTOR DefaultHidDescriptor = {
     0x00,   // country code == Not Specified
     0x01,   // number of HID class descriptors
     { 0x22,   // descriptor type 
-    sizeof(MouseReportDescriptor) }  // MouseReportDescriptor//TouchpadReportDescriptor//AmtPtpSpiFamily3aReportDescriptor
+    sizeof(TouchpadReportDescriptor) }  // MouseReportDescriptor//TouchpadReportDescriptor
 };
 
 
@@ -769,44 +994,10 @@ struct mouse_report_t
 #pragma pack()
 
 
-
-#define PTP_MAX_CONTACT_POINTS 5
-#define PTP_BUTTON_TYPE_CLICK_PAD 0
-#define PTP_BUTTON_TYPE_PRESSURE_PAD 1
-
-#define PTP_COLLECTION_MOUSE 0
-#define PTP_COLLECTION_WINDOWS 3
-
-#define PTP_FEATURE_INPUT_COLLECTION   0
-#define PTP_FEATURE_SELECTIVE_REPORTING   1
-#define PTP_SELECTIVE_REPORT_Button_Surface_ON 3
-
-#define PTP_CONTACT_CONFIDENCE_BIT   1
-#define PTP_CONTACT_TIPSWITCH_BIT    2
-
-
-// HID report descriptor constants
-#define HID_TYPE_COLLECTION 0xA1
-#define HID_TYPE_END_COLLECTION 0xC0
-#define HID_TYPE_USAGE_PAGE 0x05
-#define HID_TYPE_USAGE 0x09
-#define HID_TYPE_REPORT_ID 0x85
-#define HID_TYPE_REPORT_SIZE 0x75
-#define HID_TYPE_REPORT_COUNT 0x95
-#define HID_TYPE_FEATURE 0xB1
-#define HID_USAGE_PAGE_DIGITIZERS 0x0D
-#define HID_USAGE_TOUCHPAD 0x05
-#define HID_USAGE_TOUCHSCREEN 0x04
-#define HID_USAGE_CONFIGURATION 0x0E
-
-#define HID_USAGE_INPUT_MODE 0x52
-#define HID_USAGE_X 0x30
-#define HID_USAGE_Y 0x31
-
 typedef struct _PTP_DEVICE_CAPS_FEATURE_REPORT {
     UCHAR ReportID;
-    UCHAR MaximumContactPoints;
-    UCHAR ButtonType;
+    UCHAR MaximumContactPoints : 4;
+    UCHAR ButtonType : 4;
 } PTP_DEVICE_CAPS_FEATURE_REPORT, * PPTP_DEVICE_CAPS_FEATURE_REPORT;
 
 typedef struct _PTP_DEVICE_HQA_CERTIFICATION_REPORT {
@@ -845,11 +1036,24 @@ PtpReportFeatures(
     _In_ WDFREQUEST Request
 );
 
+NTSTATUS
+PtpSetFeature(
+    PDEVICE_CONTEXT pDevContext,
+    BOOLEAN SetType
+);
+
+NTSTATUS
+HidGetFeature(
+    PDEVICE_CONTEXT pDevContext,
+    WDFREQUEST Request,
+    HID_REPORT_TYPE ReportType
+);
 
 NTSTATUS
 HidSetFeature(
     PDEVICE_CONTEXT pDevContext,
-    BOOLEAN SetType
+    WDFREQUEST Request,
+    HID_REPORT_TYPE ReportType
 );
 
 NTSTATUS
@@ -862,9 +1066,14 @@ GetReportDescriptor(
     PDEVICE_CONTEXT pDevContext
 );
 
+NTSTATUS
+SendOriginalReport(PDEVICE_CONTEXT pDevContext, PVOID OriginalReport, size_t outputBufferLength);
 
 NTSTATUS
 SendPtpMouseReport(PDEVICE_CONTEXT pDevContext, mouse_report_t* pMouseReport);
+
+NTSTATUS
+SendPtpMultiTouchReport(PDEVICE_CONTEXT pDevContext, PVOID MultiTouchReport, size_t outputBufferLength);
 
 void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext);
 
@@ -875,5 +1084,15 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
 
 NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx);
+
+NTSTATUS
+HidSendResetNotification(
+    PDEVICE_CONTEXT pDevContext,
+    WDFREQUEST Request,
+    BOOLEAN* requestPendingFlag_reset
+);
+
+
+
 
 
