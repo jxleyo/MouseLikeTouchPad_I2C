@@ -4,8 +4,8 @@ Class = HIDClass
 ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = Hidi2c_TouchPad.cat
-PnpLockdown=1	
-DriverVer = 01/01/2021,1.1.1.1
+PnpLockdown=0	
+DriverVer = 01/01/2022,1.1.1.1
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -24,10 +24,10 @@ Hidi2c_TouchPad.sys  = 99,,
 %ManufacturerName%=Hidi2c_TouchPad,NTamd64...1
 
 [Hidi2c_TouchPad.NTamd64...1]
-%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, Hid\Hidi2c_TouchPad
+;%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, Hid\Hidi2c_TouchPad
 %Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, ACPI\PNP0C50
 ;%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, ACPI\MSFT0001
-;%Hidi2c_TouchPad.DeviceDesc%=Hidi2c_TouchPad_Device, *MSFT0001
+
 
 [Hidi2c_TouchPad_Device.NT]
 CopyFiles=Hidi2c_TouchPad_Device.CopyFiles

@@ -7,7 +7,25 @@
 
 本人尝试过联系笔记本厂商、触摸板方案商甚至微软来提供逻辑实现方法但是没有渠道联系不上或者人家及大量IT人士认为没有价值所以最终决定自己开发主流windows笔记本的触摸板驱动（因为windows系统比macos好用、笔记本硬件价格便宜并且普及适应性广），本驱动程序仅凭我一人之力历经半年多时间艰苦攻坚奋战开发而成，驱动基本框架为原生Windows系统触摸板驱动Hidi2c.sys的逆向，并参考了微软公开的SPB驱动Sample，所有数据结构、函数源代码精准还原，修改注释掉极少部分代码并增加大量仿鼠标触摸板逻辑实现代码，获取到手指触摸点数据并完美还原全部手势操作， 驱动带有数字签名证书安装简便安全，欢迎大家免费下载使用。
 
-安装方法：
+
+驱动下载：
+(1)方法1：
+复制下面的链接到浏览器地址栏后回车
+https://github.com/jxleyo/MouseLikeTouchPad-Hidi2c_Driver/archive/refs/heads/main.zip
+直接下载驱动
+
+(1)方法2：
+复制下面的链接到浏览器地址栏后回车进入下载页面
 https://github.com/jxleyo/MouseLikeTouchPad-Hidi2c_Driver
-下载驱动后解压到任意文件夹，打开MouseLikeTouchPad-Hidi2c_Driver/x64/Release/Hidi2c_TouchPad文件夹，双击打开VRootCA.reg导入数字签名证书到注册表，然后右键Hidi2c_TouchPad.inf文件选择安装点击信任即可安装完成，最后重启笔记本电脑就能正常使用了。
+点击绿色的code按钮后再点击Download ZIP进行下载
+
+安装和卸载方法：
+下载的驱动zip文件解压到任意位置后打开，进入Installation Package子文件夹，安装/卸载驱动分别打开Install安装脚本.bat/Uninstall卸载脚本.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载。
+
+
+使用操作视频教程网址：
+https://space.bilibili.com/409976933
+https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
+
+
 
