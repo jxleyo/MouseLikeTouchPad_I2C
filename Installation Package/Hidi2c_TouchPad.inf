@@ -4,8 +4,8 @@ Class = HIDClass
 ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = Hidi2c_TouchPad.cat
-PnpLockdown=0	
-DriverVer = 03/16/2022,17.12.10.645
+PnpLockdown=1	
+DriverVer = 03/18/2022,17.45.49.924
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -46,7 +46,8 @@ HKR,,"UpperFilters",0x00010000,"mshidkmdf"
 [Hidi2c_TouchPad_Device.Configuration.AddReg]
 HKR,,"EnhancedPowerManagementEnabled",0x00010001,1
 HKR,,"DeviceResetNotificationEnabled",0x00010001,1
-HKR,,"LegacyTouchScaling",0x00010001,0
+HKR,,"LegacyTouchScaling",0x00010001,1
+
 
 
 
