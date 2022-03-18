@@ -31,7 +31,7 @@ VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue)//RegDeb
 
     //初始化OBJECT_ATTRIBUTES结构
     OBJECT_ATTRIBUTES  ObjectAttributes;
-    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_CASE_INSENSITIVE, NULL, NULL);//OBJ_CASE_INSENSITIVE对大小写敏感
 
     //创建注册表项
     HANDLE hKey;
@@ -855,9 +855,12 @@ NTSTATUS OnPrepareHardware(
     pDevContext->REPORTSIZE_PTPHQA = 0;//
 
     pDevContext->HidReportDescriptorSaved = FALSE;
-    pDevContext->MouseSensitivityIndex = 1;//默认初始值为序号1
-    pDevContext->MouseSensitivityValue = 1.0;//默认初始值为1.0
+    pDevContext->MouseSensitivity_Index = 1;//默认初始值为序号1
+    pDevContext->MouseSensitivity_Value = 1.0;//默认初始值为1.0
+    pDevContext->bWheelDisabled = TRUE;//默认初始值为开启滚轮操作
 
+
+    //读取鼠标灵敏度设置
     ULONG ms_idx;
     status = GetRegisterMouseSensitivity(pDevContext, &ms_idx);
     if (!NT_SUCCESS(status))
@@ -876,11 +879,38 @@ NTSTATUS OnPrepareHardware(
         }
     }
     else {
-        pDevContext->MouseSensitivityIndex = (ms_idx & 0x03) - 1;//存储的序号值为1/2/3计算更方便
-        pDevContext->MouseSensitivityValue = MouseSensitivityTable[pDevContext->MouseSensitivityIndex];
-        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivityIndex=", NULL, pDevContext->MouseSensitivityIndex);
+        pDevContext->MouseSensitivity_Index = (ms_idx & 0x03) - 1;//存储的序号值为1/2/3计算更方便
+        pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
+        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
     }
     
+
+    //读取滚轮开启关闭状态设置
+    ULONG bWheelDisabled = FALSE;////默认设置为开启滚轮操作
+    status = GetRegisterWheelDisabled(pDevContext, &bWheelDisabled);
+    if (!NT_SUCCESS(status))
+    {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            status = SetRegisterWheelDisabled(pDevContext, FALSE);//默认设置为开启滚轮操作
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"OnPrepareHardware SetRegisterWheelDisabled err", NULL, status);
+            }
+        }
+        else
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled err", NULL, status);
+        }
+    }
+    if (bWheelDisabled) {
+        pDevContext->bWheelDisabled = TRUE;
+    }
+    else {
+        pDevContext->bWheelDisabled = FALSE;
+    }
+    RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled=", NULL, bWheelDisabled);
+
 
     RegDebug(L"OnPrepareHardware ok", NULL, status);
     return STATUS_SUCCESS;
@@ -932,6 +962,8 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
         }
     }
 
+
+    pDevContext->bSetAAPThresholdOK = FALSE;//未设置AAPThreshold
     pDevContext->PtpInputModeOn = FALSE;
     pDevContext->SetFeatureReady = TRUE;
     pDevContext->SetInputModeOK = FALSE;
@@ -942,7 +974,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     pDevContext->contactCount = 0;
     MouseLikeTouchPad_parse_init(pDevContext);
 
-    //RegDebug(L"OnD0Entry ok", NULL, 0);
+    RegDebug(L"OnD0Entry ok", NULL, 0);
     return STATUS_SUCCESS;
 }
 
@@ -2639,6 +2671,8 @@ OnInterruptIsr(
             goto exit;
         }
 
+        SetAAPThreshold(pDevContext);//当前时间表明已经用户登录了系统，可以进行获取SID操作了
+
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
 
         //Single finger hybrid reporting mode单指混合模式
@@ -3802,6 +3836,10 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     BOOLEAN bMouse_LButton_Status = 0; //定义临时鼠标左键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
     BOOLEAN bMouse_MButton_Status = 0; //定义临时鼠标中键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
     BOOLEAN bMouse_RButton_Status = 0; //定义临时鼠标右键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+    BOOLEAN bMouse_BButton_Status = 0; //定义临时鼠标Back后退键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+    BOOLEAN bMouse_FButton_Status = 0; //定义临时鼠标Forward前进键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
+
+    //HKEY_CURRENT_USER\Control Panel\Desktop WheelScrollLines垂直滚轮一次几行-1为滚一屏 WheelScrollChars水平滚轮一次几行 
 
     //初始化当前触摸点索引号，跟踪后未再赋值的表示不存在了
     tp->nMouse_Pointer_CurrentIndex = -1;
@@ -3852,13 +3890,51 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
-    if (tp->currentFinger.IsButtonClicked) {//触摸板物理按键功能,切换触控板灵敏度,需要进行离开判定，因为按键报告会一直发送直到释放
-        tp->bPhysicalButtonUp = FALSE;//准备设置灵敏度
+    if (tp->currentFinger.IsButtonClicked) {//触摸板物理按键功能,切换触控板灵敏度/滚轮模式手指数量等参数,需要进行离开判定，因为按键报告会一直发送直到释放
+        tp->bPhysicalButtonUp = FALSE;//准备设置相关参数
     }
     else {
         if (!tp->bPhysicalButtonUp) {
             tp->bPhysicalButtonUp = TRUE;
-            SetNextSensitivity(pDevContext);//循环设置灵敏度
+            if (currentFinger_Count == 1) {//单指按压触控板物理按键时
+                SetNextSensitivity(pDevContext);//循环设置灵敏度
+            }
+            else if (currentFinger_Count == 2) {//双指按压触控板物理按键时设置为开启双指滚轮功能,未来三指三指按压触控板物理按键有其他用途时改为双指按压触控板左下角区域为开启、双指按压触控板右下角区域为关闭
+                //不采用3指滚轮方式因为判断区分双指先接触的操作必须加大时间阈值使得延迟太高不合适,玩游戏较少使用到滚轮功能可选择关闭切换可以极大降低玩游戏时的误操作率，所以采取开启关闭滚轮方案兼顾日常操作和游戏
+                
+                //保存注册表灵敏度设置数值
+                NTSTATUS status = SetRegisterWheelDisabled(pDevContext, FALSE);
+                if (!NT_SUCCESS(status))
+                {
+                    RegDebug(L"MouseLikeTouchPad_parse SetRegisterWheelDisabled err", NULL, status);
+                }
+                else {
+                    pDevContext->bWheelDisabled = FALSE;
+                    RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled", NULL, FALSE);
+                }   
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+            else if (currentFinger_Count == 3) {//三指按压触控板物理按键时设置为关闭双指滚轮功能,
+                //保存注册表灵敏度设置数值
+                NTSTATUS status = SetRegisterWheelDisabled(pDevContext, TRUE);
+                if (!NT_SUCCESS(status))
+                {
+                    RegDebug(L"MouseLikeTouchPad_parse SetRegisterWheelDisabled err", NULL, status);
+                }
+                else {
+                    pDevContext->bWheelDisabled = TRUE;
+                    RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled", NULL, TRUE);
+                }
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+            else if (currentFinger_Count == 4) {//四指按压触控板物理按键时
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+            else {
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+
+            
         }
     }
 
@@ -3886,7 +3962,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         tp->nMouse_Wheel_CurrentIndex = -1;
     }
     else if (tp->nMouse_Pointer_CurrentIndex != -1 && !tp->bMouse_Wheel_Mode) {  //指针已定义的非滚轮事件处理
-        //查找指针左侧或者右侧是否有并拢的手指作为滚轮模式或者按键模式，当指针左侧/右侧的手指按下时间与指针手指定义时间间隔小于设定阈值时判定为鼠标滚轮否则为鼠标按键，这一规则能有效区别按键与滚轮操作,但鼠标按键和滚轮不能一起使用
+        //查找指针左侧或者右侧是否有手指作为滚轮模式或者按键模式，当指针左侧/右侧的手指按下时间与指针手指定义时间间隔小于设定阈值时判定为鼠标滚轮否则为鼠标按键，这一规则能有效区别按键与滚轮操作,但鼠标按键和滚轮不能一起使用
         //按键定义后会跟踪坐标所以左键和中键不能滑动食指互相切换需要抬起食指后进行改变，左键/中键/右键按下的情况下不能转变为滚轮模式，
         LARGE_INTEGER MouseButton_Interval;
         MouseButton_Interval.QuadPart = (tp->current_Ticktime.QuadPart - tp->MousePointer_DefineTime.QuadPart) * tp->tick_Count / 10000;//单位ms毫秒
@@ -3901,8 +3977,13 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 float dy = (float)(tp->currentFinger.Contacts[i].Y - tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y);
                 float distance = sqrt(dx * dx + dy * dy);//触摸点与指针的距离
 
-                //指针左右侧有手指按下并且与指针手指起始定义时间间隔小于阈值，指针被定义后区分滚轮操作只需判断一次直到指针消失，后续按键操作判断不会被时间阈值约束使得响应速度不受影响
-                if (tp->bMouse_Wheel_Mode_JudgeEnable && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC) {
+                BOOLEAN isWheel = FALSE;//滚轮模式成立条件初始化重置，注意bWheelDisabled与bMouse_Wheel_Mode_JudgeEnable的作用不同，不能混淆
+                if (!pDevContext->bWheelDisabled) {//滚轮模式开启时
+                    // 指针左右侧有手指按下并且与指针手指起始定义时间间隔小于阈值，指针被定义后区分滚轮操作只需判断一次直到指针消失，后续按键操作判断不会被时间阈值约束使得响应速度不受影响
+                    isWheel = tp->bMouse_Wheel_Mode_JudgeEnable && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC;
+                }
+                
+                if (isWheel) {//滚轮模式条件成立
                     tp->bMouse_Wheel_Mode = TRUE;  //开启滚轮模式
                     tp->bMouse_Wheel_Mode_JudgeEnable = FALSE;//关闭滚轮判别
 
@@ -3970,8 +4051,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 }
             }
 
-            pMouseReport->dx = (UCHAR)(pDevContext->MouseSensitivityValue * px / tp->PointerSensitivity_x);
-            pMouseReport->dy = (UCHAR)(pDevContext->MouseSensitivityValue * py / tp->PointerSensitivity_y);
+            pMouseReport->dx = (UCHAR)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
+            pMouseReport->dy = (UCHAR)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
 
         }
     }
@@ -4008,8 +4089,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         px = px / direction_hscale;
         py = py / direction_vscale;
 
-        px = (float)(pDevContext->MouseSensitivityValue * px / tp->PointerSensitivity_x);
-        py = (float)(pDevContext->MouseSensitivityValue * py / tp->PointerSensitivity_y);
+        px = (float)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
+        py = (float)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
 
         tp->Scroll_TotalDistanceX += px;//累计滚动位移量
         tp->Scroll_TotalDistanceY += py;//累计滚动位移量
@@ -4034,7 +4115,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //其他组合无效
     }
 
-    pMouseReport->button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2);  //左中右键状态合成
+    pMouseReport->button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2) + (bMouse_BButton_Status << 3) + (bMouse_FButton_Status << 4);  //左中右后退前进键状态合成
 
     //保存下一轮所有触摸点的初始坐标及功能定义索引号
     tp->lastFinger = tp->currentFinger;
@@ -4092,7 +4173,7 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
 void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
 {
     
-    UCHAR ms_idx = pDevContext->MouseSensitivityIndex;// MouseSensitivity_Normal;//MouseSensitivity_Slow//MouseSensitivity_FAST
+    UCHAR ms_idx = pDevContext->MouseSensitivity_Index;// MouseSensitivity_Normal;//MouseSensitivity_Slow//MouseSensitivity_FAST
 
     ms_idx++;
     if (ms_idx == 3) {//灵敏度循环设置
@@ -4107,20 +4188,20 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
         return;
     }
 
-    pDevContext->MouseSensitivityIndex = ms_idx;
-    pDevContext->MouseSensitivityValue = MouseSensitivityTable[ms_idx];
-    RegDebug(L"SetNextSensitivity pDevContext->MouseSensitivityIndex", NULL, pDevContext->MouseSensitivityIndex);
+    pDevContext->MouseSensitivity_Index = ms_idx;
+    pDevContext->MouseSensitivity_Value = MouseSensitivityTable[ms_idx];
+    RegDebug(L"SetNextSensitivity pDevContext->MouseSensitivity_Index", NULL, pDevContext->MouseSensitivity_Index);
 
     RegDebug(L"SetNextSensitivity ok", NULL, status);
 }
 
 
-NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)
+NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)//保存设置到注册表
 {
     NTSTATUS status = STATUS_SUCCESS;
     WDFDEVICE device = pDevContext->FxDevice;
 
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"MouseSensitivityIndex");//效果等同下列多行
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"MouseSensitivity_Index");
 
     WDFKEY hKey = NULL;
 
@@ -4149,7 +4230,7 @@ NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)
 
 
 
-NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
+NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)//从注册表读取设置
 {
 
     NTSTATUS status = STATUS_SUCCESS;
@@ -4158,7 +4239,7 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
     WDFKEY hKey = NULL;
     *ms_idx = 0;
 
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"MouseSensitivityIndex");//效果等同下列多行
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"MouseSensitivity_Index");
 
     status = WdfDeviceOpenRegistryKey(
         device,
@@ -4171,6 +4252,9 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
     {
         status = WdfRegistryQueryULong(hKey, &ValueNameString, ms_idx);
     }
+    else {
+        RegDebug(L"GetRegisterMouseSensitivity err", NULL, status);
+    }
 
     if (hKey) {
         WdfObjectDelete(hKey);
@@ -4180,3 +4264,355 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
     return status;
 }
 
+
+
+NTSTATUS SetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG bWheelDisabled)//保存设置到注册表
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"WheelDisabled");
+
+    WDFKEY hKey = NULL;
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_WRITE,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status)) {
+        status = WdfRegistryAssignULong(hKey, &ValueNameString, bWheelDisabled);
+        if (!NT_SUCCESS(status)) {
+            RegDebug(L"SetRegisterWheelDisabled WdfRegistryAssignULong err", NULL, status);
+            return status;
+        }
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    RegDebug(L"SetRegisterWheelDisabled ok", NULL, status);
+    return status;
+}
+
+
+
+NTSTATUS GetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG* pWheelDisabled)//从注册表读取设置
+{
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    WDFKEY hKey = NULL;
+    *pWheelDisabled = FALSE;//默认开启滚轮模式
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"WheelDisabled");
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_READ,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status))
+    {
+        status = WdfRegistryQueryULong(hKey, &ValueNameString, pWheelDisabled);
+    }
+    else {
+        RegDebug(L"GetRegisterWheelDisabled err", NULL, status);
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    RegDebug(L"GetRegisterWheelDisabled end", NULL, status);
+    return status;
+}
+
+
+void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext)
+{
+    if (pDevContext->bSetAAPThresholdOK) {
+        return;
+    }
+
+    pDevContext->bSetAAPThresholdOK = TRUE;
+
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    pDevContext->bFoundRegCurrentUserSID = FALSE;//当前用户SID是否找到
+    UNICODE_STRING SidUserName;
+    status = GetCurrentUserSID(pDevContext, &SidUserName);//获取当前用户SID
+    if (!NT_SUCCESS(status)) {
+        RegDebug(L"OnD0Entry GetCurrentUserSID SidUserName err", NULL, status);
+    }
+    else {
+        status = SetRegisterAAPThreshold(&SidUserName);//设置Touchpad sensitivity触摸板敏感度AAPThreshold为最高Maximum sensitivity
+        if (!NT_SUCCESS(status)) {
+            RegDebug(L"OnD0Entry SetRegisterAAPThreshold SidUserName err", NULL, status);
+        }
+    }
+    if (SidUserName.Buffer != NULL)
+    {
+        RtlFreeUnicodeString(&SidUserName);
+    }
+
+    return;
+}
+
+NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//触控板AAP意外激活防护Accidental Activation Prevention功能，设置Touchpad sensitivity触摸板敏感度AAPThreshold为最高Maximum sensitivity
+{
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    if (pSidReg->Buffer == NULL || pSidReg->Length <= 20)
+    {
+        RegDebug(L"SetRegisterAAPThreshold pSidReg err", NULL, status);
+        return status;
+    }
+
+    //初始化注册表项
+    UNICODE_STRING stringKey;
+    UNICODE_STRING strAAPThreshold;
+
+    WCHAR CurrentUserbuf[256];
+    UNICODE_STRING RegCurrentUserLocation, RegUserLocation;
+    RtlInitUnicodeString(&RegUserLocation, L"\\Registry\\User\\");//HKET__USERS位置
+    RtlInitUnicodeString(&strAAPThreshold, L"\\Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad");//AAPThreshold键位置后段
+
+    RtlInitEmptyUnicodeString(&RegCurrentUserLocation, CurrentUserbuf, 256 * sizeof(WCHAR));
+
+    RtlCopyUnicodeString(&RegCurrentUserLocation, &RegUserLocation);
+    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, pSidReg);//得到HKET_CURRENT_USER位置
+    RegDebug(L"SetRegisterAAPThreshold HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
+
+    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, &strAAPThreshold);//得到完整AAPThreshold键位置
+    RtlInitUnicodeString(&stringKey, RegCurrentUserLocation.Buffer);
+    RegDebug(L"SetRegisterAAPThreshold AAPThreshold Key=", stringKey.Buffer, stringKey.Length);
+
+    //RtlInitUnicodeString(&stringKey, L"\\Registry\\Machine\\Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad");//AAPDisabled键位置
+
+    //初始化OBJECT_ATTRIBUTES结构
+    OBJECT_ATTRIBUTES  ObjectAttributes;
+    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE对大小写敏感
+
+    //创建注册表项
+    HANDLE hKey;
+    ULONG Des;
+    status = ZwCreateKey(&hKey, KEY_ALL_ACCESS, &ObjectAttributes, 0, NULL, REG_OPTION_NON_VOLATILE, &Des);//KEY_ALL_ACCESS//KEY_READ| KEY_WRITE
+    if (NT_SUCCESS(status))
+    {
+        if (Des == REG_CREATED_NEW_KEY)
+        {
+            KdPrint(("新建注册表项！\n"));
+        }
+        else
+        {
+            KdPrint(("要创建的注册表项已经存在！\n"));
+        }
+    }
+    else {
+        RegDebug(L"SetRegisterAAPThreshold ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
+        return status;
+    }
+
+
+    //初始化valueName
+    UNICODE_STRING valueName;
+    RtlInitUnicodeString(&valueName, L"AAPThreshold");
+
+    //设置REG_DWORD键值
+    ULONG AAPThreshold = 0;//设置触摸板敏感度为最高,0 == Most sensitive,1 == High sensitivity,2 == Medium sensitivity(default),3 == Low sensitivity
+    status = ZwSetValueKey(hKey, &valueName, 0, REG_DWORD, &AAPThreshold, 4);
+    if (!NT_SUCCESS(status))
+    {
+        KdPrint(("设置REG_DWORD键值失败！\n"));
+        RegDebug(L"SetRegisterAAPThreshold err", NULL, status);
+    }
+
+    ////初始化valueName2
+    //UNICODE_STRING valueName2;
+    //RtlInitUnicodeString(&valueName2, L"AAPDisabled");
+
+    ////设置REG_DWORD键值
+    //ULONG AAPDisabled = 1;//关闭触摸板敏感度功能
+    //status = ZwSetValueKey(hKey, &valueName2, 0, REG_DWORD, &AAPDisabled, 4);
+    //if (!NT_SUCCESS(status))
+    //{
+    //    KdPrint(("设置REG_DWORD键值失败！\n"));
+    //}
+
+    ZwFlushKey(hKey);
+    //关闭注册表句柄
+    ZwClose(hKey);
+
+    RegDebug(L"SetRegisterAAPThreshold end", NULL, status);
+    return status;
+}
+
+
+NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg)
+{
+    //RegDebug(L"GetCurrentUserSID start", NULL, 0);
+
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    HANDLE hRegHandle = NULL;
+    OBJECT_ATTRIBUTES objSid;
+    ULONG uRetLength = 0;
+    PKEY_FULL_INFORMATION pkfiQuery = NULL;
+    PKEY_BASIC_INFORMATION pbiEnumKey = NULL;
+    ULONG uIndex = 0;
+    UNICODE_STRING uniKeyName;
+    WCHAR ProfileListBuf[256];
+    WCHAR RegSidBuf[256];
+    UNICODE_STRING RegProfileList, strSaveSidRegLocation, RegSid;
+    RTL_QUERY_REGISTRY_TABLE paramTable[2];
+    ULONG udefaultData = 0;
+    ULONG uQueryValue;
+
+    
+    RtlZeroMemory(paramTable, sizeof(paramTable));
+
+    paramTable[0].Flags = RTL_QUERY_REGISTRY_DIRECT;
+    paramTable[0].Name = L"RefCount";
+    paramTable[0].EntryContext = &uQueryValue;
+    paramTable[0].DefaultType = REG_DWORD;
+    paramTable[0].DefaultData = &udefaultData;
+    paramTable[0].DefaultLength = sizeof(ULONG);
+
+    RtlInitUnicodeString(&strSaveSidRegLocation, L"\\Registry\\Machine\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\");
+ 
+    RtlInitEmptyUnicodeString(&RegProfileList, ProfileListBuf, 256 * sizeof(WCHAR));
+    RtlCopyUnicodeString(&RegProfileList, &strSaveSidRegLocation);
+
+    RtlInitEmptyUnicodeString(&RegSid, RegSidBuf, 256 * sizeof(WCHAR));
+
+    InitializeObjectAttributes(&objSid, &strSaveSidRegLocation, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE
+
+    status = ZwOpenKey(&hRegHandle, KEY_ALL_ACCESS, &objSid);//KEY_ALL_ACCESS//KEY_READ
+    if (!NT_SUCCESS(status))
+    {
+        RegDebug(L"GetCurrentUserSID ZwOpenKey err", NULL, status);
+        goto END;
+    }
+
+    //ZwQueryKey ZwEnumKey Get Sid
+    status = ZwQueryKey(hRegHandle, KeyFullInformation, NULL, 0, &uRetLength);
+    if (status != STATUS_BUFFER_TOO_SMALL)//必须是该错误
+    {
+        RegDebug(L"GetCurrentUserSID ZwQueryKey err", NULL, status);
+        goto END;
+    }
+
+    pkfiQuery = (PKEY_FULL_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
+    if (pkfiQuery == NULL)
+    {
+        RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pkfiQuery err", NULL, status);
+        goto END;
+    }
+
+    RtlZeroMemory(pkfiQuery, uRetLength);
+    status = ZwQueryKey(hRegHandle, KeyFullInformation, pkfiQuery, uRetLength, &uRetLength);
+    if (!NT_SUCCESS(status))
+    {
+        RegDebug(L"GetCurrentUserSID ZwQueryKey pkfiQuery err", NULL, status);
+        goto END;
+    }
+
+    RegDebug(L"GetCurrentUser ZwQueryKey pkfiQuery ok", NULL, status);
+    for (uIndex = 0; uIndex < pkfiQuery->SubKeys; uIndex++)
+    {
+        status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, NULL, 0, &uRetLength);
+        if (status != STATUS_BUFFER_TOO_SMALL)//必须是该错误
+        {
+            RegDebug(L"GetCurrentUserSID ZwEnumerateKey err", NULL, status);
+            goto END;
+        }
+
+        pbiEnumKey = (PKEY_BASIC_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
+        if (pbiEnumKey == NULL)
+        {
+            RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pbiEnumKey err", NULL, status);
+            goto END;
+        }
+
+        RtlZeroMemory(pbiEnumKey, uRetLength);
+        status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, pbiEnumKey, uRetLength, &uRetLength);
+        if (!NT_SUCCESS(status))
+        {
+            RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey err", NULL, status);
+            goto END;
+        }
+
+        RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey ok", NULL, status);
+        uniKeyName.Length = (USHORT)pbiEnumKey->NameLength;
+        uniKeyName.MaximumLength = (USHORT)pbiEnumKey->NameLength;
+        uniKeyName.Buffer = pbiEnumKey->Name;
+        //RegDebug(L"GetCurrentUser pbiEnumKey->Name=", pbiEnumKey->Name, pbiEnumKey->NameLength);
+
+        if (pbiEnumKey->NameLength > 20)
+        {
+            BOOLEAN* pFoundSID = &pDevContext->bFoundRegCurrentUserSID;
+            if (!(*pFoundSID)) {//第一个找到的SID先保存，如果后面有多用户SID会被替换
+                *pFoundSID = TRUE;//找到当前用户SID
+                RtlCopyUnicodeString(&RegSid, &uniKeyName);//SID内容会变化所以用定长数值buf的RegSid
+                RegDebug(L"GetCurrentUserSID RegSid =", RegSid.Buffer, RegSid.Length);
+            }
+
+            //判断多用户下登录的当前用户SID
+            RtlAppendUnicodeStringToString(&RegProfileList, &uniKeyName);
+            RtlQueryRegistryValues(RTL_REGISTRY_ABSOLUTE, RegProfileList.Buffer, paramTable, NULL, NULL);
+            if (uQueryValue > 0)//当前登录用户
+            {
+                RtlCopyUnicodeString(&RegSid, &uniKeyName);//SID内容会变化所以用定长数值buf的RegSid//替换初始用户SID
+                RegDebug(L"GetCurrentUserSID new RegSid =", RegSid.Buffer, RegSid.Length);
+            }
+        }
+
+        RtlCopyUnicodeString(&RegProfileList, &strSaveSidRegLocation);
+
+    }  
+
+    if (RegSid.Length <=20)
+    {
+        status = STATUS_UNSUCCESSFUL;
+        RegDebug(L"GetCurrentUserSID RegSid.Length err", NULL, status);
+        goto END;
+    }
+
+    //赋值最终SID常量
+    pSidReg->Buffer = (PWCHAR)ExAllocatePoolWithTag(NonPagedPool, RegSid.Length, HIDI2C_POOL_TAG);
+    if (pSidReg->Buffer == NULL)
+    {
+        status = STATUS_UNSUCCESSFUL;
+        RegDebug(L"GetCurrentUserSID pSidReg->Buffer err", NULL, status);
+        goto END;
+    }
+
+    pSidReg->Length = RegSid.Length;//必须设置长度，否则pSidReg数据会错误
+    pSidReg->MaximumLength = RegSid.Length;
+    RtlCopyUnicodeString(pSidReg, &RegSid);//注意顺序在设置长度之后，否则pSidReg数据会错误
+
+    //RegDebug(L"GetCurrentUserSID RegSid2 =", RegSid.Buffer, RegSid.Length);
+    RegDebug(L"GetCurrentUserSID pSidReg =", pSidReg->Buffer, pSidReg->Length);
+
+
+END:
+    if (pbiEnumKey != NULL) {
+        ExFreePoolWithTag(pbiEnumKey, HIDI2C_POOL_TAG);
+        pbiEnumKey = NULL;
+    }
+    if (pkfiQuery != NULL) {
+        ExFreePoolWithTag(pkfiQuery, HIDI2C_POOL_TAG);
+        pkfiQuery = NULL;
+    }
+    if (hRegHandle != NULL)
+    {
+        ZwClose(hRegHandle);
+        hRegHandle = NULL;
+    }
+
+    return status;
+}

@@ -52,6 +52,8 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 #define SCROLL_OFFSET_THRESHOLD_X      100   // 滚动位移量X阈值 
 #define SCROLL_OFFSET_THRESHOLD_Y      100   // 滚动位移量Y阈值 
+#define cDefault_WheelModeFingerAmount      3   // 默认滚轮操作模式手指数量
+
 
 
 
@@ -290,11 +292,15 @@ typedef struct _DEVICE_CONTEXT
     UCHAR   GetStringStep;
 
     BOOLEAN PtpInputModeOn;
+    BOOLEAN bFoundRegCurrentUserSID;
+    BOOLEAN bSetAAPThresholdOK;
 
     //MouseLikeTouchpad Paser context
     PTP_PARSER  tp_settings;  //PTP_PARSER数据
-    UCHAR MouseSensitivityIndex;
-    double MouseSensitivityValue;
+    UCHAR MouseSensitivity_Index;
+    double MouseSensitivity_Value;
+
+    BOOLEAN bWheelDisabled;//当前滚轮模式开启关闭状态
 
 } DEVICE_CONTEXT, * PDEVICE_CONTEXT;
 
@@ -787,13 +793,13 @@ const unsigned char TouchpadReportDescriptor[] = {//本描述符只作为上层客户端驱动
             0xA1, 0x00, //     COLLECTION(Physical)
             0x05, 0x09, //     USAGE_PAGE(Button)
             0x19, 0x01, //     USAGE_MINIMUM(button 1)   Button 按键， 位 0 左键， 位1 右键， 位2 中键
-            0x29, 0x03, //     USAGE_MAXMUM(button 3)  //0x03限制最大的鼠标按键数量
+            0x29, 0x07, //     USAGE_MAXMUM(button 5)  //0x05限制最大的鼠标按键数量
             0x15, 0x00, //     LOGICAL_MINIMUM(0)
             0x25, 0x01, //     LOGICAL_MAXIMUM(1)
             0x75, 0x01, //     REPORT_SIZE(1)
-            0x95, 0x03, //     REPORT_COUNT(3)  //0x03鼠标按键数量
+            0x95, 0x07, //     REPORT_COUNT(3)  //0x05鼠标按键数量,新增4号Back/5号Forward后退前进功能键
             0x81, 0x02, //     INPUT(Data,Var,Abs)
-            0x95, 0x05, //     REPORT_COUNT(5) //需要补足多少个bit使得加上鼠标按键数量的3个bit位成1个字节8bit
+            0x95, 0x01, //     REPORT_COUNT(3) //需要补足多少个bit使得加上鼠标按键数量的n个bit位成1个字节8bit
             0x81, 0x03, //     INPUT (Cnst,Var,Abs)////一般pending补位的input用Cnst常量0x03
             0x05, 0x01, //     USAGE_PAGE(Generic Desktop)
             0x09, 0x30, //     USAGE(X)       X移动
@@ -1084,6 +1090,15 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
 
 NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx);
+
+NTSTATUS SetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG bWheelDisabled);
+
+NTSTATUS GetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG* pWheelDisabled);
+
+NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg);
+NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg); 
+void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext);
+
 
 NTSTATUS
 HidSendResetNotification(
