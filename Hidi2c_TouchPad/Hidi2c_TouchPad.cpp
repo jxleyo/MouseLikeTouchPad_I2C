@@ -1,7 +1,7 @@
 #include "Hidi2c_TouchPad.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 1
+#define debug_on 0
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -855,9 +855,18 @@ NTSTATUS OnPrepareHardware(
     pDevContext->REPORTSIZE_PTPHQA = 0;//
 
     pDevContext->HidReportDescriptorSaved = FALSE;
-    pDevContext->MouseSensitivity_Index = 1;//默认初始值为序号1
-    pDevContext->MouseSensitivity_Value = 1.0;//默认初始值为1.0
+    pDevContext->MouseSensitivity_Index = 1;//默认初始值为MouseSensitivityTable存储表的序号1项
+    pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];//默认初始值为1.0
+
+    pDevContext->ScrollSpeed_Index = 0;//默认初始值为ScrollSpeedTable存储表的序号0项
+    pDevContext->ScrollSpeed_Value = ScrollSpeedTable[pDevContext->ScrollSpeed_Index];//默认初始值为3
+
     pDevContext->bWheelDisabled = TRUE;//默认初始值为开启滚轮操作
+
+    //初始化当前登录用户的SID
+    pDevContext->strCurrentUserSID.Buffer = NULL;
+    pDevContext->strCurrentUserSID.Length = 0;
+    pDevContext->strCurrentUserSID.MaximumLength = 0;
 
 
     //读取鼠标灵敏度设置
@@ -868,7 +877,7 @@ NTSTATUS OnPrepareHardware(
         if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
         {
             RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
-            status = SetRegisterMouseSensitivity(pDevContext, 2);//默认设置为序号1，存储值为2
+            status = SetRegisterMouseSensitivity(pDevContext, pDevContext->MouseSensitivity_Index);//初始默认设置
             if (!NT_SUCCESS(status)) {
                 RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
             }
@@ -879,11 +888,42 @@ NTSTATUS OnPrepareHardware(
         }
     }
     else {
-        pDevContext->MouseSensitivity_Index = (ms_idx & 0x03) - 1;//存储的序号值为1/2/3计算更方便
+        if (ms_idx > 2) {//如果读取的数值错误
+            ms_idx = pDevContext->MouseSensitivity_Index;//恢复初始默认值
+        }
+        pDevContext->MouseSensitivity_Index = (UCHAR)ms_idx;
         pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
         RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
     }
     
+
+    //读取鼠标滚轮速度设置
+    ULONG ss_idx;
+    status = GetRegisterScrollSpeedIndex(pDevContext, &ss_idx);
+    if (!NT_SUCCESS(status))
+    {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            status = SetRegisterScrollSpeedIndex(pDevContext, pDevContext->ScrollSpeed_Index);//初始默认设置
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"OnPrepareHardware SetRegisterScrollSpeedIndex err", NULL, status);
+            }
+        }
+        else
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex err", NULL, status);
+        }
+    }
+    else {
+        if (ss_idx > 1) {//如果读取的数值错误
+            ss_idx = pDevContext->ScrollSpeed_Index;//恢复初始默认值
+        }
+        pDevContext->ScrollSpeed_Index = (UCHAR)ss_idx;
+        pDevContext->ScrollSpeed_Value = ScrollSpeedTable[pDevContext->ScrollSpeed_Index];
+        RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex ScrollSpeed_Index=", NULL, pDevContext->ScrollSpeed_Index);
+    }
+
 
     //读取滚轮开启关闭状态设置
     ULONG bWheelDisabled = FALSE;////默认设置为开启滚轮操作
@@ -3839,8 +3879,6 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     BOOLEAN bMouse_BButton_Status = 0; //定义临时鼠标Back后退键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
     BOOLEAN bMouse_FButton_Status = 0; //定义临时鼠标Forward前进键状态，0为释放，1为按下，每次都需要重置确保后面逻辑
 
-    //HKEY_CURRENT_USER\Control Panel\Desktop WheelScrollLines垂直滚轮一次几行-1为滚一屏 WheelScrollChars水平滚轮一次几行 
-
     //初始化当前触摸点索引号，跟踪后未再赋值的表示不存在了
     tp->nMouse_Pointer_CurrentIndex = -1;
     tp->nMouse_LButton_CurrentIndex = -1;
@@ -3890,18 +3928,37 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
-    if (tp->currentFinger.IsButtonClicked) {//触摸板物理按键功能,切换触控板灵敏度/滚轮模式手指数量等参数,需要进行离开判定，因为按键报告会一直发送直到释放
-        tp->bPhysicalButtonUp = FALSE;//准备设置相关参数
+    if (tp->currentFinger.IsButtonClicked) {//触摸板下沿物理按键功能,切换触控板灵敏度/滚轮模式开关等参数设置,需要进行离开判定，因为按键报告会一直发送直到释放
+        tp->bPhysicalButtonUp = FALSE;//准备设置触摸板下沿物理按键相关参数
+        if (currentFinger_Count == 1) {//单指重按触控板左下角物理键为鼠标的后退功能键，单指重按触控板右下角物理键为鼠标的前进功能键，单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），
+            if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y / 2) && tp->currentFinger.Contacts[0].X < tp->StartX_LEFT) {//首个触摸点坐标在左下角
+                bMouse_BButton_Status = 1;//鼠标侧面的后退键按下
+            }
+            else if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y / 2) && tp->currentFinger.Contacts[0].X > tp->StartX_RIGHT) {//首个触摸点坐标在右下角
+                bMouse_FButton_Status = 1;//鼠标侧面的前进键按下
+            }
+            else {//切换鼠标DPI灵敏度，放在物理键释放时执行判断
+
+            }
+
+        }
     }
     else {
         if (!tp->bPhysicalButtonUp) {
             tp->bPhysicalButtonUp = TRUE;
-            if (currentFinger_Count == 1) {//单指按压触控板物理按键时
-                SetNextSensitivity(pDevContext);//循环设置灵敏度
+            if (currentFinger_Count == 1) {//单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），鼠标的后退/前进功能键不需要判断会自动释放)，
+                if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
+                    && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y/2) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
+                    //切换鼠标DPI灵敏度
+                    SetNextSensitivity(pDevContext);//循环设置灵敏度
+                }          
             }
-            else if (currentFinger_Count == 2) {//双指按压触控板物理按键时设置为开启双指滚轮功能,未来三指三指按压触控板物理按键有其他用途时改为双指按压触控板左下角区域为开启、双指按压触控板右下角区域为关闭
+            else if (currentFinger_Count == 2) {//双指重按触控板下沿物理键时设置为开启双指滚轮功能
                 //不采用3指滚轮方式因为判断区分双指先接触的操作必须加大时间阈值使得延迟太高不合适,玩游戏较少使用到滚轮功能可选择关闭切换可以极大降低玩游戏时的误操作率，所以采取开启关闭滚轮方案兼顾日常操作和游戏
-                
+                //触控板实现的鼠标功能已经很强大了并且配合系统快捷键足够高效所以没有三指/四指手势功能大大降低了学习记忆成本。
+
                 //保存注册表灵敏度设置数值
                 NTSTATUS status = SetRegisterWheelDisabled(pDevContext, FALSE);
                 if (!NT_SUCCESS(status))
@@ -3914,7 +3971,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 }   
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
-            else if (currentFinger_Count == 3) {//三指按压触控板物理按键时设置为关闭双指滚轮功能,
+            else if (currentFinger_Count == 3) {//三指重按触控板下沿物理键时设置为关闭双指滚轮功能,
                 //保存注册表灵敏度设置数值
                 NTSTATUS status = SetRegisterWheelDisabled(pDevContext, TRUE);
                 if (!NT_SUCCESS(status))
@@ -3928,6 +3985,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             else if (currentFinger_Count == 4) {//四指按压触控板物理按键时
+                //切换鼠标滚轮速度
+                SetNextScrollSpeed(pDevContext);//循环设置滚轮速度(一次滚动3行/1行)
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             else {
@@ -4170,9 +4229,212 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
 }
 
 
-void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
+NTSTATUS  SetRegisterScrollSpeedActualValue(PUNICODE_STRING pSidReg,ULONG ScrollSpeedActualValue)//设置注册表滚轮速度的实际数值
 {
-    
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    if (pSidReg->Buffer == NULL || pSidReg->Length <= 20)
+    {
+        RegDebug(L"SetRegisterScrollSpeedActualValue pSidReg err", NULL, status);
+        return status;
+    }
+
+    //初始化注册表项
+    UNICODE_STRING stringKey;
+    UNICODE_STRING strWheelScrollLocation;
+
+    WCHAR CurrentUserbuf[256];
+    UNICODE_STRING RegCurrentUserLocation, RegUserLocation;
+    RtlInitUnicodeString(&RegUserLocation, L"\\Registry\\User\\");//HKET__USERS位置
+    RtlInitUnicodeString(&strWheelScrollLocation, L"\\Control Panel\\Desktop");//WheelScrollLines、WheelScrollChars键位置后段
+
+    RtlInitEmptyUnicodeString(&RegCurrentUserLocation, CurrentUserbuf, 256 * sizeof(WCHAR));
+
+    RtlCopyUnicodeString(&RegCurrentUserLocation, &RegUserLocation);
+    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, pSidReg);//得到HKET_CURRENT_USER位置
+    RegDebug(L"SetRegisterScrollSpeedActualValue HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
+
+    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, &strWheelScrollLocation);//得到完整WheelScrollLines、WheelScrollChars键位置
+    RtlInitUnicodeString(&stringKey, RegCurrentUserLocation.Buffer);
+    RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollLines、WheelScrollChars Key=", stringKey.Buffer, stringKey.Length);
+
+
+    //初始化OBJECT_ATTRIBUTES结构
+    OBJECT_ATTRIBUTES  ObjectAttributes;
+    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE对大小写敏感
+
+    //创建注册表项
+    HANDLE hKey;
+    ULONG Des;
+    status = ZwCreateKey(&hKey, KEY_ALL_ACCESS, &ObjectAttributes, 0, NULL, REG_OPTION_NON_VOLATILE, &Des);//KEY_ALL_ACCESS//KEY_READ| KEY_WRITE
+    if (NT_SUCCESS(status))
+    {
+        if (Des == REG_CREATED_NEW_KEY)
+        {
+            KdPrint(("新建注册表项！\n"));
+        }
+        else
+        {
+            KdPrint(("要创建的注册表项已经存在！\n"));
+        }
+    }
+    else {
+        RegDebug(L"SetRegisterScrollSpeedActualValue ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
+        return status;
+    }
+
+
+    //初始化valueName
+    UNICODE_STRING valueName1, valueName2;
+    RtlInitUnicodeString(&valueName1, L"WheelScrollLines");//WheelScrollLines垂直滚轮一次几行 - 1为滚一屏
+    RtlInitUnicodeString(&valueName2, L"WheelScrollChars");//WheelScrollChars水平滚轮一次几行
+
+    //设置REG_DWORD键值
+    ULONG WheelScrollLines = ScrollSpeedActualValue;//设置滚轮速度，一次n行，-1为滚一屏
+    ULONG WheelScrollChars = ScrollSpeedActualValue;//WheelScrollChars水平滚轮一次几行
+
+    WCHAR* strWheelScrollLines;
+    WCHAR* strWheelScrollChars;
+    if (WheelScrollLines == 1) {
+        strWheelScrollLines = L"1";
+    }
+    else {
+        strWheelScrollLines = L"3";
+    }
+    if (WheelScrollChars == 1) {
+        strWheelScrollChars = L"1";
+    }
+    else {
+        strWheelScrollChars = L"3";
+    }
+
+    status = ZwSetValueKey(hKey, &valueName1, 0, REG_SZ, strWheelScrollLines, 4);
+    if (!NT_SUCCESS(status))
+    {
+        KdPrint(("设置REG_DWORD键值失败！\n"));
+        RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollLines err", NULL, status);
+    }
+    status = ZwSetValueKey(hKey, &valueName2, 0, REG_SZ, strWheelScrollChars, 4);
+    if (!NT_SUCCESS(status))
+    {
+        KdPrint(("设置REG_DWORD键值失败！\n"));
+        RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollChars err", NULL, status);
+    }
+
+    ZwFlushKey(hKey);
+    //关闭注册表句柄
+    ZwClose(hKey);
+
+    RegDebug(L"SetRegisterScrollSpeedActualValue end", NULL, status);
+    return status;
+}
+
+
+void SetNextScrollSpeed(PDEVICE_CONTEXT pDevContext)
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    UCHAR ss_idx = pDevContext->ScrollSpeed_Index;// ScrollSpeed_Normal;//ScrollSpeed_Slow
+
+    ss_idx++;
+    if (ss_idx == 2) {//灵敏度循环设置
+        ss_idx = 0;
+    }
+
+    //保存注册表滚轮速度的实际数值设置
+    if (pDevContext->strCurrentUserSID.Buffer !=NULL && pDevContext->strCurrentUserSID.Length > 0) {//已经获取SID
+        status = SetRegisterScrollSpeedActualValue(&pDevContext->strCurrentUserSID, ScrollSpeedTable[ss_idx]);
+        if (!NT_SUCCESS(status))
+        {
+            RegDebug(L"SetNextScrollSpeed SetRegisterScrollSpeedActualValue err", NULL, status);
+            return;
+        }
+    }
+
+    //保存注册表滚轮速度的序号设置数值
+    status = SetRegisterScrollSpeedIndex(pDevContext, ss_idx);//ScrollSpeedTable存储表的序号值
+    if (!NT_SUCCESS(status))
+    {
+        RegDebug(L"SetNextScrollSpeed SetRegisterScrollSpeed err", NULL, status);
+        return;
+    }
+
+    pDevContext->ScrollSpeed_Index = ss_idx;
+    pDevContext->ScrollSpeed_Value = ScrollSpeedTable[ss_idx];
+    RegDebug(L"SetNextScrollSpeed pDevContext->ScrollSpeed_Index", NULL, pDevContext->ScrollSpeed_Index);
+
+    RegDebug(L"SetNextScrollSpeed ok", NULL, status);
+}
+
+NTSTATUS SetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG ss_idx)//保存设置到注册表
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ScrollSpeed_Index");
+
+    WDFKEY hKey = NULL;
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_WRITE,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status)) {
+        status = WdfRegistryAssignULong(hKey, &ValueNameString, ss_idx);
+        if (!NT_SUCCESS(status)) {
+            RegDebug(L"SetRegisterScrollSpeedIndex WdfRegistryAssignULong err", NULL, status);
+            return status;
+        }
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    RegDebug(L"SetRegisterScrollSpeedIndex ok", NULL, status);
+    return status;
+}
+
+
+NTSTATUS GetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG* ss_idx)//从注册表读取设置
+{
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    WDFKEY hKey = NULL;
+    *ss_idx = 0;
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ScrollSpeed_Index");
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_READ,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status))
+    {
+        status = WdfRegistryQueryULong(hKey, &ValueNameString, ss_idx);
+    }
+    else {
+        RegDebug(L"SetRegisterScrollSpeedIndex err", NULL, status);
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    RegDebug(L"SetRegisterScrollSpeedIndex end", NULL, status);
+    return status;
+}
+
+
+void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
+{  
     UCHAR ms_idx = pDevContext->MouseSensitivity_Index;// MouseSensitivity_Normal;//MouseSensitivity_Slow//MouseSensitivity_FAST
 
     ms_idx++;
@@ -4181,7 +4443,7 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
     }
 
     //保存注册表灵敏度设置数值
-    NTSTATUS status = SetRegisterMouseSensitivity(pDevContext, ms_idx + 1);//存储的序号值为1/2/3计算更方便
+    NTSTATUS status = SetRegisterMouseSensitivity(pDevContext, ms_idx);//MouseSensitivityTable存储表的序号值
     if (!NT_SUCCESS(status))
     {
         RegDebug(L"SetNextSensitivity SetRegisterMouseSensitivity err", NULL, status);
@@ -4355,6 +4617,17 @@ void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext)
         if (!NT_SUCCESS(status)) {
             RegDebug(L"OnD0Entry SetRegisterAAPThreshold SidUserName err", NULL, status);
         }
+
+        //保存SID
+        pDevContext->strCurrentUserSID.Buffer = (PWCHAR)ExAllocatePoolWithTag(NonPagedPool, SidUserName.Length, HIDI2C_POOL_TAG);
+        if (pDevContext->strCurrentUserSID.Buffer == NULL)
+        {
+            status = STATUS_UNSUCCESSFUL;
+            RegDebug(L"GetCurrentUserSID pDevContext->strCurrentUserSID.Buffer err", NULL, status);
+        }
+        pDevContext->strCurrentUserSID.Length = SidUserName.Length;//必须设置长度，否则数据会错误
+        pDevContext->strCurrentUserSID.MaximumLength = SidUserName.Length;
+        RtlCopyUnicodeString(&pDevContext->strCurrentUserSID, &SidUserName);//注意顺序在设置长度之后，否则数据会错误
     }
     if (SidUserName.Buffer != NULL)
     {

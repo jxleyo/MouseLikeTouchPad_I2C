@@ -100,6 +100,8 @@ typedef struct _PTP_REPORT {
 CHAR UnitExponent_Table[16] ={0,1,2,3,4,5,6,7,-8,-7,-6,-5,-4,-3,-2,1};
 
 double MouseSensitivityTable[3] = { 0.8,1.0,1.25};
+char ScrollSpeedTable[2] = { 3,1};
+
 
 
 typedef struct _PTP_PARSER {
@@ -297,10 +299,16 @@ typedef struct _DEVICE_CONTEXT
 
     //MouseLikeTouchpad Paser context
     PTP_PARSER  tp_settings;  //PTP_PARSER数据
+
     UCHAR MouseSensitivity_Index;
     double MouseSensitivity_Value;
 
+    UCHAR ScrollSpeed_Index;
+    char ScrollSpeed_Value;
+    
     BOOLEAN bWheelDisabled;//当前滚轮模式开启关闭状态
+
+    UNICODE_STRING strCurrentUserSID;//当前登录用户的SID
 
 } DEVICE_CONTEXT, * PDEVICE_CONTEXT;
 
@@ -1087,12 +1095,17 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
 void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 
-NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
+void SetNextScrollSpeed(PDEVICE_CONTEXT pDevContext);
 
+NTSTATUS  SetRegisterScrollSpeedActualValue(PUNICODE_STRING pSidReg, ULONG ScrollSpeedActualValue);
+
+NTSTATUS SetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG ss_idx);
+NTSTATUS GetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG* ss_idx);
+
+NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
 NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx);
 
 NTSTATUS SetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG bWheelDisabled);
-
 NTSTATUS GetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG* pWheelDisabled);
 
 NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg);
