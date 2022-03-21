@@ -210,7 +210,7 @@ devcon update Hidi2c_TouchPad.inf %hwidstr%  && (
     pause
     shutdown -r -f -t 0
 ) || (
-     echo Hidi2c_TouchPad第三方驱动安装失败，重启电脑后再次运行本安装程序即可成功安装
+     echo Hidi2c_TouchPad第三方驱动安装失败，需要重启电脑后再次运行本安装程序即可成功安装
      echo 按任意键恢复原版驱动并退出
      echo.
      pause
