@@ -92,8 +92,8 @@ find/i "HID" hwid0.tmp && (
     echo 找到触控板设备
     echo.
 ) || (
-     echo 未发现触控板设备，按任意键将自动安装Windows原版驱动，或者关闭本窗口手动安装原版驱动
-     echo.
+     echo 未发现触控板设备，按任意键将自动安装Windows原版驱动后再次尝试查找触控板设备
+     echo 多次尝试都是 未发现触控板设备 则本驱动不兼容该笔记本电脑硬件
      del/f /q hwid*.tmp
      pause
      goto seek
@@ -208,18 +208,20 @@ devcon update Hidi2c_TouchPad.inf %hwidstr%  && (
     echo 请重压一下触控板按键查看是否工作正常，如果正常请关闭本窗口以取消重启
     echo 如果触控板不工作请按任意键重启电脑
     pause
-    shutdown -r -f -t 0
+
 ) || (
-     echo Hidi2c_TouchPad第三方驱动安装失败，需要重启电脑后再次运行本安装程序即可成功安装
-     echo 按任意键恢复原版驱动并退出
      echo.
-     pause
      devcon update C:\Windows\INF\hidi2c.inf %hwidstr%
      devcon rescan
      devcon update hidi2c.inf %hwidstr%
      devcon rescan
-     exit    
+     echo.
+     echo Hidi2c_TouchPad第三方驱动安装准备就绪，按任意键重启电脑后再次运行本安装程序即可成功安装
+     pause 
 )
 echo.
+
+shutdown -r -f -t 0
+
 
 
