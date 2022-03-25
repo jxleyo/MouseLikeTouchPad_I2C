@@ -140,7 +140,7 @@ for /f "delims=^" %%i in (hwid3.tmp) do (
     set "hwIDstr=%%i"
     echo !hwIDstr!>hwID.txt
 )
-echo 触控板touchpad设备所使用的i2c总线mini port设备id为%hwIDstr%
+echo 人体学输入设备/人机接口设备列表内touchpad触控板对应的I2C设备id为  %hwIDstr%
 echo 按任意键继续安装
 pause
 echo.
@@ -181,7 +181,7 @@ for /f "delims=: tokens=2"  %%i in (i2c_dev_tp1.tmp) do (
     set "hwNameStr=%%i" 
     echo !hwNameStr!>hwName.txt
 )
-echo touchpad触控板对应的I2C设备名称为  %hwNameStr%
+echo 人体学输入设备/人机接口设备列表内touchpad触控板对应的I2C设备名称为  %hwNameStr%
 echo 按任意键继续安装
 pause
 echo.

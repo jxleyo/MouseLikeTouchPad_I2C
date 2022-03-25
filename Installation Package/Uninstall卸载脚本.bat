@@ -108,7 +108,7 @@ for /f "delims=^" %%i in (hwid3.tmp) do (
     set "hwIDstr=%%i"
     echo !hwIDstr!>hwID.txt
 )
-echo 触控板touchpad设备所使用的i2c总线mini port设备id为%hwIDstr%
+echo 人体学输入设备/人机接口设备列表内touchpad触控板对应的I2C设备id为  %hwIDstr%
 echo.
 
 ::删除临时文件
