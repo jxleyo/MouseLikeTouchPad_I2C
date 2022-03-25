@@ -74,6 +74,24 @@ echo.
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
 
+echo 开始查找所有的I2C设备device
+devcon hwids ACPI\PNP0C50 >i2c_dev_all.txt
+echo.
+
+::检查是否找到I2C设备device
+find/i "PNP0C50" i2c_dev_all.txt && (
+    echo.
+    echo 找到I2C设备
+    echo.
+) || (
+     echo.
+     echo 未发现I2C设备，本驱动与此笔记本电脑触控板硬件所采用的bus总线不兼容
+     echo 无法安装，按任意键退出
+     del/f /q i2c_dev_all.txt
+     pause
+     exit
+)
+
 :seek
 echo 开始安装windows原版触控板驱动
 devcon update C:\Windows\INF\hidi2c.inf ACPI\PNP0C50
@@ -85,23 +103,24 @@ echo.
 echo 开始查找touchpad触控板设备device
 devcon hwids *HID_DEVICE_UP:000D_U:0005* >hwid0.tmp
 echo.
-
+     
 ::检查是否找到touchpad触控板设备device
 find/i "HID" hwid0.tmp && (
     echo.
-    echo 找到触控板设备
+    echo 找到touchpad触控板设备
     echo.
 ) || (
-     echo 未发现触控板设备，按任意键将自动安装Windows原版驱动后再次尝试查找触控板设备
+     echo.
+     echo 未发现touchpad触控板设备，按任意键将自动安装Windows原版驱动后再次尝试查找触控板设备
      echo 多次尝试都是 未发现触控板设备 则本驱动不兼容该笔记本电脑硬件
      del/f /q hwid*.tmp
+     echo.
      pause
      goto seek
 )
-echo.
 
 
-echo 开始查找I2C设备id
+echo 开始查找touchpad触控板对应的I2C设备id
 ::查找有&COL字符的行并加入行号
 find/i /n "&COL" hwid0.tmp >hwid1.tmp
 ::过滤其他行保留首行
@@ -118,14 +137,57 @@ for /f "delims=" %%i in (hwid2.tmp) do (
 
 ::以^分割字符串获取开头即可生成touchpad所使用的i2c总线mini port设备id
 for /f "delims=^" %%i in (hwid3.tmp) do (
-    set "hwidstr=%%i"
-    echo !hwidstr!>hwid.txt
+    set "hwIDstr=%%i"
+    echo !hwIDstr!>hwID.txt
 )
-echo 触控板touchpad设备所使用的i2c总线mini port设备id为%hwidstr%
+echo 触控板touchpad设备所使用的i2c总线mini port设备id为%hwIDstr%
+echo 按任意键继续安装
+pause
 echo.
 
 ::删除临时文件
 del/f /q hwid*.tmp
+
+
+echo 开始查找touchpad触控板对应的I2C设备名称
+devcon hwids %hwIDstr% >i2c_dev_tp.txt
+echo.
+
+::检查是否找到touchpad触控板对应的I2C设备device
+find/i "PNP0C50" i2c_dev_tp.txt && (
+    echo.
+    echo 找到touchpad触控板对应的I2C设备
+    echo.
+) || (
+     echo.
+     echo 未发现touchpad触控板对应的I2C设备，无法安装，按任意键退出
+     del/f /q i2c_dev_tp.txt
+     pause
+     exit
+)
+
+::查找有name字符的行
+find/i "name:" i2c_dev_tp.txt >i2c_dev_tp0.tmp
+
+::替换Hardware IDs成特殊字符方便分割
+for /f "delims=" %%i in (i2c_dev_tp0.tmp) do (
+    set "str=%%i"
+    set "str=!str:Hardware IDs=:!"
+    echo !str!>i2c_dev_tp1.tmp
+)
+
+::以“:"分割字符串获取开头即可生成touchpad触控板对应的I2C设备名称
+for /f "delims=: tokens=2"  %%i in (i2c_dev_tp1.tmp) do (
+    set "hwNameStr=%%i" 
+    echo !hwNameStr!>hwName.txt
+)
+echo touchpad触控板对应的I2C设备名称为  %hwNameStr%
+echo 按任意键继续安装
+pause
+echo.
+
+::删除临时文件
+del/f /q i2c_dev_*.*
 
 
 echo 开始查询是否安装了第三方驱动Hidi2c_TouchPad以及oem*.inf文件名称
@@ -146,6 +208,7 @@ find/i "oem" infResult.txt && (
     echo oem安装文件为%infFileName%
     echo.
 ) || (
+     echo.
      echo 未发现第三方驱动Hidi2c_TouchPad
      echo.
      goto inst
@@ -200,7 +263,7 @@ regedit /s EVRootCA.reg && (
 echo.
 
 echo 开始安装新驱动
-devcon update Hidi2c_TouchPad.inf %hwidstr%  && (
+devcon update Hidi2c_TouchPad.inf %hwIDstr%  && (
     echo.
     devcon rescan
     echo Hidi2c_TouchPad第三方驱动已经安装完成
@@ -211,9 +274,9 @@ devcon update Hidi2c_TouchPad.inf %hwidstr%  && (
 
 ) || (
      echo.
-     devcon update C:\Windows\INF\hidi2c.inf %hwidstr%
+     devcon update C:\Windows\INF\hidi2c.inf %hwIDstr%
      devcon rescan
-     devcon update hidi2c.inf %hwidstr%
+     devcon update hidi2c.inf %hwIDstr%
      devcon rescan
      echo.
      echo Hidi2c_TouchPad第三方驱动安装准备就绪，按任意键重启电脑后再次运行本安装程序即可成功安装
