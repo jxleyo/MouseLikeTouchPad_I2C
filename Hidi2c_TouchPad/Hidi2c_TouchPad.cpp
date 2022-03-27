@@ -1,7 +1,7 @@
 #include "Hidi2c_TouchPad.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 0
+#define debug_on 1
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -2802,6 +2802,12 @@ OnInterruptIsr(
                     if (ptpReport.ContactCount == 4 && !pDevContext->bMouseLikeTouchPad_Mode) {//四指按压触控板物理按键时，切换回仿鼠标式触摸板模式，
                         pDevContext->bMouseLikeTouchPad_Mode = TRUE;
                         RegDebug(L"OnInterruptIsr bMouseLikeTouchPad_Mode TRUE", NULL, status);
+
+                        //切换回仿鼠标式触摸板模式的同时也恢复滚轮功能和实现方式
+                        pDevContext->bWheelDisabled = FALSE;
+                        RegDebug(L"OnInterruptIsr bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                        pDevContext->bWheelScrollMode = FALSE;
+                        RegDebug(L"OnInterruptIsr bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
                     }
                 }
             }
@@ -3960,6 +3966,10 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
                 RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                if (pDevContext->bWheelDisabled) {//开启滚轮功能时同时也恢复滚轮实现方式为触摸板双指滑动手势
+                    pDevContext->bWheelScrollMode = FALSE;
+                    RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                }
 
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
@@ -3970,6 +3980,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 pDevContext->bWheelScrollMode = !pDevContext->bWheelScrollMode;
                 RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
 
+                //切换滚轮实现方式的同时也开启滚轮功能方便用户
+                pDevContext->bWheelDisabled = FALSE;
+                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+
+
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             else if (currentFinger_Count == 4 && !pDevContext->bHybrid_ReportingMode) {//四指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
@@ -3979,7 +3994,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
                 RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
-
+  
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             
