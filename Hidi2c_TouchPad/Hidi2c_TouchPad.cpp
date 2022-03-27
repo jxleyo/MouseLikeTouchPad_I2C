@@ -618,7 +618,7 @@ VOID OnInternalDeviceIoControl(
             //LONG outlen = pDevContext->HidSettings.ReportDescriptorLength;//…Ë÷√√Ë ˆ∑˚≥§∂»
             //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
 
-            PVOID outbuf = (PVOID)TouchpadReportDescriptor;//(PVOID)TouchpadReportDescriptor //(PVOID)MouseReportDescriptor
+            PVOID outbuf = (PVOID)ParallelMode_PtpReportDescriptor;//(PVOID)ParallelMode_PtpReportDescriptor //(PVOID)MouseReportDescriptor//(PVOID)SingleFingerHybridMode_PtpReportDescriptor
             LONG outlen = DefaultHidDescriptor.DescriptorList[0].wReportLength;
 
             status = WdfMemoryCopyFromBuffer(memory, 0, outbuf, outlen);
@@ -834,7 +834,7 @@ NTSTATUS OnPrepareHardware(
 
     RtlZeroMemory(&pDevContext->tp_settings, sizeof(PTP_PARSER));
 
-    pDevContext->CONTACT_COUNT_MAXIMUM = 1;
+    pDevContext->CONTACT_COUNT_MAXIMUM = PTP_MAX_CONTACT_POINTS;
     pDevContext->PAD_TYPE = 0;
     pDevContext->INPUT_MODE = 0;
     pDevContext->FUNCTION_SWITCH = 0;
@@ -858,10 +858,12 @@ NTSTATUS OnPrepareHardware(
     pDevContext->MouseSensitivity_Index = 1;//ƒ¨»œ≥ı º÷µŒ™MouseSensitivityTable¥Ê¥¢±Ìµƒ–Ú∫≈1œÓ
     pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];//ƒ¨»œ≥ı º÷µŒ™1.0
 
-    pDevContext->ScrollSpeed_Index = 0;//ƒ¨»œ≥ı º÷µŒ™ScrollSpeedTable¥Ê¥¢±Ìµƒ–Ú∫≈0œÓ
-    pDevContext->ScrollSpeed_Value = ScrollSpeedTable[pDevContext->ScrollSpeed_Index];//ƒ¨»œ≥ı º÷µŒ™3
+    pDevContext->bWheelDisabled = FALSE;//ƒ¨»œ≥ı º÷µŒ™ø™∆Ùπˆ¬÷≤Ÿ◊˜
+    pDevContext->bWheelScrollMode = FALSE;//ƒ¨»œ≥ı º÷µŒ™¥•√˛∞ÂÀ´÷∏ª¨∂Ø ÷ ∆
 
-    pDevContext->bWheelDisabled = TRUE;//ƒ¨»œ≥ı º÷µŒ™ø™∆Ùπˆ¬÷≤Ÿ◊˜
+    pDevContext->bHybrid_ReportingMode = FALSE;//ƒ¨»œ≥ı º÷µŒ™Parallel mode≤¢––±®∏Êƒ£ Ω
+
+    pDevContext->bMouseLikeTouchPad_Mode = TRUE;//ƒ¨»œ≥ı º÷µŒ™∑¬ Û±Í¥•√˛∞Â≤Ÿ◊˜∑Ω Ω
 
     //≥ı ºªØµ±«∞µ«¬º”√ªßµƒSID
     pDevContext->strCurrentUserSID.Buffer = NULL;
@@ -895,62 +897,6 @@ NTSTATUS OnPrepareHardware(
         pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
         RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
     }
-    
-
-    //∂¡»° Û±Íπˆ¬÷ÀŸ∂»…Ë÷√
-    ULONG ss_idx;
-    status = GetRegisterScrollSpeedIndex(pDevContext, &ss_idx);
-    if (!NT_SUCCESS(status))
-    {
-        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
-            status = SetRegisterScrollSpeedIndex(pDevContext, pDevContext->ScrollSpeed_Index);//≥ı ºƒ¨»œ…Ë÷√
-            if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnPrepareHardware SetRegisterScrollSpeedIndex err", NULL, status);
-            }
-        }
-        else
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex err", NULL, status);
-        }
-    }
-    else {
-        if (ss_idx > 1) {//»Áπ˚∂¡»°µƒ ˝÷µ¥ÌŒÛ
-            ss_idx = pDevContext->ScrollSpeed_Index;//ª÷∏¥≥ı ºƒ¨»œ÷µ
-        }
-        pDevContext->ScrollSpeed_Index = (UCHAR)ss_idx;
-        pDevContext->ScrollSpeed_Value = ScrollSpeedTable[pDevContext->ScrollSpeed_Index];
-        RegDebug(L"OnPrepareHardware GetRegisterScrollSpeedIndex ScrollSpeed_Index=", NULL, pDevContext->ScrollSpeed_Index);
-    }
-
-
-    //∂¡»°πˆ¬÷ø™∆Ùπÿ±’◊¥Ã¨…Ë÷√
-    ULONG bWheelDisabled = FALSE;////ƒ¨»œ…Ë÷√Œ™ø™∆Ùπˆ¬÷≤Ÿ◊˜
-    status = GetRegisterWheelDisabled(pDevContext, &bWheelDisabled);
-    if (!NT_SUCCESS(status))
-    {
-        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
-            status = SetRegisterWheelDisabled(pDevContext, FALSE);//ƒ¨»œ…Ë÷√Œ™ø™∆Ùπˆ¬÷≤Ÿ◊˜
-            if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnPrepareHardware SetRegisterWheelDisabled err", NULL, status);
-            }
-        }
-        else
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled err", NULL, status);
-        }
-    }
-    if (bWheelDisabled) {
-        pDevContext->bWheelDisabled = TRUE;
-    }
-    else {
-        pDevContext->bWheelDisabled = FALSE;
-    }
-    RegDebug(L"OnPrepareHardware GetRegisterWheelDisabled=", NULL, bWheelDisabled);
-
 
     RegDebug(L"OnPrepareHardware ok", NULL, status);
     return STATUS_SUCCESS;
@@ -1009,9 +955,14 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     pDevContext->SetInputModeOK = FALSE;
     pDevContext->SetFunSwicthOK = FALSE;
     pDevContext->GetStringStep = 0;
-    RtlZeroMemory(&pDevContext->currentFrame, sizeof(HYBRID_REPORT));
+
+    RtlZeroMemory(&pDevContext->currentPartOfFrame, sizeof(HYBRID_REPORT));
     RtlZeroMemory(&pDevContext->combinedPacket, sizeof(PTP_REPORT));
-    pDevContext->contactCount = 0;
+    pDevContext->contactCountIndex = 0;
+    pDevContext->CombinedPacketReady = FALSE;
+
+
+
     MouseLikeTouchPad_parse_init(pDevContext);
 
     RegDebug(L"OnD0Entry ok", NULL, 0);
@@ -2716,66 +2667,93 @@ OnInterruptIsr(
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
 
         //Single finger hybrid reporting modeµ•÷∏ªÏ∫œƒ£ Ω
-        if (Actual_inputReportLength != sizeof(PTP_REPORT)) {//∫œ≤¢ ˝æ›÷°MergeFrame
-            
-            HYBRID_REPORT* pCurrentFrame = &pDevContext->currentFrame;
+        if (Actual_inputReportLength != sizeof(PTP_REPORT)) {
+            pDevContext->bHybrid_ReportingMode = TRUE;//ªÏ∫œ±®∏Êƒ£ Ω◊¥Ã¨
+
+            //∫œ≤¢ ˝æ›÷°MergeFrame
+            HYBRID_REPORT* pCurrentPartOfFrame  = &pDevContext->currentPartOfFrame;//∫œ≤¢÷°µƒ≤ø∑÷ ˝æ›∞¸
+
             PTP_REPORT* pCombinedPacket = &pDevContext->combinedPacket;
-            RtlCopyMemory(pCurrentFrame, pBuf, sizeof(HYBRID_REPORT));
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.ReportID", NULL, pCurrentFrame->ReportID);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.C5_BLOB", NULL, pCurrentFrame->C5_BLOB);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.Confidence", NULL, pCurrentFrame->Confidence);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.TipSwitch", NULL, pCurrentFrame->TipSwitch);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.Padding1", NULL, pCurrentFrame->Padding1);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.ContactID", NULL, pCurrentFrame->ContactID);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.X", NULL, pCurrentFrame->X);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.Y", NULL, pCurrentFrame->Y);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.ScanTime", NULL, pCurrentFrame->ScanTime);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.ContactCount", NULL, pCurrentFrame->ContactCount);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.IsButtonClicked", NULL, pCurrentFrame->IsButtonClicked);
-            RegDebug(L"OnInterruptIsr HYBRID_REPORT.Padding2", NULL, pCurrentFrame->Padding2);
+            RtlCopyMemory(pCurrentPartOfFrame, pBuf, sizeof(HYBRID_REPORT));
 
-            if (pCurrentFrame->ScanTime == pCombinedPacket->ScanTime) {
-                pDevContext->contactCount++;
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCount=", NULL, pDevContext->contactCount);
-            }
-            else {//µ±«∞∫œ≤¢÷°Ω· ¯£¨Ω‚Œˆ≤¢∑¢ÀÕ Û±Íœ˚œ¢ ¬º˛
-                if (pDevContext->contactCount == (pCombinedPacket->ContactCount - 1)) {//‘Ÿ¥Œ—È÷§¥•√˛µ„ ˝¡ø
-                    PTP_REPORT ptpReport;
-                    RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
-                    mouse_report_t mReport;
-                    mReport.report_id = TEMPORARY_REPORTID_MOUSE;//TEMPORARY_REPORTID_MOUSE//pDevContext->REPORTID_MOUSE_COLLECTION
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
 
-                    //MouseLikeTouchPadΩ‚Œˆ∆˜
-                    MouseLikeTouchPad_parse(pDevContext, &ptpReport, &mReport);
+            if (pCurrentPartOfFrame->ScanTime == pCombinedPacket->ScanTime) {//”Î…œ∏ˆ ˝æ›∞¸Õ¨ Ù“ª÷°
+                //≤ª“™≈–∂œpCurrentFrame->Confidence && pCurrentFrame->TipSwitch «∑Ò”––ß£¨÷±Ω”ÃÌº”÷°£¨∑Ò‘Ú”–ø…ƒ‹≥ˆœ÷Œ Ã‚
+                pDevContext->contactCountIndex++;//∫Û–¯÷°À˜“˝∫≈ºÊº∆ ˝∆˜
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
 
-                    //∑¢ÀÕ Û±Í±®∏Ê
-                    status = SendPtpMouseReport(pDevContext, &mReport);
-                    if (!NT_SUCCESS(status)) {
-                        RegDebug(L"OnInterruptIsr HYBRID_REPORT SendPtpMouseReport failed", NULL, runtimes_ioControl);
-                    }
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+
+                if (pDevContext->contactCountIndex == (pCombinedPacket->ContactCount - 1)) {//÷°ƒ⁄◊Ó∫Û“ª∏ˆ ˝æ›∞¸
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+                    pDevContext->CombinedPacketReady = TRUE;//∫œ≤¢÷°Ω· ¯£¨ø…“‘∑¢ÀÕ
                 }
-
-               //–¬µƒ∫œ≤¢÷°
-                //BOOLEAN FirstFrame = TRUE;
+            }
+            else {// ˝æ›∞¸ Ù”⁄–¬µƒ“ª÷°£¨µ±«∞∫œ≤¢÷°Ω· ¯
                 RtlZeroMemory(pCombinedPacket, sizeof(PTP_REPORT));
-                pDevContext->contactCount = 0;
-                pCombinedPacket->ContactCount= pCurrentFrame->ContactCount;// ◊÷°∞¸∫¨Ω”¥•µ„ ˝¡ø
-                pCombinedPacket->IsButtonClicked = pCurrentFrame->IsButtonClicked;
-                pCombinedPacket->ReportID = pCurrentFrame->ReportID;
-                //pCombinedPacket->ReportID = TEMPORARY_REPORTID_MULTITOUCH;
-                pCombinedPacket->ScanTime = pCurrentFrame->ScanTime;
+                pDevContext->contactCountIndex = 0;//÷°ƒ⁄À˜“˝∫≈ºÊº∆ ˝∆˜÷ÿ÷√
+                pDevContext->CombinedPacketReady = FALSE;//∫œ≤¢÷° ˝æ›◊¥Ã¨÷ÿ÷√
+                pCombinedPacket->ContactCount = pCurrentPartOfFrame->ContactCount;// ◊÷°∞¸∫¨Ω”¥•µ„ ˝¡ø
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
+                pCombinedPacket->IsButtonClicked = pCurrentPartOfFrame->IsButtonClicked;
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
+                pCombinedPacket->ReportID = pCurrentPartOfFrame->ReportID;
+                //pCombinedPacket->ReportID = FAKE_REPORTID_MULTITOUCH;
+                pCombinedPacket->ScanTime = pCurrentPartOfFrame->ScanTime;
 
-            }    
+                if (pCombinedPacket->ContactCount == 1) {//∫œ≤¢÷°÷ª”–“ª∏ˆ ˝æ›∞¸ ±£¨¡¢º¥∑¢ÀÕ∂¯≤ª–Ë“™µ»¥˝œ¬“ª∏ˆ∑÷ ˝æ›∞¸
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
+                    pDevContext->CombinedPacketReady = TRUE;//∫œ≤¢÷°Ω· ¯£¨ø…“‘∑¢ÀÕ¡À
+                }
+            }
 
-            //ÃÌº”µ±«∞÷°µΩ∫œ≤¢ ˝æ›∞¸÷–
-            BYTE i = pDevContext->contactCount;
-            pCombinedPacket->Contacts[i].Confidence = pCurrentFrame->Confidence;
-            pCombinedPacket->Contacts[i].ContactID = pCurrentFrame->ContactID;
-            pCombinedPacket->Contacts[i].TipSwitch = pCurrentFrame->TipSwitch;
+            //ÃÌº”µ±«∞÷°µΩ∫œ≤¢ ˝æ›∞¸÷–£¨≤ª“™≈–∂œpCurrentFrame->Confidence && pCurrentFrame->TipSwitch «∑Ò”––ß£¨÷±Ω”ÃÌº”÷°£¨∑Ò‘Ú”–ø…ƒ‹≥ˆœ÷Œ Ã‚
+            BYTE i = pDevContext->contactCountIndex;
+            pCombinedPacket->Contacts[i].Confidence = pCurrentPartOfFrame->Confidence;
+            pCombinedPacket->Contacts[i].ContactID = pCurrentPartOfFrame->ContactID;
+            pCombinedPacket->Contacts[i].TipSwitch = pCurrentPartOfFrame->TipSwitch;
             pCombinedPacket->Contacts[i].Padding = 0;
-            pCombinedPacket->Contacts[i].X = pCurrentFrame->X;
-            pCombinedPacket->Contacts[i].Y = pCurrentFrame->Y;
+            pCombinedPacket->Contacts[i].X = pCurrentPartOfFrame->X;
+            pCombinedPacket->Contacts[i].Y = pCurrentPartOfFrame->Y;
 
+
+            if (pDevContext->CombinedPacketReady) {//∫œ≤¢÷°◊º±∏∫√¡À,∑¢ÀÕ∫œ≤¢÷°
+                PTP_REPORT ptpReport;
+                RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
+                ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
+                RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
+
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+
+                //MouseLikeTouchPadΩ‚Œˆ∆˜
+                MouseLikeTouchPad_parse(pDevContext, &ptpReport);
+
+            }
+   
             goto exit;//µ»¥˝œ¬“ª∏ˆ÷°
         }
 
@@ -2795,7 +2773,7 @@ OnInterruptIsr(
 
 
         PTP_REPORT ptpReport = *(PPTP_REPORT)pBuf;
-        ptpReport.ReportID = TEMPORARY_REPORTID_MULTITOUCH;
+        ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
         RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
         RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
         RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
@@ -2808,25 +2786,38 @@ OnInterruptIsr(
         RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
         RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
-        ////∑¢ÀÕptp±®∏Ê
-        //status = SendPtpMultiTouchReport(pDevContext, pBuf, Actual_inputReportLength);
-        //if (!NT_SUCCESS(status)) {
-        //    RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport failed", NULL, runtimes_ioControl);
-        //}
 
-        mouse_report_t mReport;
-        mReport.report_id = TEMPORARY_REPORTID_MOUSE;//TEMPORARY_REPORTID_MOUSE//pDevContext->REPORTID_MOUSE_COLLECTION
+        if (!pDevContext->bMouseLikeTouchPad_Mode) {//‘≠∞Ê¥•øÿ∞Â≤Ÿ◊˜∑Ω Ω÷±Ω”∑¢ÀÕ‘≠ º±®∏Ê
+            PTP_PARSER* tps = &pDevContext->tp_settings;
+            if (ptpReport.IsButtonClicked) {
+                //–Ë“™Ω¯––¿Îø™≈–∂®£¨∑Ò‘Ú±æ¥ŒªÚœ¬¥ŒΩ¯»ÎMouseLikeTouchPadΩ‚Œˆ∆˜∫ÛπÿœµbPhysicalButtonUpªπª·±ªƒ⁄≤øµƒ¥˙¬Î∂Œ÷¥––‘Ï≥…Œ¥÷™Œ Ã‚
+                tps->bPhysicalButtonUp = FALSE;
+                RegDebug(L"OnInterruptIsr bPhysicalButtonUp FALSE", NULL, FALSE);
+            }
+            else {
+                if (!tps->bPhysicalButtonUp) {
+                    tps->bPhysicalButtonUp = TRUE;
+                    RegDebug(L"OnInterruptIsr bPhysicalButtonUp TRUE", NULL, TRUE);
 
-        //MouseLikeTouchPadΩ‚Œˆ∆˜
-        MouseLikeTouchPad_parse(pDevContext, &ptpReport, &mReport);
-       
-        //∑¢ÀÕ Û±Í±®∏Ê
-        status = SendPtpMouseReport(pDevContext, &mReport);
-        if (!NT_SUCCESS(status)) {
-            RegDebug(L"OnInterruptIsr SendPtpMouseReport failed", NULL, runtimes_ioControl);
+                    if (ptpReport.ContactCount == 4 && !pDevContext->bMouseLikeTouchPad_Mode) {//Àƒ÷∏∞¥—π¥•øÿ∞ÂŒÔ¿Ì∞¥º¸ ±£¨«–ªªªÿ∑¬ Û±Í Ω¥•√˛∞Âƒ£ Ω£¨
+                        pDevContext->bMouseLikeTouchPad_Mode = TRUE;
+                        RegDebug(L"OnInterruptIsr bMouseLikeTouchPad_Mode TRUE", NULL, status);
+                    }
+                }
+            }
+
+            //∑¢ÀÕptp±®∏Ê
+            status = SendPtpMultiTouchReport(pDevContext, &ptpReport, sizeof(PTP_REPORT));
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
+            }
+        }
+        else {
+            //MouseLikeTouchPadΩ‚Œˆ∆˜
+            MouseLikeTouchPad_parse(pDevContext, &ptpReport);
         }
 
-        RegDebug(L"SendReport end", NULL, status);
+        RegDebug(L"OnInterruptIsr SendReport end", NULL, runtimes_ioControl);
         goto exit;
 
     }
@@ -2855,7 +2846,6 @@ OnInterruptIsr(
             RegDebug(L"OnInterruptIsr  WdfRequestComplete", NULL, runtimes_OnInterruptIsr);
         }
     }
-
    
 
 exit:
@@ -2981,7 +2971,7 @@ PtpReportFeatures(
     }
 
     UCHAR reportId = pHidPacket->reportId;
-    if(reportId== TEMPORARY_REPORTID_DEVICE_CAPS){//TEMPORARY_REPORTID_DEVICE_CAPS//pDevContext->REPORTID_DEVICE_CAPS
+    if(reportId== FAKE_REPORTID_DEVICE_CAPS){//FAKE_REPORTID_DEVICE_CAPS//pDevContext->REPORTID_DEVICE_CAPS
             ReportSize = sizeof(PTP_DEVICE_CAPS_FEATURE_REPORT);
             if (pHidPacket->reportBufferLen < ReportSize) {
                 Status = STATUS_INVALID_BUFFER_SIZE;
@@ -2993,12 +2983,12 @@ PtpReportFeatures(
 
             capsReport->MaximumContactPoints = PTP_MAX_CONTACT_POINTS;// pDevContext->CONTACT_COUNT_MAXIMUM;// PTP_MAX_CONTACT_POINTS;
             capsReport->ButtonType = PTP_BUTTON_TYPE_CLICK_PAD;// pDevContext->PAD_TYPE;// PTP_BUTTON_TYPE_CLICK_PAD;
-            capsReport->ReportID = TEMPORARY_REPORTID_DEVICE_CAPS;// pDevContext->REPORTID_DEVICE_CAPS;//TEMPORARY_REPORTID_DEVICE_CAPS
+            capsReport->ReportID = FAKE_REPORTID_DEVICE_CAPS;// pDevContext->REPORTID_DEVICE_CAPS;//FAKE_REPORTID_DEVICE_CAPS
             RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_DEVICE_CAPS", NULL, pHidPacket->reportId);
             RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS MaximumContactPoints", NULL, capsReport->MaximumContactPoints);
             RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS REPORTID_DEVICE_CAPS ButtonType", NULL, capsReport->ButtonType);
     }
-    else if (reportId == TEMPORARY_REPORTID_PTPHQA) {//TEMPORARY_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
+    else if (reportId == FAKE_REPORTID_PTPHQA) {//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             // Size sanity check
             ReportSize = sizeof(PTP_DEVICE_HQA_CERTIFICATION_REPORT);
             if (pHidPacket->reportBufferLen < ReportSize)
@@ -3011,7 +3001,7 @@ PtpReportFeatures(
             PPTP_DEVICE_HQA_CERTIFICATION_REPORT certReport = (PPTP_DEVICE_HQA_CERTIFICATION_REPORT)pHidPacket->reportBuffer;
 
             *certReport->CertificationBlob = DEFAULT_PTP_HQA_BLOB;
-            certReport->ReportID = TEMPORARY_REPORTID_PTPHQA;//TEMPORARY_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
+            certReport->ReportID = FAKE_REPORTID_PTPHQA;//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             pDevContext->PtpInputModeOn = TRUE;//≤‚ ‘
 
             RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_PTPHQA", NULL, pHidPacket->reportId);
@@ -3243,13 +3233,13 @@ HidSetFeature(
     }
 
     UCHAR reportId = pHidPacket->reportId;
-    if (reportId == TEMPORARY_REPORTID_INPUTMODE) {//TEMPORARY_REPORTID_INPUTMODE
+    if (reportId == FAKE_REPORTID_INPUTMODE) {//FAKE_REPORTID_INPUTMODE
         reportID = pDevContext->REPORTID_INPUT_MODE;//ÃÊªªŒ™’Ê µ÷µ
         reportDataSize = pDevContext->REPORTSIZE_INPUT_MODE;
         reportData = PTP_COLLECTION_WINDOWS;
         //RegDebug(L"HidSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
     }
-    else if (reportId == TEMPORARY_REPORTID_FUNCTION_SWITCH) {//TEMPORARY_REPORTID_FUNCTION_SWITCH
+    else if (reportId == FAKE_REPORTID_FUNCTION_SWITCH) {//FAKE_REPORTID_FUNCTION_SWITCH
         reportID = pDevContext->REPORTID_FUNCTION_SWITCH;//ÃÊªªŒ™’Ê µ÷µ
         reportDataSize = pDevContext->REPORTSIZE_FUNCTION_SWITCH;
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
@@ -3835,8 +3825,10 @@ cleanup:
 }
 
 
-void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport, mouse_report_t* pMouseReport)
+void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport)
 {
+    NTSTATUS status = STATUS_SUCCESS;
+
     PTP_PARSER* tp = &pDevContext->tp_settings;
 
     //º∆À„±®∏Ê∆µ¬ ∫Õ ±º‰º‰∏Ù
@@ -3851,7 +3843,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//µ±«∞¥•√˛µ„ ˝¡ø
     UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //…œ¥Œ¥•√˛µ„ ˝¡ø
 
-    UCHAR MAX_CONTACT_FINGER = pDevContext->CONTACT_COUNT_MAXIMUM;
+    UCHAR MAX_CONTACT_FINGER = PTP_MAX_CONTACT_POINTS;
     BOOLEAN allFingerDetached = TRUE;
     for (UCHAR i = 0; i < MAX_CONTACT_FINGER; i++) {//À˘”–TipSwitchŒ™0 ±≈–∂®Œ™ ÷÷∏»´≤ø¿Îø™£¨“ÚŒ™◊Ó∫Û“ª∏ˆµ„¿Îø™ ±ContactCount∫ÕConfidence º÷’Œ™1≤ªª·÷√0°£
         if (tp->currentFinger.Contacts[i].TipSwitch) {
@@ -3865,13 +3857,18 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
 
 
+    //∑¢ÀÕ±®∏Êµƒ¿‡–Õ
+    BOOLEAN bPtpReportCollection = FALSE;//ƒ¨»œ Û±ÍºØ∫œ
 
     //≥ı ºªØ Û±Í ¬º˛
-    pMouseReport->button = 0;
-    pMouseReport->dx = 0;
-    pMouseReport->dy = 0;
-    pMouseReport->h_wheel = 0;
-    pMouseReport->v_wheel = 0;
+    mouse_report_t mReport;
+    mReport.report_id = FAKE_REPORTID_MOUSE;//FAKE_REPORTID_MOUSE//pDevContext->REPORTID_MOUSE_COLLECTION
+
+    mReport.button = 0;
+    mReport.dx = 0;
+    mReport.dy = 0;
+    mReport.h_wheel = 0;
+    mReport.v_wheel = 0;
 
     BOOLEAN bMouse_LButton_Status = 0; //∂®“Â¡Ÿ ± Û±Í◊Ûº¸◊¥Ã¨£¨0Œ™ Õ∑≈£¨1Œ™∞¥œ¬£¨√ø¥Œ∂º–Ë“™÷ÿ÷√»∑±£∫Û√Ê¬ﬂº≠
     BOOLEAN bMouse_MButton_Status = 0; //∂®“Â¡Ÿ ± Û±Í÷–º¸◊¥Ã¨£¨0Œ™ Õ∑≈£¨1Œ™∞¥œ¬£¨√ø¥Œ∂º–Ë“™÷ÿ÷√»∑±£∫Û√Ê¬ﬂº≠
@@ -3929,7 +3926,9 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
 
     if (tp->currentFinger.IsButtonClicked) {//¥•√˛∞Âœ¬—ÿŒÔ¿Ì∞¥º¸π¶ƒ‹,«–ªª¥•øÿ∞Â¡È√Ù∂»/πˆ¬÷ƒ£ Ωø™πÿµ»≤Œ ˝…Ë÷√,–Ë“™Ω¯––¿Îø™≈–∂®£¨“ÚŒ™∞¥º¸±®∏Êª·“ª÷±∑¢ÀÕ÷±µΩ Õ∑≈
-        tp->bPhysicalButtonUp = FALSE;//◊º±∏…Ë÷√¥•√˛∞Âœ¬—ÿŒÔ¿Ì∞¥º¸œ‡πÿ≤Œ ˝
+        tp->bPhysicalButtonUp = FALSE;//ŒÔ¿Ìº¸ «∑Ò Õ∑≈±Í÷æ
+        RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp FALSE", NULL, FALSE);
+        //◊º±∏…Ë÷√¥•√˛∞Âœ¬—ÿŒÔ¿Ì∞¥º¸œ‡πÿ≤Œ ˝
         if (currentFinger_Count == 1) {//µ•÷∏÷ÿ∞¥¥•øÿ∞Â◊Ûœ¬Ω«ŒÔ¿Ìº¸Œ™ Û±Íµƒ∫ÛÕÀπ¶ƒ‹º¸£¨µ•÷∏÷ÿ∞¥¥•øÿ∞Â”“œ¬Ω«ŒÔ¿Ìº¸Œ™ Û±Íµƒ«∞Ω¯π¶ƒ‹º¸£¨µ•÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿ÷–º‰ŒÔ¿Ìº¸Œ™µ˜Ω⁄ Û±Í¡È√Ù∂»£®¬˝/÷–µ»/øÏ3∂Œ¡È√Ù∂»£©£¨
             if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
                 && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y / 2) && tp->currentFinger.Contacts[0].X < tp->StartX_LEFT) {// ◊∏ˆ¥•√˛µ„◊¯±Í‘⁄◊Ûœ¬Ω«
@@ -3948,6 +3947,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     else {
         if (!tp->bPhysicalButtonUp) {
             tp->bPhysicalButtonUp = TRUE;
+            RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp TRUE", NULL, TRUE);
             if (currentFinger_Count == 1) {//µ•÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿ÷–º‰ŒÔ¿Ìº¸Œ™µ˜Ω⁄ Û±Í¡È√Ù∂»£®¬˝/÷–µ»/øÏ3∂Œ¡È√Ù∂»£©£¨ Û±Íµƒ∫ÛÕÀ/«∞Ω¯π¶ƒ‹º¸≤ª–Ë“™≈–∂œª·◊‘∂Ø Õ∑≈)£¨
                 if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
                     && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y/2) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {// ◊∏ˆ¥•√˛µ„◊¯±Í‘⁄¥•√˛∞Âœ¬—ÿ÷–º‰
@@ -3955,46 +3955,44 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                     SetNextSensitivity(pDevContext);//—≠ª∑…Ë÷√¡È√Ù∂»
                 }          
             }
-            else if (currentFinger_Count == 2) {//À´÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿŒÔ¿Ìº¸ ±…Ë÷√Œ™ø™∆ÙÀ´÷∏πˆ¬÷π¶ƒ‹
+            else if (currentFinger_Count == 2) {//À´÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿŒÔ¿Ìº¸ ±…Ë÷√Œ™ø™∆Ù/πÿ±’À´÷∏πˆ¬÷π¶ƒ‹
                 //≤ª≤…”√3÷∏πˆ¬÷∑Ω Ω“ÚŒ™≈–∂œ«¯∑÷À´÷∏œ»Ω”¥•µƒ≤Ÿ◊˜±ÿ–Îº”¥Û ±º‰„–÷µ πµ√—”≥ŸÃ´∏ﬂ≤ª∫œ  ,ÕÊ”Œœ∑Ωœ…Ÿ π”√µΩπˆ¬÷π¶ƒ‹ø…—°‘Òπÿ±’«–ªªø…“‘º´¥ÛΩµµÕÕÊ”Œœ∑ ±µƒŒÛ≤Ÿ◊˜¬ £¨À˘“‘≤…»°ø™∆Ùπÿ±’πˆ¬÷∑Ω∞∏ºÊπÀ»’≥£≤Ÿ◊˜∫Õ”Œœ∑
-                //¥•øÿ∞Â µœ÷µƒ Û±Íπ¶ƒ‹“—æ≠∫‹«ø¥Û¡À≤¢«“≈‰∫œœµÕ≥øÏΩ›º¸◊„πª∏ﬂ–ßÀ˘“‘√ª”–»˝÷∏/Àƒ÷∏ ÷ ∆π¶ƒ‹¥Û¥ÛΩµµÕ¡À—ßœ∞º«“‰≥…±æ°£
 
-                //±£¥Ê◊¢≤·±Ì¡È√Ù∂»…Ë÷√ ˝÷µ
-                NTSTATUS status = SetRegisterWheelDisabled(pDevContext, FALSE);
-                if (!NT_SUCCESS(status))
-                {
-                    RegDebug(L"MouseLikeTouchPad_parse SetRegisterWheelDisabled err", NULL, status);
-                }
-                else {
-                    pDevContext->bWheelDisabled = FALSE;
-                    RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled", NULL, FALSE);
-                }   
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
-            }
-            else if (currentFinger_Count == 3) {//»˝÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿŒÔ¿Ìº¸ ±…Ë÷√Œ™πÿ±’À´÷∏πˆ¬÷π¶ƒ‹,
-                //±£¥Ê◊¢≤·±Ì¡È√Ù∂»…Ë÷√ ˝÷µ
-                NTSTATUS status = SetRegisterWheelDisabled(pDevContext, TRUE);
-                if (!NT_SUCCESS(status))
-                {
-                    RegDebug(L"MouseLikeTouchPad_parse SetRegisterWheelDisabled err", NULL, status);
-                }
-                else {
-                    pDevContext->bWheelDisabled = TRUE;
-                    RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled", NULL, TRUE);
-                }
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
-            }
-            else if (currentFinger_Count == 4) {//Àƒ÷∏∞¥—π¥•øÿ∞ÂŒÔ¿Ì∞¥º¸ ±
-                //«–ªª Û±Íπˆ¬÷ÀŸ∂»
-                SetNextScrollSpeed(pDevContext);//—≠ª∑…Ë÷√πˆ¬÷ÀŸ∂»(“ª¥Œπˆ∂Ø3––/1––)
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
-            }
-            else {
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
-            }
+                pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
+                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
 
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+            else if (currentFinger_Count == 3 && !pDevContext->bHybrid_ReportingMode) {//»˝÷∏÷ÿ∞¥¥•øÿ∞Âœ¬—ÿŒÔ¿Ìº¸ ±…Ë÷√Œ™«–ªªπˆ¬÷ƒ£ ΩbWheelScrollMode£¨∂®“Â Û±Íπˆ¬÷ µœ÷∑Ω Ω£¨TRUEŒ™ƒ£∑¬ Û±Íπˆ¬÷£¨FALSEŒ™¥•√˛∞ÂÀ´÷∏ª¨∂Ø ÷ ∆
+                //ªÏ∫œ±®∏Êƒ£ Ωµƒ¥•øÿ∞Â¥Ê‘⁄÷Ó∂‡Œ Ã‚Œ¥Ω‚æˆÀ˘“‘√ª”–¥Àπ¶ƒ‹
+                //“ÚŒ™»’≥£≤Ÿ◊˜πˆ¬÷∏¸≥£”√£¨À˘“‘πÿ±’πˆ¬÷π¶ƒ‹µƒ◊¥Ã¨≤ª±£¥ÊµΩ◊¢≤·±Ì£¨µÁƒ‘÷ÿ∆ÙªÚ–›√ﬂªΩ–—∫Ûª÷∏¥πˆ¬÷π¶ƒ‹
+                //“ÚŒ™¥•√˛∞ÂÀ´÷∏ª¨∂Ø ÷ ∆µƒπˆ¬÷ƒ£ Ω∏¸≥£”√£¨À˘“‘ƒ£∑¬ Û±Íµƒπˆ¬÷ƒ£ Ω◊¥Ã¨≤ª±£¥ÊµΩ◊¢≤·±Ì£¨µÁƒ‘÷ÿ∆ÙªÚ–›√ﬂªΩ–—∫Ûª÷∏¥µΩÀ´÷∏ª¨∂Ø ÷ ∆µƒπˆ¬÷ƒ£ Ω
+                pDevContext->bWheelScrollMode = !pDevContext->bWheelScrollMode;
+                RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
+            else if (currentFinger_Count == 4 && !pDevContext->bHybrid_ReportingMode) {//Àƒ÷∏∞¥—π¥•øÿ∞ÂŒÔ¿Ì∞¥º¸ ±«–ªª∑¬ Û±Í Ω¥•√˛∞Â”Îwindows‘≠∞ÊµƒPTPæ´»∑ Ω¥•√˛∞Â≤Ÿ◊˜∑Ω Ω
+                //ªÏ∫œ±®∏Êƒ£ Ωµƒ¥•øÿ∞Â¥Ê‘⁄÷Ó∂‡Œ Ã‚Œ¥Ω‚æˆÀ˘“‘√ª”–¥Àπ¶ƒ‹
+                //“ÚŒ™‘≠∞Ê¥•øÿ∞Â≤Ÿ◊˜∑Ω Ω÷ª «¡Ÿ ± π”√À˘“‘≤ª±£¥ÊµΩ◊¢≤·±Ì£¨µÁƒ‘÷ÿ∆ÙªÚ–›√ﬂªΩ–—∫Ûª÷∏¥µΩ∑¬ Û±Í Ω¥•√˛∞Âƒ£ Ω
+                // ‘≠∞ÊµƒPTPæ´»∑ Ω¥•√˛∞Â≤Ÿ◊˜∑Ω Ω ±∑¢ÀÕ±®∏Ê‘⁄±æ∫Ø ˝Õ‚≤ø÷¥––≤ª–Ë“™¿À∑—◊ ‘¥Ω‚Œˆ£¨«–ªªªÿ∑¬ Û±Í Ω¥•√˛∞Âƒ£ Ω“≤‘⁄±æ∫Ø ˝Õ‚≤ø≈–∂œ
+                
+                pDevContext->bMouseLikeTouchPad_Mode = FALSE;
+                RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
+
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+            }
             
         }
+    }
+
+    if (!pDevContext->bMouseLikeTouchPad_Mode) {//windows‘≠∞ÊµƒPTPæ´»∑ Ω¥•√˛∞Â≤Ÿ◊˜∑Ω Ω£¨÷±Ω”∑¢ÀÕ±®∏Ê∫ÛÃ¯µΩΩ·Œ≤
+        //∑¢ÀÕptp±®∏Ê
+        status = SendPtpMultiTouchReport(pDevContext, pPtpReport, sizeof(PTP_REPORT));
+        if (!NT_SUCCESS(status)) {
+            RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport bMouseLikeTouchPad_Mode failed", NULL, status);
+        }
+        goto EndParse;
     }
 
     //ø™ º Û±Í ¬º˛¬ﬂº≠≈–∂®
@@ -4013,6 +4011,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     else if (tp->nMouse_Pointer_CurrentIndex == -1 && tp->nMouse_Pointer_LastIndex != -1) {//÷∏’Îœ˚ ß
         tp->bMouse_Wheel_Mode = FALSE;//Ω· ¯πˆ¬÷ƒ£ Ω
         tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//ø™∆Ùπˆ¬÷≈–±
+
+        tp->bGestureCompleted = TRUE;// ÷ ∆ƒ£ ΩΩ· ¯
 
         tp->nMouse_Pointer_CurrentIndex = -1;
         tp->nMouse_LButton_CurrentIndex = -1;
@@ -4045,6 +4045,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 if (isWheel) {//πˆ¬÷ƒ£ ΩÃıº˛≥…¡¢
                     tp->bMouse_Wheel_Mode = TRUE;  //ø™∆Ùπˆ¬÷ƒ£ Ω
                     tp->bMouse_Wheel_Mode_JudgeEnable = FALSE;//πÿ±’πˆ¬÷≈–±
+
+                    tp->bGestureCompleted = FALSE; // ÷ ∆≤Ÿ◊˜Ω· ¯±Í÷æ
 
                     tp->nMouse_Wheel_CurrentIndex = i;//πˆ¬÷∏®÷˙≤Œøº ÷÷∏À˜“˝÷µ
                     // ÷÷∏±‰ªØÀ≤º‰ ±µÁ»›ø…ƒ‹≤ªŒ»∂®÷∏’Î◊¯±ÍÕª∑¢–‘∆Ø“∆–Ë“™∫ˆ¬‘
@@ -4110,72 +4112,136 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 }
             }
 
-            pMouseReport->dx = (UCHAR)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
-            pMouseReport->dy = (UCHAR)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
+            mReport.dx = (UCHAR)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
+            mReport.dy = (UCHAR)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
 
         }
     }
-    else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//πˆ¬÷≤Ÿ◊˜ƒ£ Ω
-        // Û±Í÷∏’ÎŒª“∆…Ë÷√
-        LARGE_INTEGER FixTimer;
-        FixTimer.QuadPart = (tp->current_Ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_Count / 10000;//µ•Œªms∫¡√Î
-        float JitterFixTimer = (float)FixTimer.LowPart;//µ±«∞∂∂∂Ø ±º‰º∆ ±
+    else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//πˆ¬÷≤Ÿ◊˜ƒ£ Ω£¨¥•√˛∞ÂÀ´÷∏ª¨∂Ø°¢»˝÷∏Àƒ÷∏ ÷ ∆“≤πÈŒ™¥Àƒ£ Ωœ¬µƒÃÿ¿˝…Ë÷√“ª∏ˆ ÷ ∆◊¥Ã¨ø™πÿπ©∫Û–¯≈–∂œ π”√
+        if (!pDevContext->bWheelScrollMode && !pDevContext->bHybrid_ReportingMode) {//¥•√˛∞ÂÀ´÷∏ª¨∂Ø ÷ ∆ƒ£ Ω£¨»˝÷∏Àƒ÷∏ ÷ ∆“≤πÈŒ™¥Àƒ£ Ω
+             //÷ª”–Parallel Report Mode≤¢––±®∏Êƒ£ Ωµƒ¥•øÿ∞Â”– ÷ ∆π¶ƒ‹£¨ªÏ∫œ±®∏Êƒ£ Ωµƒ¥•øÿ∞Â ÷ ∆≤Ÿ◊˜¥Ê‘⁄÷Ó∂‡Œ Ã‚Œ¥Ω‚æˆÀ˘“‘≤ª µœ÷∆‰ ÷ ∆π¶ƒ‹
+             bPtpReportCollection = TRUE;//∑¢ÀÕPTP¥•√˛∞ÂºØ∫œ±®∏Ê£¨∫Û–¯‘Ÿ◊ˆΩ¯“ª≤Ω≈–∂œ
+   
+        }
+        else {
+            // Û±Í÷∏’ÎŒª“∆…Ë÷√
+            LARGE_INTEGER FixTimer;
+            FixTimer.QuadPart = (tp->current_Ticktime.QuadPart - tp->JitterFixStartTime.QuadPart) * tp->tick_Count / 10000;//µ•Œªms∫¡√Î
+            float JitterFixTimer = (float)FixTimer.LowPart;//µ±«∞∂∂∂Ø ±º‰º∆ ±
 
-        float px = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X) / tp->thumb_Scale;
-        float py = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y) / tp->thumb_Scale;
+            float px = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X) / tp->thumb_Scale;
+            float py = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y) / tp->thumb_Scale;
 
-        if (JitterFixTimer < STABLE_INTERVAL_FingerClosed_MSEC) {//÷ª–Ë‘⁄¥•√˛µ„Œ»∂®«∞–ﬁ’˝
-            if (abs(px) <= Jitter_Offset) {//÷∏’Î«·Œ¢∂∂∂Ø–ﬁ’˝
-                px = 0;
+            if (JitterFixTimer < STABLE_INTERVAL_FingerClosed_MSEC) {//÷ª–Ë‘⁄¥•√˛µ„Œ»∂®«∞–ﬁ’˝
+                if (abs(px) <= Jitter_Offset) {//÷∏’Î«·Œ¢∂∂∂Ø–ﬁ’˝
+                    px = 0;
+                }
+                if (abs(py) <= Jitter_Offset) {//÷∏’Î«·Œ¢∂∂∂Ø–ﬁ’˝
+                    py = 0;
+                }
             }
-            if (abs(py) <= Jitter_Offset) {//÷∏’Î«·Œ¢∂∂∂Ø–ﬁ’˝
-                py = 0;
+
+            int direction_hscale = 1;//πˆ∂Ø∑ΩœÚÀı∑≈±»¿˝
+            int direction_vscale = 1;//πˆ∂Ø∑ΩœÚÀı∑≈±»¿˝
+
+            if (abs(px) > abs(py) / 4) {//πˆ∂Ø∑ΩœÚŒ»∂®–‘–ﬁ’˝
+                direction_hscale = 1;
+                direction_vscale = 8;
+            }
+            if (abs(py) > abs(px) / 4) {//πˆ∂Ø∑ΩœÚŒ»∂®–‘–ﬁ’˝
+                direction_hscale = 8;
+                direction_vscale = 1;
+            }
+
+            px = px / direction_hscale;
+            py = py / direction_vscale;
+
+            px = (float)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
+            py = (float)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
+
+            tp->Scroll_TotalDistanceX += px;//¿€º∆πˆ∂ØŒª“∆¡ø
+            tp->Scroll_TotalDistanceY += py;//¿€º∆πˆ∂ØŒª“∆¡ø
+
+            //≈–∂œπˆ∂Ø¡ø
+            if (abs(tp->Scroll_TotalDistanceX) > SCROLL_OFFSET_THRESHOLD_X) {//Œª“∆¡ø≥¨π˝„–÷µ
+                int h = (int)(abs(tp->Scroll_TotalDistanceX) / SCROLL_OFFSET_THRESHOLD_X);
+                mReport.h_wheel = (char)(tp->Scroll_TotalDistanceX > 0 ? h : -h);//πˆ∂Ø–– ˝
+
+                float r = abs(tp->Scroll_TotalDistanceX) - SCROLL_OFFSET_THRESHOLD_X * h;// πˆ∂ØŒª“∆¡ø”‡ ˝æ¯∂‘÷µ
+                tp->Scroll_TotalDistanceX = tp->Scroll_TotalDistanceX > 0 ? r : -r;//πˆ∂ØŒª“∆¡ø”‡ ˝
+            }
+            if (abs(tp->Scroll_TotalDistanceY) > SCROLL_OFFSET_THRESHOLD_Y) {//Œª“∆¡ø≥¨π˝„–÷µ
+                int v = (int)(abs(tp->Scroll_TotalDistanceY) / SCROLL_OFFSET_THRESHOLD_Y);
+                mReport.v_wheel = (char)(tp->Scroll_TotalDistanceY > 0 ? v : -v);//πˆ∂Ø–– ˝
+
+                float r = abs(tp->Scroll_TotalDistanceY) - SCROLL_OFFSET_THRESHOLD_Y * v;// πˆ∂ØŒª“∆¡ø”‡ ˝æ¯∂‘÷µ
+                tp->Scroll_TotalDistanceY = tp->Scroll_TotalDistanceY > 0 ? r : -r;//πˆ∂ØŒª“∆¡ø”‡ ˝
             }
         }
-
-        int direction_hscale = 1;//πˆ∂Ø∑ΩœÚÀı∑≈±»¿˝
-        int direction_vscale = 1;//πˆ∂Ø∑ΩœÚÀı∑≈±»¿˝
-
-        if (abs(px) > abs(py) / 4) {//πˆ∂Ø∑ΩœÚŒ»∂®–‘–ﬁ’˝
-            direction_hscale = 1;
-            direction_vscale = 8;
-        }
-        if (abs(py) > abs(px) / 4) {//πˆ∂Ø∑ΩœÚŒ»∂®–‘–ﬁ’˝
-            direction_hscale = 8;
-            direction_vscale = 1;
-        }
-
-        px = px / direction_hscale;
-        py = py / direction_vscale;
-
-        px = (float)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
-        py = (float)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
-
-        tp->Scroll_TotalDistanceX += px;//¿€º∆πˆ∂ØŒª“∆¡ø
-        tp->Scroll_TotalDistanceY += py;//¿€º∆πˆ∂ØŒª“∆¡ø
-
-        //≈–∂œπˆ∂Ø¡ø
-        if (abs(tp->Scroll_TotalDistanceX) > SCROLL_OFFSET_THRESHOLD_X) {//Œª“∆¡ø≥¨π˝„–÷µ
-            int h = (int)(abs(tp->Scroll_TotalDistanceX) / SCROLL_OFFSET_THRESHOLD_X);
-            pMouseReport->h_wheel = (char)(tp->Scroll_TotalDistanceX > 0 ? h : -h);//πˆ∂Ø–– ˝
-
-            float r = abs(tp->Scroll_TotalDistanceX) - SCROLL_OFFSET_THRESHOLD_X * h;// πˆ∂ØŒª“∆¡ø”‡ ˝æ¯∂‘÷µ
-            tp->Scroll_TotalDistanceX = tp->Scroll_TotalDistanceX > 0 ? r : -r;//πˆ∂ØŒª“∆¡ø”‡ ˝
-        }
-        if (abs(tp->Scroll_TotalDistanceY) > SCROLL_OFFSET_THRESHOLD_Y) {//Œª“∆¡ø≥¨π˝„–÷µ
-            int v = (int)(abs(tp->Scroll_TotalDistanceY) / SCROLL_OFFSET_THRESHOLD_Y);
-            pMouseReport->v_wheel = (char)(tp->Scroll_TotalDistanceY > 0 ? v : -v);//πˆ∂Ø–– ˝
-
-            float r = abs(tp->Scroll_TotalDistanceY) - SCROLL_OFFSET_THRESHOLD_Y * v;// πˆ∂ØŒª“∆¡ø”‡ ˝æ¯∂‘÷µ
-            tp->Scroll_TotalDistanceY = tp->Scroll_TotalDistanceY > 0 ? r : -r;//πˆ∂ØŒª“∆¡ø”‡ ˝
-        }
+        
     }
     else {
         //∆‰À˚◊È∫œŒﬁ–ß
     }
 
-    pMouseReport->button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2) + (bMouse_BButton_Status << 3) + (bMouse_FButton_Status << 4);  //◊Û÷–”“∫ÛÕÀ«∞Ω¯º¸◊¥Ã¨∫œ≥…
 
+    if (bPtpReportCollection) {//¥•√˛∞ÂºØ∫œ£¨ ÷ ∆ƒ£ Ω≈–∂œ
+        if (!tp->bMouse_Wheel_Mode) {//“‘÷∏’Î ÷÷∏ Õ∑≈Œ™πˆ¬÷ƒ£ ΩΩ· ¯±Í÷æ£¨œ¬“ª÷°bPtpReportCollectionª·ƒ¨»œFALSEÀ˘“‘÷Æ∫Û∑¢ÀÕ“ª¥Œππ‘Ïµƒ ÷ ∆Ω· ¯±®∏Ê
+            tp->bGestureCompleted = TRUE;//Ω· ¯ ÷ ∆≤Ÿ◊˜£¨∏√ ˝æ›∫ÕbMouse_Wheel_Mode«¯∑÷ø™¡À£¨“ÚŒ™bGestureCompletedø…ƒ‹ª·±»bMouse_Wheel_ModeÃ·«∞Ω· ¯
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0", NULL, status);
+
+            //ππ‘Ï»´≤ø ÷÷∏ Õ∑≈µƒ¡Ÿ ± ˝æ›∞¸,TipSwitch”ÚπÈ¡„
+            PTP_REPORT CompletedGestureReport;
+            RtlCopyMemory(&CompletedGestureReport, &tp->currentFinger, sizeof(PTP_REPORT));
+            for (int i = 0; i < currentFinger_Count; i++) {
+                CompletedGestureReport.Contacts[i].TipSwitch = 0;
+            }
+
+            //∑¢ÀÕptp±®∏Ê
+            status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport, sizeof(PTP_REPORT));
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport failed", NULL, status);
+            }
+
+        }
+        else if(tp->bMouse_Wheel_Mode && currentFinger_Count == 1 && !tp->bGestureCompleted) {//πˆ¬÷ƒ£ ΩŒ¥Ω· ¯≤¢«“ £œ¬÷∏’Î ÷÷∏¡Ù‘⁄¥•√˛∞Â…œ,–Ë“™≈‰∫œbGestureCompleted±Í÷æ≈–∂œ πµ√ππ‘Ïµƒ ÷ ∆Ω· ¯±®∏Ê÷ª∑¢ÀÕ“ª¥Œ
+            tp->bGestureCompleted = TRUE;//Ã·«∞Ω· ¯ ÷ ∆≤Ÿ◊˜£¨∏√ ˝æ›∫ÕbMouse_Wheel_Mode«¯∑÷ø™¡À£¨“ÚŒ™bGestureCompletedø…ƒ‹ª·±»bMouse_Wheel_ModeÃ·«∞Ω· ¯
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1", NULL, status);
+
+            //ππ‘Ï÷∏’Î ÷÷∏ Õ∑≈µƒ¡Ÿ ± ˝æ›∞¸,TipSwitch”ÚπÈ¡„
+            PTP_REPORT CompletedGestureReport2;
+            RtlCopyMemory(&CompletedGestureReport2, &tp->currentFinger, sizeof(PTP_REPORT));
+            CompletedGestureReport2.Contacts[0].TipSwitch = 0;
+
+            //∑¢ÀÕptp±®∏Ê
+            status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport2, sizeof(PTP_REPORT));
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport2 failed", NULL, status);
+            }
+        }
+
+        if (!tp->bGestureCompleted) {// ÷ ∆Œ¥Ω· ¯£¨’˝≥£∑¢ÀÕ±®∏Ê
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted2", NULL, status);
+            //∑¢ÀÕptp±®∏Ê
+            status = SendPtpMultiTouchReport(pDevContext, pPtpReport, sizeof(PTP_REPORT));
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport failed", NULL, status);
+            }
+        }
+    }
+    
+
+    
+    if (!bPtpReportCollection) {//∑¢ÀÕMouseCollection
+        mReport.button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2) + (bMouse_BButton_Status << 3) + (bMouse_FButton_Status << 4);  //◊Û÷–”“∫ÛÕÀ«∞Ω¯º¸◊¥Ã¨∫œ≥…
+        //∑¢ÀÕ Û±Í±®∏Ê
+        status = SendPtpMouseReport(pDevContext, &mReport);
+        if (!NT_SUCCESS(status)) {
+            RegDebug(L"MouseLikeTouchPad_parse SendPtpMouseReport failed", NULL, status);
+        }
+    }
+    
+EndParse:
     //±£¥Êœ¬“ª¬÷À˘”–¥•√˛µ„µƒ≥ı º◊¯±Íº∞π¶ƒ‹∂®“ÂÀ˜“˝∫≈
     tp->lastFinger = tp->currentFinger;
 
@@ -4215,6 +4281,8 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->bMouse_Wheel_Mode = FALSE;
    tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//ø™∆Ùπˆ¬÷≈–±
 
+   tp->bGestureCompleted = FALSE; // ÷ ∆≤Ÿ◊˜Ω· ¯±Í÷æ
+
    RtlZeroMemory(&tp->lastFinger, sizeof(PTP_REPORT));
    RtlZeroMemory(&tp->currentFinger, sizeof(PTP_REPORT));
 
@@ -4226,210 +4294,6 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
 
     tp->bPhysicalButtonUp = TRUE;
 
-}
-
-
-NTSTATUS  SetRegisterScrollSpeedActualValue(PUNICODE_STRING pSidReg,ULONG ScrollSpeedActualValue)//…Ë÷√◊¢≤·±Ìπˆ¬÷ÀŸ∂»µƒ µº  ˝÷µ
-{
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    if (pSidReg->Buffer == NULL || pSidReg->Length <= 20)
-    {
-        RegDebug(L"SetRegisterScrollSpeedActualValue pSidReg err", NULL, status);
-        return status;
-    }
-
-    //≥ı ºªØ◊¢≤·±ÌœÓ
-    UNICODE_STRING stringKey;
-    UNICODE_STRING strWheelScrollLocation;
-
-    WCHAR CurrentUserbuf[256];
-    UNICODE_STRING RegCurrentUserLocation, RegUserLocation;
-    RtlInitUnicodeString(&RegUserLocation, L"\\Registry\\User\\");//HKET__USERSŒª÷√
-    RtlInitUnicodeString(&strWheelScrollLocation, L"\\Control Panel\\Desktop");//WheelScrollLines°¢WheelScrollCharsº¸Œª÷√∫Û∂Œ
-
-    RtlInitEmptyUnicodeString(&RegCurrentUserLocation, CurrentUserbuf, 256 * sizeof(WCHAR));
-
-    RtlCopyUnicodeString(&RegCurrentUserLocation, &RegUserLocation);
-    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, pSidReg);//µ√µΩHKET_CURRENT_USERŒª÷√
-    RegDebug(L"SetRegisterScrollSpeedActualValue HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
-
-    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, &strWheelScrollLocation);//µ√µΩÕÍ’˚WheelScrollLines°¢WheelScrollCharsº¸Œª÷√
-    RtlInitUnicodeString(&stringKey, RegCurrentUserLocation.Buffer);
-    RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollLines°¢WheelScrollChars Key=", stringKey.Buffer, stringKey.Length);
-
-
-    //≥ı ºªØOBJECT_ATTRIBUTESΩ·ππ
-    OBJECT_ATTRIBUTES  ObjectAttributes;
-    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE∂‘¥Û–°–¥√Ù∏–
-
-    //¥¥Ω®◊¢≤·±ÌœÓ
-    HANDLE hKey;
-    ULONG Des;
-    status = ZwCreateKey(&hKey, KEY_ALL_ACCESS, &ObjectAttributes, 0, NULL, REG_OPTION_NON_VOLATILE, &Des);//KEY_ALL_ACCESS//KEY_READ| KEY_WRITE
-    if (NT_SUCCESS(status))
-    {
-        if (Des == REG_CREATED_NEW_KEY)
-        {
-            KdPrint(("–¬Ω®◊¢≤·±ÌœÓ£°\n"));
-        }
-        else
-        {
-            KdPrint(("“™¥¥Ω®µƒ◊¢≤·±ÌœÓ“—æ≠¥Ê‘⁄£°\n"));
-        }
-    }
-    else {
-        RegDebug(L"SetRegisterScrollSpeedActualValue ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
-        return status;
-    }
-
-
-    //≥ı ºªØvalueName
-    UNICODE_STRING valueName1, valueName2;
-    RtlInitUnicodeString(&valueName1, L"WheelScrollLines");//WheelScrollLines¥π÷±πˆ¬÷“ª¥Œº∏–– - 1Œ™πˆ“ª∆¡
-    RtlInitUnicodeString(&valueName2, L"WheelScrollChars");//WheelScrollCharsÀÆ∆Ωπˆ¬÷“ª¥Œº∏––
-
-    //…Ë÷√REG_DWORDº¸÷µ
-    ULONG WheelScrollLines = ScrollSpeedActualValue;//…Ë÷√πˆ¬÷ÀŸ∂»£¨“ª¥Œn––£¨-1Œ™πˆ“ª∆¡
-    ULONG WheelScrollChars = ScrollSpeedActualValue;//WheelScrollCharsÀÆ∆Ωπˆ¬÷“ª¥Œº∏––
-
-    WCHAR* strWheelScrollLines;
-    WCHAR* strWheelScrollChars;
-    if (WheelScrollLines == 1) {
-        strWheelScrollLines = L"1";
-    }
-    else {
-        strWheelScrollLines = L"3";
-    }
-    if (WheelScrollChars == 1) {
-        strWheelScrollChars = L"1";
-    }
-    else {
-        strWheelScrollChars = L"3";
-    }
-
-    status = ZwSetValueKey(hKey, &valueName1, 0, REG_SZ, strWheelScrollLines, 4);
-    if (!NT_SUCCESS(status))
-    {
-        KdPrint(("…Ë÷√REG_DWORDº¸÷µ ß∞‹£°\n"));
-        RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollLines err", NULL, status);
-    }
-    status = ZwSetValueKey(hKey, &valueName2, 0, REG_SZ, strWheelScrollChars, 4);
-    if (!NT_SUCCESS(status))
-    {
-        KdPrint(("…Ë÷√REG_DWORDº¸÷µ ß∞‹£°\n"));
-        RegDebug(L"SetRegisterScrollSpeedActualValue WheelScrollChars err", NULL, status);
-    }
-
-    ZwFlushKey(hKey);
-    //πÿ±’◊¢≤·±Ìæ‰±˙
-    ZwClose(hKey);
-
-    RegDebug(L"SetRegisterScrollSpeedActualValue end", NULL, status);
-    return status;
-}
-
-
-void SetNextScrollSpeed(PDEVICE_CONTEXT pDevContext)
-{
-    NTSTATUS status = STATUS_SUCCESS;
-
-    UCHAR ss_idx = pDevContext->ScrollSpeed_Index;// ScrollSpeed_Normal;//ScrollSpeed_Slow
-
-    ss_idx++;
-    if (ss_idx == 2) {//¡È√Ù∂»—≠ª∑…Ë÷√
-        ss_idx = 0;
-    }
-
-    //±£¥Ê◊¢≤·±Ìπˆ¬÷ÀŸ∂»µƒ µº  ˝÷µ…Ë÷√
-    if (pDevContext->strCurrentUserSID.Buffer !=NULL && pDevContext->strCurrentUserSID.Length > 0) {//“—æ≠ªÒ»°SID
-        status = SetRegisterScrollSpeedActualValue(&pDevContext->strCurrentUserSID, ScrollSpeedTable[ss_idx]);
-        if (!NT_SUCCESS(status))
-        {
-            RegDebug(L"SetNextScrollSpeed SetRegisterScrollSpeedActualValue err", NULL, status);
-            return;
-        }
-    }
-
-    //±£¥Ê◊¢≤·±Ìπˆ¬÷ÀŸ∂»µƒ–Ú∫≈…Ë÷√ ˝÷µ
-    status = SetRegisterScrollSpeedIndex(pDevContext, ss_idx);//ScrollSpeedTable¥Ê¥¢±Ìµƒ–Ú∫≈÷µ
-    if (!NT_SUCCESS(status))
-    {
-        RegDebug(L"SetNextScrollSpeed SetRegisterScrollSpeed err", NULL, status);
-        return;
-    }
-
-    pDevContext->ScrollSpeed_Index = ss_idx;
-    pDevContext->ScrollSpeed_Value = ScrollSpeedTable[ss_idx];
-    RegDebug(L"SetNextScrollSpeed pDevContext->ScrollSpeed_Index", NULL, pDevContext->ScrollSpeed_Index);
-
-    RegDebug(L"SetNextScrollSpeed ok", NULL, status);
-}
-
-NTSTATUS SetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG ss_idx)//±£¥Ê…Ë÷√µΩ◊¢≤·±Ì
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE device = pDevContext->FxDevice;
-
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ScrollSpeed_Index");
-
-    WDFKEY hKey = NULL;
-
-    status = WdfDeviceOpenRegistryKey(
-        device,
-        PLUGPLAY_REGKEY_DEVICE,//1
-        KEY_WRITE,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &hKey);
-
-    if (NT_SUCCESS(status)) {
-        status = WdfRegistryAssignULong(hKey, &ValueNameString, ss_idx);
-        if (!NT_SUCCESS(status)) {
-            RegDebug(L"SetRegisterScrollSpeedIndex WdfRegistryAssignULong err", NULL, status);
-            return status;
-        }
-    }
-
-    if (hKey) {
-        WdfObjectDelete(hKey);
-    }
-
-    RegDebug(L"SetRegisterScrollSpeedIndex ok", NULL, status);
-    return status;
-}
-
-
-NTSTATUS GetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG* ss_idx)//¥”◊¢≤·±Ì∂¡»°…Ë÷√
-{
-
-    NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE device = pDevContext->FxDevice;
-
-    WDFKEY hKey = NULL;
-    *ss_idx = 0;
-
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ScrollSpeed_Index");
-
-    status = WdfDeviceOpenRegistryKey(
-        device,
-        PLUGPLAY_REGKEY_DEVICE,//1
-        KEY_READ,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &hKey);
-
-    if (NT_SUCCESS(status))
-    {
-        status = WdfRegistryQueryULong(hKey, &ValueNameString, ss_idx);
-    }
-    else {
-        RegDebug(L"SetRegisterScrollSpeedIndex err", NULL, status);
-    }
-
-    if (hKey) {
-        WdfObjectDelete(hKey);
-    }
-
-    RegDebug(L"SetRegisterScrollSpeedIndex end", NULL, status);
-    return status;
 }
 
 
@@ -4523,76 +4387,6 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
     }
 
     RegDebug(L"GetRegisterMouseSensitivity end", NULL, status);
-    return status;
-}
-
-
-
-NTSTATUS SetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG bWheelDisabled)//±£¥Ê…Ë÷√µΩ◊¢≤·±Ì
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE device = pDevContext->FxDevice;
-
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"WheelDisabled");
-
-    WDFKEY hKey = NULL;
-
-    status = WdfDeviceOpenRegistryKey(
-        device,
-        PLUGPLAY_REGKEY_DEVICE,//1
-        KEY_WRITE,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &hKey);
-
-    if (NT_SUCCESS(status)) {
-        status = WdfRegistryAssignULong(hKey, &ValueNameString, bWheelDisabled);
-        if (!NT_SUCCESS(status)) {
-            RegDebug(L"SetRegisterWheelDisabled WdfRegistryAssignULong err", NULL, status);
-            return status;
-        }
-    }
-
-    if (hKey) {
-        WdfObjectDelete(hKey);
-    }
-
-    RegDebug(L"SetRegisterWheelDisabled ok", NULL, status);
-    return status;
-}
-
-
-
-NTSTATUS GetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG* pWheelDisabled)//¥”◊¢≤·±Ì∂¡»°…Ë÷√
-{
-
-    NTSTATUS status = STATUS_SUCCESS;
-    WDFDEVICE device = pDevContext->FxDevice;
-
-    WDFKEY hKey = NULL;
-    *pWheelDisabled = FALSE;//ƒ¨»œø™∆Ùπˆ¬÷ƒ£ Ω
-
-    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"WheelDisabled");
-
-    status = WdfDeviceOpenRegistryKey(
-        device,
-        PLUGPLAY_REGKEY_DEVICE,//1
-        KEY_READ,
-        WDF_NO_OBJECT_ATTRIBUTES,
-        &hKey);
-
-    if (NT_SUCCESS(status))
-    {
-        status = WdfRegistryQueryULong(hKey, &ValueNameString, pWheelDisabled);
-    }
-    else {
-        RegDebug(L"GetRegisterWheelDisabled err", NULL, status);
-    }
-
-    if (hKey) {
-        WdfObjectDelete(hKey);
-    }
-
-    RegDebug(L"GetRegisterWheelDisabled end", NULL, status);
     return status;
 }
 
@@ -4697,7 +4491,7 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//¥•øÿ∞ÂAAP“‚Õ‚º§ªÓ∑¿ª
     RtlInitUnicodeString(&valueName, L"AAPThreshold");
 
     //…Ë÷√REG_DWORDº¸÷µ
-    ULONG AAPThreshold = 0;//…Ë÷√¥•√˛∞Â√Ù∏–∂»Œ™◊Ó∏ﬂ,0 == Most sensitive,1 == High sensitivity,2 == Medium sensitivity(default),3 == Low sensitivity
+    ULONG AAPThreshold = 0;//…Ë÷√¥•√˛∞Â√Ù∏–∂»Œ™◊Ó∏ﬂ£¨∑¬ Û±Í Ω¥•√˛∞Â«˝∂Øµƒ∑¿÷πŒÛ¥•π¶ƒ‹“¿¿µ¥À≤Œ ˝…Ë÷√£¨0 == Most sensitive,1 == High sensitivity,2 == Medium sensitivity(default),3 == Low sensitivity
     status = ZwSetValueKey(hKey, &valueName, 0, REG_DWORD, &AAPThreshold, 4);
     if (!NT_SUCCESS(status))
     {

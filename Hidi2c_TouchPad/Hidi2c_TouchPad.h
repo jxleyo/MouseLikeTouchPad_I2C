@@ -56,7 +56,6 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 
 
-
 #pragma pack(push)
 #pragma pack(1)
 typedef struct _HYBRID_REPORT {
@@ -100,8 +99,6 @@ typedef struct _PTP_REPORT {
 CHAR UnitExponent_Table[16] ={0,1,2,3,4,5,6,7,-8,-7,-6,-5,-4,-3,-2,1};
 
 double MouseSensitivityTable[3] = { 0.8,1.0,1.25};
-char ScrollSpeedTable[2] = { 3,1};
-
 
 
 typedef struct _PTP_PARSER {
@@ -124,6 +121,8 @@ typedef struct _PTP_PARSER {
 
     BOOLEAN bMouse_Wheel_Mode; //¶¨ÒåÊó±ê¹öÂÖ×´Ì¬£¬0Îª¹öÂÖÎ´¼¤»î£¬1Îª¹öÂÖ¼¤»î
     BOOLEAN bMouse_Wheel_Mode_JudgeEnable;//¶¨ÒåÊÇ·ñ¿ªÆô¹öÂÖÅÐ±ð
+
+    BOOLEAN bGestureCompleted;//ÊÖÊÆ²Ù×÷½áÊø±êÖ¾
 
     LARGE_INTEGER MousePointer_DefineTime;//Êó±êÖ¸Õë¶¨ÒåÊ±¼ä£¬ÓÃÓÚ¼ÆËã°´¼ü¼ä¸ôÊ±¼äÀ´Çø·ÖÅÐ¶¨Êó±êÖÐ¼äºÍ¹öÂÖ²Ù×÷
     float TouchPad_ReportInterval;//¶¨Òå´¥Ãþ°å±¨¸æ¼ä¸ôÊ±¼ä
@@ -284,9 +283,10 @@ typedef struct _DEVICE_CONTEXT
     UCHAR REPORTID_LATENCY;//ÑÓ³ÙÄ£Ê½
     UCHAR REPORTID_CONFIG_PTP_HAPTICS_ID;//´¥¿Ø·´À¡ÅäÖÃSimpleHapticsController
 
-    HYBRID_REPORT currentFrame;
+    HYBRID_REPORT currentPartOfFrame;
     PTP_REPORT combinedPacket;
-    BYTE contactCount;
+    BYTE contactCountIndex;//Single finger hybrid reporting modeµ¥Ö¸»ìºÏÄ£Ê½ÏÂµÄÖ¡ÄÚË÷ÒýºÅ¼æ¼ÆÊýÆ÷
+    BOOLEAN CombinedPacketReady;
 
     BOOLEAN  SetFeatureReady; 
     BOOLEAN  SetInputModeOK;
@@ -302,11 +302,13 @@ typedef struct _DEVICE_CONTEXT
 
     UCHAR MouseSensitivity_Index;
     double MouseSensitivity_Value;
-
-    UCHAR ScrollSpeed_Index;
-    char ScrollSpeed_Value;
     
     BOOLEAN bWheelDisabled;//µ±Ç°¹öÂÖÄ£Ê½¿ªÆô¹Ø±Õ×´Ì¬
+    BOOLEAN bWheelScrollMode;//¶¨ÒåÊó±ê¹öÂÖÊµÏÖ·½Ê½£¬TRUEÎªÄ£·ÂÊó±ê¹öÂÖ£¬FALSEÎª´¥Ãþ°åË«Ö¸»¬¶¯ÊÖÊÆ
+
+    BOOLEAN bHybrid_ReportingMode;//»ìºÏ±¨¸æÄ£Ê½×´Ì¬,TRUEÎªSingle finger hybrid reporting modeµ¥Ö¸»ìºÏÄ£Ê½£¬FALSEÎªParallel mode²¢ÐÐ±¨¸æÄ£Ê½
+
+    BOOLEAN bMouseLikeTouchPad_Mode;//ÇÐ»»·ÂÊó±êÊ½´¥Ãþ°åÓëwindowsÔ­°æµÄPTP¾«È·Ê½´¥Ãþ°å²Ù×÷·½Ê½
 
     UNICODE_STRING strCurrentUserSID;//µ±Ç°µÇÂ¼ÓÃ»§µÄSID
 
@@ -680,7 +682,7 @@ HidSetReport(
 #define HID_TYPE_BEGIN_COLLECTION 0xA1
 #define HID_TYPE_END_COLLECTION 0xC0
 #define HID_TYPE_USAGE_PAGE 0x05
-#define HID_TYPE_USAGE_PAGE_1 0x06
+#define HID_TYPE_USAGE_PAGE_2 0x06
 #define HID_TYPE_USAGE 0x09
 #define HID_TYPE_REPORT_ID 0x85
 #define HID_TYPE_REPORT_SIZE 0x75
@@ -783,22 +785,66 @@ HidSetReport(
 
 //ReportIDÎª±¾Çý¶¯ÎªÉÏ²ãÀàÇý¶¯Ìá¹©µÄ±¨¸æid£¬ÉÏ²ãÀà·¢ËÍ¸øÏÂ²ãÇý¶¯µÄreport¾­¹ý±¾Çý¶¯Ê±ÐèÒªÌæ»»³ÉÊµ¼ÊµÄReportID²¢ÇÒ±¨¸æÊý¾Ý¸ñÊ½Ò²Òª°´ÕÕÊµ¼ÊµÄÏÂ²ãÃèÊö·ûÖØÐÂ·â×°,±¾Çý¶¯ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
 //Ã¿¸öREPORTID_±ØÐë²»Í¬ÒÔÇø·Ö±¨¸æÀà±ð£¬²¢ÇÒÖµÔÚ1 - 255Ö®¼ä
-#define TEMPORARY_REPORTID_MOUSE 0x02
-#define TEMPORARY_REPORTID_MULTITOUCH 0x05
-#define TEMPORARY_REPORTID_DEVICE_CAPS 0x05
-#define TEMPORARY_REPORTID_INPUTMODE 0x03
-#define TEMPORARY_REPORTID_FUNCTION_SWITCH 0x06   
-#define TEMPORARY_REPORTID_PTPHQA 0x08
+#define FAKE_REPORTID_MOUSE 0x02
+#define FAKE_REPORTID_MULTITOUCH 0x05
+#define FAKE_REPORTID_DEVICE_CAPS 0x05
+#define FAKE_REPORTID_INPUTMODE 0x03
+#define FAKE_REPORTID_FUNCTION_SWITCH 0x06   
+#define FAKE_REPORTID_PTPHQA 0x08
+
+#define FAKE_REPORTID_VendorDefined_9 0x09
+#define FAKE_REPORTID_VendorDefined_A 0x0a
+#define FAKE_REPORTID_VendorDefined_B 0x0b
+#define FAKE_REPORTID_VendorDefined_C 0x0c
+#define FAKE_REPORTID_VendorDefined_F 0x0f
+#define FAKE_REPORTID_VendorDefined_E 0x0e
+
+
+#define PTP_FINGER_COLLECTION_2 \
+    0xa1, 0x02,                         /*   COLLECTION (Logical)     */ \
+    0x15, 0x00,                         /*       LOGICAL_MINIMUM (0)     */ \
+    0x25, 0x01,                         /*       LOGICAL_MAXIMUM (1)     */ \
+    0x09, 0x47,                         /*       USAGE (Confidence)     */ \
+    0x09, 0x42,                         /*       USAGE (Tip switch)     */ \
+    0x95, 0x02,                         /*       REPORT_COUNT (2)     */ \
+    0x75, 0x01,                         /*       REPORT_SIZE (1)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0x95, 0x01,                         /*       REPORT_COUNT (1)     */ \
+    0x75, 0x02,                         /*       REPORT_SIZE (2)     */ \
+    0x25, 0x03,                         /*       LOGICAL_MAXIMUM (3)     */ \
+    0x09, 0x51,                         /*       USAGE (Contact Identifier)     */ \
+    0x81, 0x03,                         /*       INPUT (Constant,Var)     */ \
+    0x75, 0x04,                         /*       REPORT_SIZE (4)     */ \
+    0x95, 0x01,                         /*       REPORT_COUNT (1)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+\
+    0x05, 0x01,                         /* USAGE_PAGE (Generic Desktop)     */ \
+    0x15, 0x00,                         /*       LOGICAL_MINIMUM (0)     */ \
+    0x26, 0x7c, 0x05,                   /*       LOGICAL_MAXIMUM (1404)     */ \
+    0x75, 0x10,                         /*       REPORT_SIZE (16)     */ \
+    0x55, 0x0e,                         /*       UNIT_EXPONENT (-2)     */ \
+    0x65, 0x11,                         /*       UNIT(cmÀåÃ×)     */ \
+    0x09, 0x30,                         /*     USAGE (X)     */ \
+    0x35, 0x00,                         /*       PHYSICAL_MINIMUM (0)     */ \
+    0x46, 0x90, 0x04,                   /*       PHYSICAL_MAXIMUM (1168)     */ \
+    0x95, 0x01,                         /*       REPORT_COUNT (1)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0x46, 0xD0, 0x02,                   /*       PHYSICAL_MAXIMUM (720)     */ \
+    0x26, 0x60, 0x03,                   /*       LOGICAL_MAXIMUM (864)     */ \
+    0x09, 0x31,                         /*     USAGE (Y)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0xc0                               /*   END_COLLECTION     ×¢Òâ²»ÐèÒª¶ººÅ½áÎ²*/ \
+\
 
 //touchpadÃèÊö·û
-const unsigned char TouchpadReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯Ê¹ÓÃ£¬Êµ¼ÊhidÃèÊö·ûÓ¦¸ÃÒÔÏÂ²ãÇý¶¯¶ÁÈ¡µÄÊý¾ÝÎª×¼
+const unsigned char SingleFingerHybridMode_PtpReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯Ê¹ÓÃ£¬Êµ¼ÊhidÃèÊö·ûÓ¦¸ÃÒÔÏÂ²ãÇý¶¯¶ÁÈ¡µÄÊý¾ÝÎª×¼
     //MOUSE TLC
-            0x05, 0x01, // USAGE_PAGE(Generic Desktop)
-            0x09, 0x02, //   USAGE(Mouse)
-            0xA1, 0x01, //   COLLECTION(APPlication)
-            0x85, TEMPORARY_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //ÁÙÊ±Õ¼Î»ÓÃÍ¾£¬Êµ¼ÊÊ¹ÓÃ¶ÁÐ´ReportÊ±ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
-            0x09, 0x01, //   USAGE(Pointer)
-            0xA1, 0x00, //     COLLECTION(Physical)
+    0x05, 0x01, // USAGE_PAGE(Generic Desktop)
+    0x09, 0x02, //   USAGE(Mouse)
+    0xA1, 0x01, //   COLLECTION(APPlication)
+        0x85, FAKE_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //ÁÙÊ±Õ¼Î»ÓÃÍ¾£¬Êµ¼ÊÊ¹ÓÃ¶ÁÐ´ReportÊ±ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
+        0x09, 0x01, //   USAGE(Pointer)
+        0xA1, 0x00, //     COLLECTION(Physical)
             0x05, 0x09, //     USAGE_PAGE(Button)
             0x19, 0x01, //     USAGE_MINIMUM(button 1)   Button °´¼ü£¬ Î» 0 ×ó¼ü£¬ Î»1 ÓÒ¼ü£¬ Î»2 ÖÐ¼ü
             0x29, 0x07, //     USAGE_MAXMUM(button 5)  //0x05ÏÞÖÆ×î´óµÄÊó±ê°´¼üÊýÁ¿
@@ -827,53 +873,223 @@ const unsigned char TouchpadReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯
             0x75, 0x08, //       REPORT_SIZE(8)
             0x95, 0x01, //       REPORT_COUNT(1)
             0x81, 0x06, //       INPUT(data,Var, Rel) //Ë®Æ½¹öÂÖ£¬Ïà¶ÔÖµ
-            0xC0,       //       End Connection(PhySical)
-            0xC0,       //     End Connection
+        0xC0,       //       End Connection(PhySical)
+    0xC0,       //     End Connection
+
 
     //TOUCH PAD input TLC
-        0x05, 0x0d,                         // USAGE_PAGE (Digitizers)          
-        0x09, 0x05,                         // USAGE (Touch Pad)             
-        0xa1, 0x01,                         // COLLECTION (Application)         
-        0x85, TEMPORARY_REPORTID_MULTITOUCH,            //   REPORT_ID (Touch pad)      //REPORTID_MULTITOUCH               
-        0x09, 0x22,                         //   USAGE (Finger)                 
-        0xa1, 0x02,                         //   COLLECTION (Logical)  
-        0x15, 0x00,                         //       LOGICAL_MINIMUM (0)
-        0x25, 0x01,                         //       LOGICAL_MAXIMUM (1)
-        0x09, 0x47,                         //       USAGE (Confidence) 
-        0x09, 0x42,                         //       USAGE (Tip switch)
-        0x95, 0x02,                         //       REPORT_COUNT (2)
-        0x75, 0x01,                         //       REPORT_SIZE (1)
-        0x81, 0x02,                         //       INPUT (Data,Var,Abs)
-        0x95, 0x01,                         //       REPORT_COUNT (1)
-        0x75, 0x02,                         //       REPORT_SIZE (2)
-        0x25, 0x02,                         //       LOGICAL_MAXIMUM (2)
-        0x09, 0x51,                         //       USAGE (Contact Identifier)
-        0x81, 0x02,                         //       INPUT (Data,Var,Abs)
-        0x75, 0x01,                         //       REPORT_SIZE (1)
-        0x95, 0x04,                         //       REPORT_COUNT (4)             
-        0x81, 0x03,                         //       INPUT (Cnst,Var,Abs)
-        0x05, 0x01,                         //       USAGE_PAGE (Generic Desk..
-        0x15, 0x00,                         //       LOGICAL_MINIMUM (0)
-        0x26, 0xff, 0x0f,                   //       LOGICAL_MAXIMUM (4095)         
-        0x75, 0x10,                         //       REPORT_SIZE (16)             
-        0x55, 0x0e,                         //       UNIT_EXPONENT (-2)           
-        0x65, 0x13,                         //       UNIT(Inch,EngLinear)                  
-        0x09, 0x30,                         //       USAGE (X)                    
-        0x35, 0x00,                         //       PHYSICAL_MINIMUM (0)         
-        0x46, 0x90, 0x01,                   //       PHYSICAL_MAXIMUM (400)
-        0x95, 0x01,                         //       REPORT_COUNT (1)         
-        0x81, 0x02,                         //       INPUT (Data,Var,Abs)         
-        0x46, 0x13, 0x01,                   //       PHYSICAL_MAXIMUM (275)
-        0x09, 0x31,                         //       USAGE (Y)                    
-        0x81, 0x02,                         //       INPUT (Data,Var,Abs)    
-        0xc0,                               //    END_COLLECTION
-        0x55, 0x0C,                         //    UNIT_EXPONENT (-4)           
+    0x05, 0x0d,                         // USAGE_PAGE (Digitizers)          
+    0x09, 0x05,                         // USAGE (Touch Pad)    
+    0xa1, 0x01,                         // COLLECTION (Application)         
+        0x85, FAKE_REPORTID_MULTITOUCH,     /*  REPORT_ID (Touch pad)  REPORTID_MULTITOUCH  */ \
+
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION_2, \
+
+        0x05, 0x0d,                         // USAGE_PAGE (Digitizers) 
+        0x55, 0x0C,                         //    UNIT_EXPONENT (-4) 
         0x66, 0x01, 0x10,                   //    UNIT (Seconds)        
         0x47, 0xff, 0xff, 0x00, 0x00,      //     PHYSICAL_MAXIMUM (65535)
         0x27, 0xff, 0xff, 0x00, 0x00,         //  LOGICAL_MAXIMUM (65535) 
         0x75, 0x10,                           //  REPORT_SIZE (16)             
         0x95, 0x01,                           //  REPORT_COUNT (1) 
-        0x05, 0x0d,                         //    USAGE_PAGE (Digitizers)
+
+        0x09, 0x56,                         //    USAGE (Scan Time)    
+        0x81, 0x02,                           //  INPUT (Data,Var,Abs)         
+        0x09, 0x54,                         //    USAGE (Contact count)
+        0x25, 0x7f,                           //  LOGICAL_MAXIMUM (127) 
+        0x95, 0x01,                         //    REPORT_COUNT (1)
+        0x75, 0x08,                         //    REPORT_SIZE (8)    
+        0x81, 0x02,                         //    INPUT (Data,Var,Abs)
+
+        0x05, 0x09,                         //    USAGE_PAGE (Button)         
+        0x09, 0x01,                         //    USAGE_(Button 1)     
+        0x25, 0x01,                         //    LOGICAL_MAXIMUM (1)          
+        0x75, 0x01,                         //    REPORT_SIZE (1)              
+        0x95, 0x01,                         //    REPORT_COUNT (1)             
+        0x81, 0x02,                         //    INPUT (Data,Var,Abs)
+        0x95, 0x07,                          //   REPORT_COUNT (7)                 
+        0x81, 0x03,                         //    INPUT (Constant,Var)
+
+        0x09, 0xC5,                         //    USAGE (ÈÏÖ¤×´Ì¬Blob)
+        0x75, 0x08,                         //    REPORT_SIZE (8)              
+        0x95, 0x02,                         //    REPORT_COUNT (2)             
+        0x81, 0x03,                         //    INPUT (Constant,Var)
+
+        0x05, 0x0d,                         // USAGE_PAGE (Digitizers) 
+        0x85, FAKE_REPORTID_DEVICE_CAPS,    // REPORT_ID (Feature) Ó²¼þÌØÐÔ                  
+        0x09, 0x55,                         //    USAGE (Contact Count Maximum) Ó²¼þÖ§³ÖµãÊý REPORTID_MAX_COUNT
+        0x09, 0x59,                         //    USAGE (Pad TYpe) ´¥Ãþ°åÀàÐÍ
+        0x75, 0x04,                         //    REPORT_SIZE (4) 
+        0x95, 0x02,                         //    REPORT_COUNT (2)
+        0x25, 0x0f,                         //    LOGICAL_MAXIMUM (15)
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+
+        //0x85, FAKE_REPORTID_Latency,   //    REPORT_ID   Latency mode feature report id
+        //0x09, 0x60,                         //    USAGE (  Latency mode feature report ÑÓ³ÙÄ£Ê½¹¦ÄÜ±¨±íµÄ¿ÉÑ¡Ö§³Ö) 
+        //0x75, 0x01,                         //    REPORT_SIZE (1)              
+        //0x95, 0x01,                         //    REPORT_COUNT (1)    
+        //0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
+        //0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+        //0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        //0x95, 0x0F,                          //   REPORT_COUNT (15)  
+        //0xb1, 0x03,                         //    FEATURE (Constant,Var)  
+
+        0x06, 0x00, 0xff,                   //    USAGE_PAGE (Vendor Defined)
+        0x85, FAKE_REPORTID_PTPHQA, //   REPORT_ID (PTPHQA) 
+        0x09, 0xC5,                         //    USAGE (Vendor Usage 0xC5 ÍêÕûµÄÈÏÖ¤×´Ì¬Blob)
+        0x15, 0x00,                         //    LOGICAL_MINIMUM (0)          
+        0x26, 0xff, 0x00,                   //    LOGICAL_MAXIMUM (0xff) 
+        0x75, 0x08,                         //    REPORT_SIZE (8)             
+        0x96, 0x00, 0x01,                   //    REPORT_COUNT (0x100 (256))     
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+
+    0xc0,                               // END_COLLECTION
+
+
+    //CONFIG TLC
+    0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
+    0x09, 0x0E,                         //    USAGE (Configuration)
+    0xa1, 0x01,                         //   COLLECTION (Application)
+        0x85, FAKE_REPORTID_INPUTMODE,   //   REPORT_ID (Feature)      REPORTID_FEATURE       
+        0x09, 0x22,                         //   USAGE (Finger)              
+        0xa1, 0x02,                         //   COLLECTION (logical)     
+            0x09, 0x52,                         //    USAGE (Input Mode)         
+            0x15, 0x00,                         //    LOGICAL_MINIMUM (0)      
+            0x25, 0x0a,                         //    LOGICAL_MAXIMUM (10)
+            0x75, 0x10,                         //    REPORT_SIZE (16)         
+            0x95, 0x01,                         //    REPORT_COUNT (1)         
+            0xb1, 0x02,                         //    FEATURE (Data,Var,Abs    
+            0xc0,                               //   END_COLLECTION
+
+            0x09, 0x22,                         //   USAGE (Finger)              
+            0xa1, 0x00,                         //   COLLECTION (physical)     
+            0x85, FAKE_REPORTID_FUNCTION_SWITCH,  //     REPORT_ID (Feature)              
+            0x09, 0x57,                         //     USAGE(Surface switch)
+            0x09, 0x58,                         //     USAGE(Button switch)
+            0x75, 0x01,                         //     REPORT_SIZE (1)
+            0x95, 0x02,                         //     REPORT_COUNT (2)
+            0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+            0xb1, 0x02,                         //     FEATURE (Data,Var,Abs)
+            0x95, 0x0E,                         //     REPORT_COUNT (14)             
+            0xb1, 0x03,                         //     FEATURE (Cnst,Var,Abs)
+        0xc0,                               //   END_COLLECTION
+    0xc0,                               // END_COLLECTION
+
+};
+    
+
+
+#define PTP_FINGER_COLLECTION \
+    0xa1, 0x02,                         /*   COLLECTION (Logical)     */ \
+    0x15, 0x00,                         /*       LOGICAL_MINIMUM (0)     */ \
+    0x25, 0x01,                         /*       LOGICAL_MAXIMUM (1)     */ \
+    0x09, 0x47,                         /*       USAGE (Confidence)     */ \
+    0x09, 0x42,                         /*       USAGE (Tip switch)     */ \
+    0x95, 0x02,                         /*       REPORT_COUNT (2)     */ \
+    0x75, 0x01,                         /*       REPORT_SIZE (1)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0x95, 0x01,                         /*       REPORT_COUNT (1)     */ \
+    0x75, 0x03,                         /*       REPORT_SIZE (3)     */ \
+    0x25, 0x05,                         /*       LOGICAL_MAXIMUM (5)     */ \
+    0x09, 0x51,                         /*       USAGE (Contact Identifier)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0x75, 0x01,                         /*       REPORT_SIZE (1)     */ \
+    0x95, 0x03,                         /*       REPORT_COUNT (3)     */ \
+    0x81, 0x03,                         /*       INPUT (Constant,Var)     */ \
+\
+    0x05, 0x01,                         /* USAGE_PAGE (Generic Desktop)     */ \
+    0x15, 0x00,                         /*       LOGICAL_MINIMUM (0)     */ \
+    0x26, 0x7c, 0x05,                   /*       LOGICAL_MAXIMUM (1404)     */ \
+    0x75, 0x10,                         /*       REPORT_SIZE (16)     */ \
+    0x55, 0x0e,                         /*       UNIT_EXPONENT (-2)     */ \
+    0x65, 0x11,                         /*       UNIT(cmÀåÃ×)     */ \
+    0x09, 0x30,                         /*     USAGE (X)     */ \
+    0x35, 0x00,                         /*       PHYSICAL_MINIMUM (0)     */ \
+    0x46, 0x90, 0x04,                   /*       PHYSICAL_MAXIMUM (1168)     */ \
+    0x95, 0x01,                         /*       REPORT_COUNT (1)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0x46, 0xD0, 0x02,                   /*       PHYSICAL_MAXIMUM (720)     */ \
+    0x26, 0x60, 0x03,                   /*       LOGICAL_MAXIMUM (864)     */ \
+    0x09, 0x31,                         /*     USAGE (Y)     */ \
+    0x81, 0x02,                         /*       INPUT (Data,Var,Abs)     */ \
+    0xc0                               /*   END_COLLECTION     ×¢Òâ²»ÐèÒª¶ººÅ½áÎ²*/ \
+\
+
+const unsigned char ParallelMode_PtpReportDescriptor[] = {
+    //MOUSE TLC
+    0x05, 0x01, // USAGE_PAGE(Generic Desktop)
+    0x09, 0x02, //   USAGE(Mouse)
+    0xA1, 0x01, //   COLLECTION(APPlication)
+        0x85, FAKE_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //¹¹ÔìµÄIDÓÃÓÚ¿Í»§¶ËÍ¨Ñ¶ÓÃÍ¾£¬Êµ¼ÊÊ¹ÓÃ¶ÁÐ´ReportÊ±ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
+        0x09, 0x01, //   USAGE(Pointer)
+        0xA1, 0x00, //     COLLECTION(Physical)
+            0x05, 0x09, //     USAGE_PAGE(Button)
+            0x19, 0x01, //     USAGE_MINIMUM(button 1)   Button °´¼ü£¬ Î» 0 ×ó¼ü£¬ Î»1 ÓÒ¼ü£¬ Î»2 ÖÐ¼ü
+            0x29, 0x07, //     USAGE_MAXMUM(button 5)  //0x05ÏÞÖÆ×î´óµÄÊó±ê°´¼üÊýÁ¿
+            0x15, 0x00, //     LOGICAL_MINIMUM(0)
+            0x25, 0x01, //     LOGICAL_MAXIMUM(1)
+            0x75, 0x01, //     REPORT_SIZE(1)
+            0x95, 0x07, //     REPORT_COUNT(3)  //0x05Êó±ê°´¼üÊýÁ¿,ÐÂÔö4ºÅBack/5ºÅForwardºóÍËÇ°½ø¹¦ÄÜ¼ü
+            0x81, 0x02, //     INPUT(Data,Var,Abs)
+            0x95, 0x01, //     REPORT_COUNT(3) //ÐèÒª²¹×ã¶àÉÙ¸öbitÊ¹µÃ¼ÓÉÏÊó±ê°´¼üÊýÁ¿µÄn¸öbitÎ»³É1¸ö×Ö½Ú8bit
+            0x81, 0x03, //     INPUT (Cnst,Var,Abs)////Ò»°ãpending²¹Î»µÄinputÓÃCnst³£Á¿0x03
+            0x05, 0x01, //     USAGE_PAGE(Generic Desktop)
+            0x09, 0x30, //     USAGE(X)       XÒÆ¶¯
+            0x09, 0x31, //     USAGE(Y)       YÒÆ¶¯
+            0x09, 0x38, //     USAGE(Wheel)   ´¹Ö±¹ö¶¯
+            0x15, 0x81, //     LOGICAL_MINIMUM(-127)
+            0x25, 0x7F, //     LOGICAL_MAXIMUM(127)
+            0x75, 0x08, //     REPORT_SIZE(8)
+            0x95, 0x03, //     REPORT_COUNT(3)
+            0x81, 0x06, //     INPUT(Data,Var, Rel) //X,Y,´¹Ö±¹öÂÖÈý¸ö²ÎÊý£¬ Ïà¶ÔÖµ
+
+            //ÏÂ±ßË®Æ½¹ö¶¯
+            0x05, 0x0C, //     USAGE_PAGE (Consumer Devices)
+            0x0A, 0x38, 0x02, // USAGE(AC Pan)
+            0x15, 0x81, //       LOGICAL_MINIMUM(-127)
+            0x25, 0x7F, //       LOGICAL_MAXIMUM(127)
+            0x75, 0x08, //       REPORT_SIZE(8)
+            0x95, 0x01, //       REPORT_COUNT(1)
+            0x81, 0x06, //       INPUT(data,Var, Rel) //Ë®Æ½¹öÂÖ£¬Ïà¶ÔÖµ
+        0xC0,       //       End Connection(PhySical)
+    0xC0,       //     End Connection
+
+
+    //TOUCH PAD input TLC
+    0x05, 0x0d,                         // USAGE_PAGE (Digitizers)          
+    0x09, 0x05,                         // USAGE (Touch Pad)    
+    0xa1, 0x01,                         // COLLECTION (Application)         
+        0x85, FAKE_REPORTID_MULTITOUCH,     /*  REPORT_ID (Touch pad)  REPORTID_MULTITOUCH  */ \
+
+        0x05, 0x0d,                         /* USAGE_PAGE (Digitizers)  */ \
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION, \
+
+        0x05, 0x0d,                         /* USAGE_PAGE (Digitizers)  */ \
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION, \
+
+        0x05, 0x0d,                         /* USAGE_PAGE (Digitizers)  */ \
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION, \
+
+        0x05, 0x0d,                         /* USAGE_PAGE (Digitizers)  */ \
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION, \
+
+        0x05, 0x0d,                         /* USAGE_PAGE (Digitizers)  */ \
+        0x09, 0x22,                        /* Usage: Finger */ \
+        PTP_FINGER_COLLECTION, \
+
+        0x05, 0x0d,                         // USAGE_PAGE (Digitizers) 
+        0x55, 0x0C,                         //    UNIT_EXPONENT (-4) 
+        0x66, 0x01, 0x10,                   //    UNIT (Seconds)        
+        0x47, 0xff, 0xff, 0x00, 0x00,      //     PHYSICAL_MAXIMUM (65535)
+        0x27, 0xff, 0xff, 0x00, 0x00,         //  LOGICAL_MAXIMUM (65535) 
+        0x75, 0x10,                           //  REPORT_SIZE (16)             
+        0x95, 0x01,                           //  REPORT_COUNT (1) 
+
         0x09, 0x56,                         //    USAGE (Scan Time)    
         0x81, 0x02,                           //  INPUT (Data,Var,Abs)         
         0x09, 0x54,                         //    USAGE (Contact count)
@@ -888,30 +1104,59 @@ const unsigned char TouchpadReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯
         0x95, 0x01,                         //    REPORT_COUNT (1)             
         0x81, 0x02,                         //    INPUT (Data,Var,Abs)
         0x95, 0x07,                          //   REPORT_COUNT (7)                 
-        0x81, 0x03,                         //    INPUT (Cnst,Var,Abs)
+        0x81, 0x03,                         //    INPUT (Constant,Var)
+
         0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
-        0x85, TEMPORARY_REPORTID_DEVICE_CAPS,            //   REPORT_ID (Feature)  /Ó²¼þÖ§³ÖµãÊý    REPORTID_DEVICE_CAPS£¬REPORTID_MAX_COUNT,                   
-        0x09, 0x55,                         //    USAGE (Contact Count Maximum)
-        0x09, 0x59,                         //    USAGE (Pad TYpe)
+        0x85, FAKE_REPORTID_DEVICE_CAPS,    // REPORT_ID (Feature) Ó²¼þÌØÐÔ                  
+        0x09, 0x55,                         //    USAGE (Contact Count Maximum) Ó²¼þÖ§³ÖµãÊý REPORTID_MAX_COUNT
+        0x09, 0x59,                         //    USAGE (Pad TYpe) ´¥Ãþ°åÀàÐÍ
         0x75, 0x04,                         //    REPORT_SIZE (4) 
         0x95, 0x02,                         //    REPORT_COUNT (2)
         0x25, 0x0f,                         //    LOGICAL_MAXIMUM (15)
         0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+
+        //0x85, FAKE_REPORTID_Latency,   //    REPORT_ID   Latency mode feature report id
+        //0x09, 0x60,                         //    USAGE (  Latency mode feature report ÑÓ³ÙÄ£Ê½¹¦ÄÜ±¨±íµÄ¿ÉÑ¡Ö§³Ö) 
+        //0x75, 0x01,                         //    REPORT_SIZE (1)              
+        //0x95, 0x01,                         //    REPORT_COUNT (1)    
+        //0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
+        //0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+        //0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        //0x95, 0x07,                          //   REPORT_COUNT (7)  
+        //0xb1, 0x03,                         //    FEATURE (Constant,Var)  
+
+        0x85, FAKE_REPORTID_PTPHQA, //   REPORT_ID (PTPHQA) 
         0x06, 0x00, 0xff,                   //    USAGE_PAGE (Vendor Defined)
-        0x85, TEMPORARY_REPORTID_PTPHQA,               //    REPORT_ID (PTPHQA)  
-        0x09, 0xC5,                         //    USAGE (Vendor Usage 0xC5)    
+        0x09, 0xC5,                         //    USAGE (Vendor Usage 0xC5 ÍêÕûµÄÈÏÖ¤×´Ì¬Blob)
         0x15, 0x00,                         //    LOGICAL_MINIMUM (0)          
         0x26, 0xff, 0x00,                   //    LOGICAL_MAXIMUM (0xff) 
         0x75, 0x08,                         //    REPORT_SIZE (8)             
-        0x96, 0x00, 0x01,                   //    REPORT_COUNT (0x100 (256))             
+        0x96, 0x00, 0x01,                   //    REPORT_COUNT (0x100 (256))     
         0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
-        0xc0,                               // END_COLLECTION
 
-        //CONFIG TLC
-        0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
-        0x09, 0x0E,                         //    USAGE (Configuration)
-        0xa1, 0x01,                         //   COLLECTION (Application)
-        0x85, TEMPORARY_REPORTID_INPUTMODE,             //   REPORT_ID (Feature)      REPORTID_FEATURE       
+        ////ÒÔÏÂÕªÂ¼Õª×ÔÉè±¸ÈÏÖ¤×´Ì¬¹¦ÄÜ±¨±íµÄWindows¾«¶È Touchpad ¶¥¼¶¼¯ºÏµÄÃèÊö·û ¿ÉÑ¡Ö§³Ö¡£ 
+        ////ÕâÔÊÐí½«ÈÏÖ¤×´Ì¬ Blob ²ð·ÖÎª 8 ¸ö 32 ×Ö½Ú¶Î£¬¶ø²»ÊÇµ¥¸ö 256 ×Ö½Ú¶Î,C6ÓÃ·¨Ö¸Ê¾·Ö¶ÎÊýÁ¿¶¨Òå£¬C7ÓÃ·¨Ö¸Ê¾Ã¿¶ÎµÄ³¤¶È×Ö½Ú¶¨Òå
+        ////Ö÷»úÖ¸Ê¾ÔÚ SET FEATURE ÖÐ·µ»ØµÄ¶Î#£¬Éè±¸Ó¦·µ»Ø GET FEATURE ÖÐµÄ¶Î #ºÍ¹ØÁªµÄ¶Î¡£
+        //0x06, 0x00, 0xff,                   //     USAGE_PAGE (Vendor Defined)  
+        //0x85, FAKE_REPORTID_PTPHQA,    //     REPORT_ID (PTPHQA)              
+        //0x09, 0xC6,                         //     USAGE (Vendor usage for segment #) 
+        //0x25, 0x08,                         //     LOGICAL_MAXIMUM (8)
+        //0x75, 0x08,                         //     REPORT_SIZE (8)
+        //0x95, 0x01,                         //     REPORT_COUNT (1) 
+        //0xb1, 0x02,                         //     FEATURE (Data,Var,Abs) 
+        //0x09, 0xC7,                         //     USAGE (Vendor Usage) 
+        //0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)                 
+        //0x95, 0x20,                         //     REPORT_COUNT (32)             
+        //0xb1, 0x02,                         //     FEATURE (Data,Var,Abs)
+
+    0xc0,                               // END_COLLECTION
+
+
+    //CONFIG TLC
+    0x05, 0x0d,                         //    USAGE_PAGE (Digitizer)
+    0x09, 0x0E,                         //    USAGE (Configuration)
+    0xa1, 0x01,                         //   COLLECTION (Application)
+        0x85, FAKE_REPORTID_INPUTMODE,   //   REPORT_ID (Feature)      REPORTID_FEATURE       
         0x09, 0x22,                         //   USAGE (Finger)              
         0xa1, 0x02,                         //   COLLECTION (logical)     
         0x09, 0x52,                         //    USAGE (Input Mode)         
@@ -920,10 +1165,11 @@ const unsigned char TouchpadReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯
         0x75, 0x08,                         //    REPORT_SIZE (8)         
         0x95, 0x01,                         //    REPORT_COUNT (1)         
         0xb1, 0x02,                         //    FEATURE (Data,Var,Abs    
-        0xc0,                               //   END_COLLECTION
-        0x09, 0x22,                         //   USAGE (Finger)              
-        0xa1, 0x00,                         //   COLLECTION (physical)     
-        0x85, TEMPORARY_REPORTID_FUNCTION_SWITCH,     //     REPORT_ID (Feature)              
+    0xc0,                               //   END_COLLECTION
+
+    0x09, 0x22,                         //   USAGE (Finger)              
+    0xa1, 0x00,                         //   COLLECTION (physical)     
+        0x85, FAKE_REPORTID_FUNCTION_SWITCH,  //     REPORT_ID (Feature)              
         0x09, 0x57,                         //     USAGE(Surface switch)
         0x09, 0x58,                         //     USAGE(Button switch)
         0x75, 0x01,                         //     REPORT_SIZE (1)
@@ -933,12 +1179,75 @@ const unsigned char TouchpadReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯
         0x95, 0x06,                         //     REPORT_COUNT (6)             
         0xb1, 0x03,                         //     FEATURE (Cnst,Var,Abs)
         0xc0,                               //   END_COLLECTION
-        0xc0,                               // END_COLLECTION
+    0xc0,                               // END_COLLECTION
 
-        
+    ////Vendor Defined
+    //0x06, 0x00, 0xff,                   //     USAGE_PAGE (Vendor Defined) £¬0x06 = HID_TYPE_USAGE_PAGE_2
+    //0x09, 0x01,                         //   USAGE(vendor definedÓÃ·¨Usage_x01)   User-mode Application configuration
+    //0xa1, 0x01,                         //   COLLECTION (Application)
+    //    0x85, FAKE_REPORTID_VendorDefined_9,              //     REPORT_ID ( ) 
+    //    0x09, 0x02,                         // USAGE (Vendor Defined)
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x14,                         //     REPORT_COUNT (20) 
+    //    0x91, 0x02,                         //     OUTPUT (Data,Var,Abs)Êä³öÊý¾Ý
 
+    //    0x85, FAKE_REPORTID_VendorDefined_A,   //     REPORT_ID ( )
+    //    0x09, 0x03,                         //   USAGE (Vendor Defined)
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x14,                         //     REPORT_COUNT (20)  
+    //    0x91, 0x02,                         //     OUTPUT (Data,Var,Abs)Êä³öÊý¾Ý
+
+    //    0x85, FAKE_REPORTID_VendorDefined_B,     //     REPORT_ID ( )
+    //    0x09, 0x04,                        //   USAGE (Vendor Defined)
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x3d,                         //     REPORT_COUNT (61)  
+    //    0x81, 0x02,                         //       INPUT (Data,Var,Abs)
+
+    //    0x85, FAKE_REPORTID_VendorDefined_C,     //     REPORT_ID ( ) 
+    //    0x09, 0x05,                        //   USAGE (Vendor Defined)
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x3d,                         //     REPORT_COUNT (61)  
+    //    0x81, 0x02,                         //     INPUT (Data,Var,Abs)
+
+    //    0x85, FAKE_REPORTID_VendorDefined_F,     //     REPORT_ID ( )
+    //    0x09, 0x06,                        //   USAGE (Vendor usage for segment #6) 
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x03,                         //     REPORT_COUNT (3)  
+    //    0xb1, 0x02,                         //     FEATURE (Data,Var,Abs)
+
+    //    0x85, FAKE_REPORTID_VendorDefined_E,     //     REPORT_ID ( )
+    //    0x09, 0x07,                        //   USAGE (Vendor usage for segment #7) 
+    //    0x15, 0x00,                         //    LOGICAL_MINIMUM (0)
+    //    0x26, 0xff, 0x00,                   //     LOGICAL_MAXIMUM (0xff)  
+    //    0x75, 0x08,                         //     REPORT_SIZE (8)
+    //    0x95, 0x01,                         //     REPORT_COUNT (1)  
+    //    0xb1, 0x02,                         //     FEATURE (Data,Var,Abs)
+
+    //    ////ÓÃÓÚÖ§³ÖHID_USAGE_HAPTIC_INTENSITYÑ¹¸ÐÇ¿¶ÈÌØÕ÷±¨¸æµÄ¿ÉÑ¡Ö§³Ö¡£
+    //    //0x05, 0x0E,                       //   Usage Page (Haptics)
+    //    //0x09, 0x01,                       //   Usage (Simple Haptics Controller)
+    //    //0xA1, 0x02,                       //   Collection (Logical)
+    //    //0x09, 0x23,                       //     Usage (Intensity)
+    //    //0x85, FAKE_REPORTID_CONFIG_PTP_HAPTICS_ID,      //     Report ID (9)
+    //    //0x15, 0x00,                       //     Logical Minimum (0)
+    //    //0x25, 0x64,                       //     Logical Maximum (100)
+    //    //0x75, 0x08,                       //     Report Size (8)
+    //    //0x95, 0x01,                       //     Report Count (1)
+    //    //0xB1, 0x02,                       //     Feature (Data,Var,Abs)
+    //    //0xC0,                             //   End Collection ()
+    //0xc0,                               // END_COLLECTION
 };
-    
+
 
 /////////Êó±êHIDÃèÊö·û, Á½¸ö°´¼ü£¨×ó£¬ÓÒ£©£¬ ¹öÂÖ£¨Ë®Æ½¹ö¶¯ºÍ´¹Ö±¹ö¶¯£©, X,Y²ÉÓÃÏà¶ÔÖµ
 const unsigned char MouseReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯Ê¹ÓÃ£¬Êµ¼ÊhidÃèÊö·ûÓ¦¸ÃÒÔÏÂ²ãÇý¶¯¶ÁÈ¡µÄÊý¾ÝÎª×¼
@@ -946,7 +1255,7 @@ const unsigned char MouseReportDescriptor[] = {//±¾ÃèÊö·ûÖ»×÷ÎªÉÏ²ã¿Í»§¶ËÇý¶¯Ê¹Ó
     0x05, 0x01, // USAGE_PAGE(Generic Desktop)
     0x09, 0x02, //   USAGE(Mouse)
     0xA1, 0x01, //   COLLECTION(APPlication)
-    0x85, TEMPORARY_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //ÁÙÊ±Õ¼Î»ÓÃÍ¾£¬Êµ¼ÊÊ¹ÓÃ¶ÁÐ´ReportÊ±ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
+    0x85, FAKE_REPORTID_MOUSE, //     ReportID(Mouse ReportID)  //ÁÙÊ±Õ¼Î»ÓÃÍ¾£¬Êµ¼ÊÊ¹ÓÃ¶ÁÐ´ReportÊ±ÐèÒªÌáÇ°»ñÈ¡hidÃèÊö·û±¨¸æÀ´È·¶¨ÕýÈ·µÄÊýÖµ
     0x09, 0x01, //   USAGE(Pointer)
         0xA1, 0x00, //     COLLECTION(Physical)
         0x05, 0x09, //     USAGE_PAGE(Button)
@@ -990,7 +1299,7 @@ CONST HID_DESCRIPTOR DefaultHidDescriptor = {
     0x00,   // country code == Not Specified
     0x01,   // number of HID class descriptors
     { 0x22,   // descriptor type 
-    sizeof(TouchpadReportDescriptor) }  // MouseReportDescriptor//TouchpadReportDescriptor
+    sizeof(ParallelMode_PtpReportDescriptor) }  // MouseReportDescriptor//ParallelMode_PtpReportDescriptor/SingleFingerHybridMode_PtpReportDescriptor
 };
 
 
@@ -1091,22 +1400,12 @@ SendPtpMultiTouchReport(PDEVICE_CONTEXT pDevContext, PVOID MultiTouchReport, siz
 
 void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext);
 
-void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport, mouse_report_t* pMouseReport);
+void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport);
 
 void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 
-void SetNextScrollSpeed(PDEVICE_CONTEXT pDevContext);
-
-NTSTATUS  SetRegisterScrollSpeedActualValue(PUNICODE_STRING pSidReg, ULONG ScrollSpeedActualValue);
-
-NTSTATUS SetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG ss_idx);
-NTSTATUS GetRegisterScrollSpeedIndex(PDEVICE_CONTEXT pDevContext, ULONG* ss_idx);
-
 NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
 NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx);
-
-NTSTATUS SetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG bWheelDisabled);
-NTSTATUS GetRegisterWheelDisabled(PDEVICE_CONTEXT pDevContext, ULONG* pWheelDisabled);
 
 NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg);
 NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg); 
