@@ -30,5 +30,3 @@ https://github.com/jxleyo/MouseLikeTouchPad-Hidi2c_Driver
 https://space.bilibili.com/409976933
 https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
 
-
-
