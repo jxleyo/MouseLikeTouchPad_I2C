@@ -52,7 +52,7 @@ typedef struct _ACPI_DEVICE_SETTINGS
 
 #define SCROLL_OFFSET_THRESHOLD_X      100   // 滚动位移量X阈值 
 #define SCROLL_OFFSET_THRESHOLD_Y      100   // 滚动位移量Y阈值 
-#define cDefault_WheelModeFingerAmount      3   // 默认滚轮操作模式手指数量
+
 
 
 
@@ -122,6 +122,7 @@ typedef struct _PTP_PARSER {
     BOOLEAN bMouse_Wheel_Mode; //定义鼠标滚轮状态，0为滚轮未激活，1为滚轮激活
     BOOLEAN bMouse_Wheel_Mode_JudgeEnable;//定义是否开启滚轮判别
 
+    BOOLEAN bPtpReportCollection;//手势集合标志
     BOOLEAN bGestureCompleted;//手势操作结束标志
 
     LARGE_INTEGER MousePointer_DefineTime;//鼠标指针定义时间，用于计算按键间隔时间来区分判定鼠标中间和滚轮操作

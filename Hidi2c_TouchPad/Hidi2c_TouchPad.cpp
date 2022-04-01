@@ -3863,9 +3863,6 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
 
 
-    //发送报告的类型
-    BOOLEAN bPtpReportCollection = FALSE;//默认鼠标集合
-
     //初始化鼠标事件
     mouse_report_t mReport;
     mReport.report_id = FAKE_REPORTID_MOUSE;//FAKE_REPORTID_MOUSE//pDevContext->REPORTID_MOUSE_COLLECTION
@@ -4027,7 +4024,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         tp->bMouse_Wheel_Mode = FALSE;//结束滚轮模式
         tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
 
-        tp->bGestureCompleted = TRUE;//手势模式结束
+        tp->bGestureCompleted = TRUE;//手势模式结束,但tp->bPtpReportCollection不要重置待其他代码来处理
 
         tp->nMouse_Pointer_CurrentIndex = -1;
         tp->nMouse_LButton_CurrentIndex = -1;
@@ -4061,7 +4058,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                     tp->bMouse_Wheel_Mode = TRUE;  //开启滚轮模式
                     tp->bMouse_Wheel_Mode_JudgeEnable = FALSE;//关闭滚轮判别
 
-                    tp->bGestureCompleted = FALSE; //手势操作结束标志
+                    tp->bGestureCompleted = FALSE; //手势操作结束标志,但tp->bPtpReportCollection不要重置待其他代码来处理
 
                     tp->nMouse_Wheel_CurrentIndex = i;//滚轮辅助参考手指索引值
                     //手指变化瞬间时电容可能不稳定指针坐标突发性漂移需要忽略
@@ -4127,15 +4124,24 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 }
             }
 
-            mReport.dx = (UCHAR)(pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x);
-            mReport.dy = (UCHAR)(pDevContext->MouseSensitivity_Value * py / tp->PointerSensitivity_y);
+            double xx= pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x;
+            double yy = pDevContext->MouseSensitivity_Value* py / tp->PointerSensitivity_y;
+            mReport.dx = (UCHAR)xx;
+            mReport.dy = (UCHAR)yy;
+            if (xx > 0.5 && xx < 1) {//慢速精细移动指针修正
+                mReport.dx = 1;
+            }
+            if (yy > 0.5 && yy < 1) {//慢速精细移动指针修正
+                mReport.dy = 1;
+            }
+            
 
         }
     }
     else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//滚轮操作模式，触摸板双指滑动、三指四指手势也归为此模式下的特例设置一个手势状态开关供后续判断使用
         if (!pDevContext->bWheelScrollMode && !pDevContext->bHybrid_ReportingMode) {//触摸板双指滑动手势模式，三指四指手势也归为此模式
              //只有Parallel Report Mode并行报告模式的触控板有手势功能，混合报告模式的触控板手势操作存在诸多问题未解决所以不实现其手势功能
-             bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
+            tp->bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
    
         }
         else {
@@ -4200,12 +4206,13 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
 
 
-    if (bPtpReportCollection) {//触摸板集合，手势模式判断
-        if (!tp->bMouse_Wheel_Mode) {//以指针手指释放为滚轮模式结束标志，下一帧bPtpReportCollection会默认FALSE所以之后发送一次构造的手势结束报告
+    if (tp->bPtpReportCollection) {//触摸板集合，手势模式判断
+        if (!tp->bMouse_Wheel_Mode) {//以指针手指释放为滚轮模式结束标志，下一帧bPtpReportCollection会设置FALSE所以只会发送一次构造的手势结束报告
+            tp->bPtpReportCollection = FALSE;//PTP触摸板集合报告模式结束
             tp->bGestureCompleted = TRUE;//结束手势操作，该数据和bMouse_Wheel_Mode区分开了，因为bGestureCompleted可能会比bMouse_Wheel_Mode提前结束
             RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0", NULL, status);
 
-            //构造全部手指释放的临时数据包,TipSwitch域归零
+            //构造全部手指释放的临时数据包,TipSwitch域归零，windows手势操作结束时需要手指离开的点xy坐标数据
             PTP_REPORT CompletedGestureReport;
             RtlCopyMemory(&CompletedGestureReport, &tp->currentFinger, sizeof(PTP_REPORT));
             for (int i = 0; i < currentFinger_Count; i++) {
@@ -4220,10 +4227,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
         }
         else if(tp->bMouse_Wheel_Mode && currentFinger_Count == 1 && !tp->bGestureCompleted) {//滚轮模式未结束并且剩下指针手指留在触摸板上,需要配合bGestureCompleted标志判断使得构造的手势结束报告只发送一次
+            tp->bPtpReportCollection = FALSE;//PTP触摸板集合报告模式结束
             tp->bGestureCompleted = TRUE;//提前结束手势操作，该数据和bMouse_Wheel_Mode区分开了，因为bGestureCompleted可能会比bMouse_Wheel_Mode提前结束
             RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1", NULL, status);
 
-            //构造指针手指释放的临时数据包,TipSwitch域归零
+            //构造指针手指释放的临时数据包,TipSwitch域归零，windows手势操作结束时需要手指离开的点xy坐标数据
             PTP_REPORT CompletedGestureReport2;
             RtlCopyMemory(&CompletedGestureReport2, &tp->currentFinger, sizeof(PTP_REPORT));
             CompletedGestureReport2.Contacts[0].TipSwitch = 0;
@@ -4244,10 +4252,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             }
         }
     }
-    
-
-    
-    if (!bPtpReportCollection) {//发送MouseCollection
+    else{//发送MouseCollection
         mReport.button = bMouse_LButton_Status + (bMouse_RButton_Status << 1) + (bMouse_MButton_Status << 2) + (bMouse_BButton_Status << 3) + (bMouse_FButton_Status << 4);  //左中右后退前进键状态合成
         //发送鼠标报告
         status = SendPtpMouseReport(pDevContext, &mReport);
@@ -4297,6 +4302,7 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
 
    tp->bGestureCompleted = FALSE; //手势操作结束标志
+   tp->bPtpReportCollection = FALSE;//默认鼠标集合
 
    RtlZeroMemory(&tp->lastFinger, sizeof(PTP_REPORT));
    RtlZeroMemory(&tp->currentFinger, sizeof(PTP_REPORT));
