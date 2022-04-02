@@ -23,7 +23,7 @@ https://github.com/jxleyo/MouseLikeTouchPad-Hidi2c_Driver
 点击绿色的code按钮后再点击Download ZIP进行下载
 
 安装和卸载方法：
-下载的驱动zip文件解压到任意位置后打开，进入Installation Package子文件夹，安装/卸载驱动分别打开Install安装脚本.bat/Uninstall卸载脚本.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载。
+下载的驱动zip文件解压到C盘任意位置后打开(放其他盘可能获取不到管理员权限)，进入Installation Package子文件夹，安装/卸载驱动分别打开Install安装脚本.bat/Uninstall卸载脚本.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载。
 
 
 使用操作视频教程网址：
