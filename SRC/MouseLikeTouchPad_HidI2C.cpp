@@ -855,48 +855,9 @@ NTSTATUS OnPrepareHardware(
     pDevContext->REPORTSIZE_PTPHQA = 0;//
 
     pDevContext->HidReportDescriptorSaved = FALSE;
-    pDevContext->MouseSensitivity_Index = 1;//默认初始值为MouseSensitivityTable存储表的序号1项
-    pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];//默认初始值为1.0
-
-    pDevContext->bWheelDisabled = FALSE;//默认初始值为开启滚轮操作
-    pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
-
+    
     pDevContext->bHybrid_ReportingMode = FALSE;//默认初始值为Parallel mode并行报告模式
-
-    pDevContext->bMouseLikeTouchPad_Mode = TRUE;//默认初始值为仿鼠标触摸板操作方式
-
-    //初始化当前登录用户的SID
-    pDevContext->strCurrentUserSID.Buffer = NULL;
-    pDevContext->strCurrentUserSID.Length = 0;
-    pDevContext->strCurrentUserSID.MaximumLength = 0;
-
-
-    //读取鼠标灵敏度设置
-    ULONG ms_idx;
-    status = GetRegisterMouseSensitivity(pDevContext, &ms_idx);
-    if (!NT_SUCCESS(status))
-    {
-        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
-            status = SetRegisterMouseSensitivity(pDevContext, pDevContext->MouseSensitivity_Index);//初始默认设置
-            if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
-            }
-        }
-        else
-        {
-            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity err", NULL, status);
-        }
-    }
-    else {
-        if (ms_idx > 2) {//如果读取的数值错误
-            ms_idx = pDevContext->MouseSensitivity_Index;//恢复初始默认值
-        }
-        pDevContext->MouseSensitivity_Index = (UCHAR)ms_idx;
-        pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
-        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
-    }
+    pDevContext->DeviceDescriptorFingerCount = 0;//描述符计算单个报告数据包手指数量
 
     RegDebug(L"OnPrepareHardware ok", NULL, status);
     return STATUS_SUCCESS;
@@ -948,7 +909,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
         }
     }
 
-
+    //和硬件无关的动态变量必须在OnD0Entry加电过程中初始化否则休眠模式下唤醒后变量有可能会丢失赋值出问题
     pDevContext->bSetAAPThresholdOK = FALSE;//未设置AAPThreshold
     pDevContext->PtpInputModeOn = FALSE;
     pDevContext->SetFeatureReady = TRUE;
@@ -961,6 +922,42 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     pDevContext->contactCountIndex = 0;
     pDevContext->CombinedPacketReady = FALSE;
 
+    pDevContext->bMouseLikeTouchPad_Mode = TRUE;//默认初始值为仿鼠标触摸板操作方式
+
+    //初始化当前登录用户的SID
+    pDevContext->strCurrentUserSID.Buffer = NULL;
+    pDevContext->strCurrentUserSID.Length = 0;
+    pDevContext->strCurrentUserSID.MaximumLength = 0;
+
+    pDevContext->MouseSensitivity_Index = 1;//默认初始值为MouseSensitivityTable存储表的序号1项
+    pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];//默认初始值为1.0
+
+    //读取鼠标灵敏度设置
+    ULONG ms_idx;
+    status = GetRegisterMouseSensitivity(pDevContext, &ms_idx);
+    if (!NT_SUCCESS(status))
+    {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            status = SetRegisterMouseSensitivity(pDevContext, pDevContext->MouseSensitivity_Index);//初始默认设置
+            if (!NT_SUCCESS(status)) {
+                RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
+            }
+        }
+        else
+        {
+            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity err", NULL, status);
+        }
+    }
+    else {
+        if (ms_idx > 2) {//如果读取的数值错误
+            ms_idx = pDevContext->MouseSensitivity_Index;//恢复初始默认值
+        }
+        pDevContext->MouseSensitivity_Index = (UCHAR)ms_idx;
+        pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
+        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
+    }
 
 
     MouseLikeTouchPad_parse_init(pDevContext);
@@ -2667,8 +2664,7 @@ OnInterruptIsr(
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
 
         //Single finger hybrid reporting mode单指混合模式
-        if (Actual_inputReportLength != sizeof(PTP_REPORT)) {
-            pDevContext->bHybrid_ReportingMode = TRUE;//混合报告模式状态
+        if (pDevContext->bHybrid_ReportingMode) {//混合报告模式状态
 
             //合并数据帧MergeFrame
             HYBRID_REPORT* pCurrentPartOfFrame  = &pDevContext->currentPartOfFrame;//合并帧的部分数据包
@@ -2812,7 +2808,7 @@ OnInterruptIsr(
                 }
             }
 
-            //发送ptp报告
+            //windows原版的PTP精确式触摸板操作方式，直接发送PTP报告
             status = SendPtpMultiTouchReport(pDevContext, &ptpReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
                 RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
@@ -3551,7 +3547,7 @@ AnalyzeHidReportDescriptor(
             usagePage = *value;
         }
         else if (type == HID_TYPE_USAGE) {
-            lastUsage = *value;
+            lastUsage = *value; 
         }
         else if (type == HID_TYPE_REPORT_ID) {
             reportId = *value;
@@ -3590,6 +3586,10 @@ AnalyzeHidReportDescriptor(
         else if (inTouchTlc && depth == 2 && lastCollection == HID_USAGE_DIGITIZER_TOUCH_PAD  && lastUsage == HID_USAGE_DIGITIZER_FINGER) {//
             pDevContext->REPORTID_MULTITOUCH_COLLECTION = reportId;
             RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MULTITOUCH_COLLECTION=", NULL, pDevContext->REPORTID_MULTITOUCH_COLLECTION);
+
+            //这里计算单个报告数据包的手指数量用来后续判断报告模式及bHybrid_ReportingMode的赋值
+            pDevContext->DeviceDescriptorFingerCount++;
+            RegDebug(L"AnalyzeHidReportDescriptor DeviceDescriptorFingerCount=", NULL, pDevContext->DeviceDescriptorFingerCount);
         }
         else if (inMouseTlc && depth == 2 && lastCollection == HID_USAGE_GENERIC_MOUSE  && lastUsage == HID_USAGE_GENERIC_POINTER) {
             //下层的Mouse集合report本驱动并不会读取，只是作为输出到上层类驱动的Report使用
@@ -3648,6 +3648,13 @@ AnalyzeHidReportDescriptor(
             continue;
         }
     }
+
+    //判断触摸板报告模式
+    if (pDevContext->DeviceDescriptorFingerCount < 5) {//5个手指数据以下
+        pDevContext->bHybrid_ReportingMode = TRUE;//混合报告模式确认
+        RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+    }
+
 
     //计算保存触摸板尺寸分辨率等参数
     //转换为mm长度单位
@@ -3848,6 +3855,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     tp->currentFinger = *pPtpReport;
     UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//当前触摸点数量
     UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //上次触摸点数量
+    RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
+    RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
 
     UCHAR MAX_CONTACT_FINGER = PTP_MAX_CONTACT_POINTS;
     BOOLEAN allFingerDetached = TRUE;
@@ -3928,6 +3937,9 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
+    RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
+    RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+
     if (tp->currentFinger.IsButtonClicked) {//触摸板下沿物理按键功能,切换触控板灵敏度/滚轮模式开关等参数设置,需要进行离开判定，因为按键报告会一直发送直到释放
         tp->bPhysicalButtonUp = FALSE;//物理键是否释放标志
         RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp FALSE", NULL, FALSE);
@@ -3998,15 +4010,6 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }
     }
 
-    if (!pDevContext->bMouseLikeTouchPad_Mode) {//windows原版的PTP精确式触摸板操作方式，直接发送报告后跳到结尾
-        //发送ptp报告
-        status = SendPtpMultiTouchReport(pDevContext, pPtpReport, sizeof(PTP_REPORT));
-        if (!NT_SUCCESS(status)) {
-            RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport bMouseLikeTouchPad_Mode failed", NULL, status);
-        }
-        goto EndParse;
-    }
-
     //开始鼠标事件逻辑判定
     //注意多手指非同时快速接触触摸板时触摸板报告可能存在一帧中同时新增多个触摸点的情况所以不能用当前只有一个触摸点作为定义指针的判断条件
     if (tp->nMouse_Pointer_LastIndex == -1 && currentFinger_Count > 0) {//鼠标指针、左键、右键、中键都未定义,
@@ -4049,7 +4052,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 float distance = sqrt(dx * dx + dy * dy);//触摸点与指针的距离
 
                 BOOLEAN isWheel = FALSE;//滚轮模式成立条件初始化重置，注意bWheelDisabled与bMouse_Wheel_Mode_JudgeEnable的作用不同，不能混淆
-                if (!pDevContext->bWheelDisabled) {//滚轮模式开启时
+                if (!pDevContext->bWheelDisabled) {//滚轮功能开启时
                     // 指针左右侧有手指按下并且与指针手指起始定义时间间隔小于阈值，指针被定义后区分滚轮操作只需判断一次直到指针消失，后续按键操作判断不会被时间阈值约束使得响应速度不受影响
                     isWheel = tp->bMouse_Wheel_Mode_JudgeEnable && abs(distance) > tp->FingerMinDistance && abs(distance) < tp->FingerMaxDistance && Mouse_Button_Interval < ButtonPointer_Interval_MSEC;
                 }
@@ -4262,7 +4265,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }
     }
     
-EndParse:
+
     //保存下一轮所有触摸点的初始坐标及功能定义索引号
     tp->lastFinger = tp->currentFinger;
 
@@ -4299,6 +4302,9 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->nMouse_MButton_LastIndex = -1; //定义上次鼠标中键触摸点坐标的数据索引号，-1为未定义
    tp->nMouse_Wheel_LastIndex = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
+   pDevContext->bWheelDisabled = FALSE;//默认初始值为开启滚轮操作功能
+   pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
+
    tp->bMouse_Wheel_Mode = FALSE;
    tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
 
@@ -4315,7 +4321,6 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
     KeQueryTickCount(&tp->last_Ticktime);
 
     tp->bPhysicalButtonUp = TRUE;
-
 }
 
 

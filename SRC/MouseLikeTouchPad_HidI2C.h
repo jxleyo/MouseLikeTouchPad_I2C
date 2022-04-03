@@ -304,10 +304,11 @@ typedef struct _DEVICE_CONTEXT
     UCHAR MouseSensitivity_Index;
     double MouseSensitivity_Value;
     
-    BOOLEAN bWheelDisabled;//当前滚轮模式开启关闭状态
+    BOOLEAN bWheelDisabled;//当前滚轮功能开启关闭状态
     BOOLEAN bWheelScrollMode;//定义鼠标滚轮实现方式，TRUE为模仿鼠标滚轮，FALSE为触摸板双指滑动手势
 
     BOOLEAN bHybrid_ReportingMode;//混合报告模式状态,TRUE为Single finger hybrid reporting mode单指混合模式，FALSE为Parallel mode并行报告模式
+    UCHAR DeviceDescriptorFingerCount;
 
     BOOLEAN bMouseLikeTouchPad_Mode;//切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
 
