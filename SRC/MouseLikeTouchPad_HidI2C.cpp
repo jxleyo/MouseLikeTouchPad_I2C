@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_Hidi2c.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 1
+#define debug_on 0
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -4139,10 +4139,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }
     }
     else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//滚轮操作模式，触摸板双指滑动、三指四指手势也归为此模式下的特例设置一个手势状态开关供后续判断使用
-        if (!pDevContext->bWheelScrollMode && !pDevContext->bHybrid_ReportingMode) {//触摸板双指滑动手势模式，三指四指手势也归为此模式
+        if (!pDevContext->bWheelScrollMode || currentFinger_Count >2) {//触摸板双指滑动手势模式，三指四指手势也归为此模式
              //只有Parallel Report Mode并行报告模式的触控板有手势功能，混合报告模式的触控板手势操作存在诸多问题未解决所以不实现其手势功能
-            tp->bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
-   
+            if (!pDevContext->bHybrid_ReportingMode) {
+                tp->bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
+            }
         }
         else {
             //鼠标指针位移设置
