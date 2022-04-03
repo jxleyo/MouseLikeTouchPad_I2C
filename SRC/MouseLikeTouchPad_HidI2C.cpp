@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_Hidi2c.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 0
+#define debug_on 1
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -3976,8 +3976,10 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
                 RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
                 if (!pDevContext->bWheelDisabled) {//开启滚轮功能时同时也恢复滚轮实现方式为触摸板双指滑动手势
-                    pDevContext->bWheelScrollMode = FALSE;
-                    RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                    if (!pDevContext->bHybrid_ReportingMode) {//并行报告模式
+                        pDevContext->bWheelScrollMode = FALSE;
+                        RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                    }
                 }
 
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
@@ -4303,7 +4305,12 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->nMouse_Wheel_LastIndex = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
    pDevContext->bWheelDisabled = FALSE;//默认初始值为开启滚轮操作功能
-   pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
+   if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标
+       pDevContext->bWheelScrollMode = TRUE;
+   }
+   else {
+       pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
+   }
 
    tp->bMouse_Wheel_Mode = FALSE;
    tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别

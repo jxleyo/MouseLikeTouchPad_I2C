@@ -5,7 +5,7 @@ ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = MouseLikeTouchPad_HidI2C.cat
 PnpLockdown=1	
-DriverVer = 04/03/2022,20.57.32.172
+DriverVer = 04/03/2022,21.34.33.851
 
 [DestinationDirs]
 DefaultDestDir = 12
