@@ -26,7 +26,7 @@ echo.
 
 
 echo 开始删除驱动文件备份
-dir /b C:\Windows\System32\DriverStore\FileRepository\hidi2c_touchpad.inf* >dir_del_list.tmp
+dir /b C:\Windows\System32\DriverStore\FileRepository\MouseLikeTouchPad_Hidi2c.inf* >dir_del_list.tmp
 for /f "delims=" %%i in (dir_del_list.tmp) do (
     rd/s /q C:\Windows\System32\DriverStore\FileRepository\%%i
     echo 旧版驱动文件备份%%i已删除
@@ -115,9 +115,9 @@ echo.
 del/f /q hwid*.tmp
 
 
-echo 开始查询是否安装了第三方驱动Hidi2c_TouchPad以及oem*.inf文件名称
+echo 开始查询是否安装了第三方驱动MouseLikeTouchPad_Hidi2c以及oem*.inf文件名称
 ::注意重定向输出文件名不要保护oem字样否则注册表未找到时会输出该文件名到保存的文件内容中干扰后续判断
-for /f "delims=@, tokens=2"  %%i in ('reg query "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\Hidi2c_TouchPad" /v "DisplayName"') do (
+for /f "delims=@, tokens=2"  %%i in ('reg query "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_Hidi2c" /v "DisplayName"') do (
     set "infFileName=%%i" 
     echo !infFileName!>infResult.txt
 )
@@ -125,7 +125,7 @@ echo.
     
 find/i "oem" infResult.txt && (
     echo.
-    echo 找到触控板设备第三方驱动Hidi2c_TouchPad
+    echo 找到触控板设备第三方驱动MouseLikeTouchPad_Hidi2c
     echo.
     for /f "delims=" %%j in (infResult.txt) do (
     set "infFileName=%%j"
@@ -134,7 +134,7 @@ find/i "oem" infResult.txt && (
     echo.
 ) || (
      echo.
-     echo 未发现第三方驱动Hidi2c_TouchPad，系统未安装本驱动，按任意键退出
+     echo 未发现第三方驱动MouseLikeTouchPad_Hidi2c，系统未安装本驱动，按任意键退出
      echo.
      pause
      exit
@@ -146,19 +146,19 @@ echo.
 echo 开始卸载touchpad触控板驱动
 devcon -f dp_delete %infFileName% && (
     echo.
-    echo 第三方触控板驱动Hidi2c_TouchPad卸载成功
+    echo 第三方触控板驱动MouseLikeTouchPad_Hidi2c卸载成功
 ) || (
-     echo 第三方触控板驱动Hidi2c_TouchPad卸载失败
+     echo 第三方触控板驱动MouseLikeTouchPad_Hidi2c卸载失败
 )
 echo.
 
 echo 开始删除遗留的驱动文件
 del/f /q C:\Windows\INF\%infFileName%
-del/f /q C:\Windows\System32\Drivers\Hidi2c_TouchPad.sys
+del/f /q C:\Windows\System32\Drivers\MouseLikeTouchPad_Hidi2c.sys
 echo.
 
 echo 开始再次删除驱动文件备份
-dir /b C:\Windows\System32\DriverStore\FileRepository\hidi2c_touchpad.inf* >dir_del_list.tmp
+dir /b C:\Windows\System32\DriverStore\FileRepository\MouseLikeTouchPad_Hidi2c.inf* >dir_del_list.tmp
 for /f "delims=" %%i in (dir_del_list.tmp) do (
     rd/s /q C:\Windows\System32\DriverStore\FileRepository\%%i
     echo 遗留的驱动文件备份%%i已删除
@@ -178,14 +178,14 @@ echo.
 
 echo 开始删除驱动的注册表信息
 echo.
-reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\Hidi2c_TouchPad" /f && (
+reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_Hidi2c" /f && (
     echo 驱动注册表信息已删除
 ) || (
      echo 驱动的注册表信息不存在或者reg delete注册表操作错误
 )
 echo.
 
-echo Hidi2c_TouchPad第三方驱动已经卸载完成
+echo MouseLikeTouchPad_Hidi2c第三方驱动已经卸载完成
 echo.
 
 echo 如果触控板不工作请按任意键重启电脑
