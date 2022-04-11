@@ -3912,8 +3912,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             }
         }
 
-        if (tp->nMouse_Pointer_LastIndex != -1) {
-            if (tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
+        if (tp->nMouse_LButton_LastIndex != -1) {
+            if (tp->lastFinger.Contacts[tp->nMouse_LButton_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
                 bMouse_LButton_Status = 1; //找到左键，
                 tp->nMouse_LButton_CurrentIndex = i;//赋值左键触摸点新索引号
                 continue;//查找其他功能
