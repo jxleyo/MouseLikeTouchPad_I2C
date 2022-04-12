@@ -2663,6 +2663,8 @@ OnInterruptIsr(
 
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
 
+        PTP_REPORT ptpReport;
+
         //Single finger hybrid reporting mode单指混合模式
         if (pDevContext->bHybrid_ReportingMode) {//混合报告模式状态
 
@@ -2728,7 +2730,6 @@ OnInterruptIsr(
 
 
             if (pDevContext->CombinedPacketReady) {//合并帧准备好了,发送合并帧
-                PTP_REPORT ptpReport;
                 RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
                 ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
                 RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
@@ -2745,8 +2746,10 @@ OnInterruptIsr(
                 RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
                 RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
-                //MouseLikeTouchPad解析器
-                MouseLikeTouchPad_parse(pDevContext, &ptpReport);
+                if (ptpReport.ScanTime > 0x64) {
+                    ptpReport.ScanTime = 0x64;
+                }
+                goto parse;
 
             }
    
@@ -2768,7 +2771,7 @@ OnInterruptIsr(
         }
 
 
-        PTP_REPORT ptpReport = *(PPTP_REPORT)pBuf;
+        ptpReport = *(PPTP_REPORT)pBuf;
         ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
         RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
         RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
@@ -2783,6 +2786,8 @@ OnInterruptIsr(
         RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
 
+
+parse:
         if (!pDevContext->bMouseLikeTouchPad_Mode) {//原版触控板操作方式直接发送原始报告
             PTP_PARSER* tps = &pDevContext->tp_settings;
             if (ptpReport.IsButtonClicked) {
@@ -2813,6 +2818,7 @@ OnInterruptIsr(
             if (!NT_SUCCESS(status)) {
                 RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
             }
+           
         }
         else {
             //MouseLikeTouchPad解析器
@@ -3976,16 +3982,18 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
                 RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
                 if (!pDevContext->bWheelDisabled) {//开启滚轮功能时同时也恢复滚轮实现方式为触摸板双指滑动手势
-                    if (!pDevContext->bHybrid_ReportingMode) {//并行报告模式
-                        pDevContext->bWheelScrollMode = FALSE;
-                        RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                    if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标(双指滑动手势还存在一些卡顿问题体验不好)
+                        pDevContext->bWheelScrollMode = TRUE;
                     }
+                    else {
+                        pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
+                    }
+                    RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
                 }
 
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
-            else if (currentFinger_Count == 3 && !pDevContext->bHybrid_ReportingMode) {//三指重按触控板下沿物理键时设置为切换滚轮模式bWheelScrollMode，定义鼠标滚轮实现方式，TRUE为模仿鼠标滚轮，FALSE为触摸板双指滑动手势
-                //混合报告模式的触控板存在诸多问题未解决所以没有此功能
+            else if (currentFinger_Count == 3) {//三指重按触控板下沿物理键时设置为切换滚轮模式bWheelScrollMode，定义鼠标滚轮实现方式，TRUE为模仿鼠标滚轮，FALSE为触摸板双指滑动手势
                 //因为日常操作滚轮更常用，所以关闭滚轮功能的状态不保存到注册表，电脑重启或休眠唤醒后恢复滚轮功能
                 //因为触摸板双指滑动手势的滚轮模式更常用，所以模仿鼠标的滚轮模式状态不保存到注册表，电脑重启或休眠唤醒后恢复到双指滑动手势的滚轮模式
                 pDevContext->bWheelScrollMode = !pDevContext->bWheelScrollMode;
@@ -4002,7 +4010,6 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 //混合报告模式的触控板存在诸多问题未解决所以没有此功能
                 //因为原版触控板操作方式只是临时使用所以不保存到注册表，电脑重启或休眠唤醒后恢复到仿鼠标式触摸板模式
                 // 原版的PTP精确式触摸板操作方式时发送报告在本函数外部执行不需要浪费资源解析，切换回仿鼠标式触摸板模式也在本函数外部判断
-                
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
                 RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
   
@@ -4145,10 +4152,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     }
     else if (tp->nMouse_Pointer_CurrentIndex != -1 && tp->bMouse_Wheel_Mode) {//滚轮操作模式，触摸板双指滑动、三指四指手势也归为此模式下的特例设置一个手势状态开关供后续判断使用
         if (!pDevContext->bWheelScrollMode || currentFinger_Count >2) {//触摸板双指滑动手势模式，三指四指手势也归为此模式
-             //只有Parallel Report Mode并行报告模式的触控板有手势功能，混合报告模式的触控板手势操作存在诸多问题未解决所以不实现其手势功能
-            if (!pDevContext->bHybrid_ReportingMode) {
-                tp->bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
-            }
+            tp->bPtpReportCollection = TRUE;//发送PTP触摸板集合报告，后续再做进一步判断
         }
         else {
             //鼠标指针位移设置
@@ -4305,12 +4309,13 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->nMouse_Wheel_LastIndex = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
    pDevContext->bWheelDisabled = FALSE;//默认初始值为开启滚轮操作功能
-   if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标
+   if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标(双指滑动手势还存在一些卡顿问题体验不好)
        pDevContext->bWheelScrollMode = TRUE;
    }
    else {
        pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
    }
+
 
    tp->bMouse_Wheel_Mode = FALSE;
    tp->bMouse_Wheel_Mode_JudgeEnable = TRUE;//开启滚轮判别
