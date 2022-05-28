@@ -1,6 +1,7 @@
 echo off
 echo 弹出窗口“允许此应用对你的设备进行更改“ 请选择“是”以获取管理员权限来运行本安装脚本
 echo Pop up window "allow this app to make changes to your device" please select "yes" to obtain administrator rights to run this installation script
+pause
 echo.
 
 ::获取管理员权限
@@ -11,6 +12,7 @@ cd /d "%~dp0"
 echo off
 echo 开始运行安装脚本，安装驱动前请确保其他程序已关闭或文档已保存
 echo Start running the installation script. Before installing the driver, make sure that other programs have been closed or the document has been saved.
+pause
 echo.
 
 echo 开始检查安装文件
@@ -77,6 +79,7 @@ find "10.0." winver.txt || (
  	echo.
 	set var=OS_ERR
 	echo !var!>Return_WinVer.txt 
+	pause
  	exit
 ) 
 
@@ -94,6 +97,7 @@ if ("%winver%" LSS "19041") (
 	echo.
 	set var=VER_ERR
 	echo !var!>Return_WinVer.txt 
+	pause
 	exit
 )
 
@@ -121,6 +125,7 @@ find/i "HID_DEVICE_UP:000D_U:0005" hid_dev.txt || (
      echo.
      set var=NoTP_ERR
      echo !var!>Return_FindTP.txt
+     pause
      exit
 )
 
@@ -199,6 +204,7 @@ find/i "ACPI\PNP0C50" i2c_dev.txt || (
      del/f /q i2c_dev.txt
       set var=NotI2C_ERR
      echo !var!>Return_FindTP.txt
+     pause
      exit
 )
 
@@ -209,6 +215,28 @@ set var=TP_OK
 echo !var!>Return_FindTP.txt
 echo.
  
+ 
+ echo 开始删除驱动的注册表信息
+echo.
+reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_I2C" /f && (
+    echo 驱动注册表信息已删除
+) || (
+     echo 驱动的注册表信息不存在或者注册表操作错误
+)
+echo.
+
+:inst
+echo 开始安装自签名证书Reg import EVRootCA.reg
+regedit /s EVRootCA.reg && (
+    echo EVRootCA.reg自签名证书安装完成
+) || (
+     echo EVRootCA.reg注册表操作错误，安装失败
+     pause
+     exit
+)
+echo.
+
+echo 开始安装新驱动
  ::安装驱动，只添加到驱动库中不安装，注意后面一定不要加/install
   pnputil /add-driver MouseLikeTouchPad_I2C.inf
   echo add-driver安装驱动ok
@@ -235,6 +263,7 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      del/f /q i2c_dev.txt
      set var=FAILED_ERR
      echo !var!>Return_InstDrv.txt
+     pause
      exit
 )
 
@@ -246,3 +275,10 @@ set var=INSTDRV_OK
 echo !var!>Return_InstDrv.txt
 echo.
 
+echo 请重压一下触控板按键查看是否工作正常，如果正常请关闭本窗口以取消重启
+echo 如果触控板不工作请按任意键重启电脑后即可
+pause
+
+echo.
+
+shutdown -r -f -t 0

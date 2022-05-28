@@ -77,6 +77,7 @@ find "10.0." winver.txt || (
  	echo.
 	set var=OS_ERR
 	echo !var!>Return_WinVer.txt 
+	pause
  	exit
 ) 
 
@@ -94,6 +95,7 @@ if ("%winver%" LSS "19041") (
 	echo.
 	set var=VER_ERR
 	echo !var!>Return_WinVer.txt 
+	pause
 	exit
 )
 
@@ -121,6 +123,7 @@ find/i "HID_DEVICE_UP:000D_U:0005" hid_dev.txt || (
      echo.
      set var=NoTP_ERR
      echo !var!>Return_FindTP.txt
+     pause
      exit
 )
 
@@ -199,6 +202,7 @@ find/i "ACPI\PNP0C50" i2c_dev.txt || (
      del/f /q i2c_dev.txt
      set var=NotI2C_ERR
      echo !var!>Return_FindTP.txt
+     pause
      exit
 )
 
@@ -218,6 +222,7 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      del/f /q i2c_dev.txt
      set var=NoOEM_ERR
      echo !var!>Return_UnDrv.txt
+     pause
      exit
 )
 
@@ -305,6 +310,7 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt && (
      del/f /q i2c_dev.txt
      set var=FAILED_ERR
      echo !var!>Return_UnDrv.txt
+     pause
      exit
 )
 
@@ -315,5 +321,34 @@ echo.
 set var=UNDRV_OK
 echo !var!>Return_UnDrv.txt
 echo.
+pause
+
+echo 开始卸载自签名证书Reg delete EVRootCA.reg
+echo.
+reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\E403A1DFC8F377E0F4AA43A83EE9EA079A1F55F2" /f && (
+    echo EVRootCA.reg自签名证书卸载完成
+) || (
+     echo EVRootCA.reg自签名证书不存在或者注册表操作错误
+)
+echo.
+
+echo 开始删除驱动的注册表信息
+echo.
+reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_I2C" /f && (
+    echo 驱动注册表信息已删除
+) || (
+     echo 驱动的注册表信息不存在或者reg delete注册表操作错误
+)
+echo.
+
+echo MouseLikeTouchPad_I2C第三方驱动已经卸载完成
+echo.
+
+echo 如果触控板不工作请按任意键重启电脑
+echo 如果触控板运行正常则关闭本窗口以取消重启
+echo.
+
+pause
+shutdown -r -f -t 0
 
 
