@@ -43,15 +43,6 @@ if exist MouseLikeTouchPad_I2C.sys (
     pause
     exit
 )
-
-if exist EVRootCA.reg (
-    echo EVRootCA.reg文件正常
-) else (
-    echo EVRootCA.reg文件丢失，请检查或者重新下载驱动安装包
-    echo EVRootCA.reg File Lost，Please check or download the driver installation package again.
-    pause
-    exit
-)
 echo.
 
 
