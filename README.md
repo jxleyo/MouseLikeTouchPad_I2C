@@ -1,4 +1,4 @@
-MouseLikeTouchPad_I2C Hid Driver for windows10仿鼠标式触摸板驱动
+MouseLikeTouchPad_I2C Hid Driver for windows仿鼠标式触摸板驱动
 
 仿鼠标式触摸板是一种模拟鼠标功能的触摸板技术实现，当前的逻辑实现版本是发明人基于仿鼠标触摸板专利技术根据人手指操作时自然状态再次优化改进而成，3指完成鼠标左键/右键/中键和指针的操作，手指与鼠标的各个按键等部件的功能一一对应，其中的中指对应鼠标的指针定位器，食指对应鼠标左键和中键（食指与中指分开时定义为鼠标左键，食指与中指并拢时定义为鼠标中键），无名指对应鼠标右键，中指无名指或者中指与食指2指一起快速触摸后滑动操作时对应鼠标垂直滚轮和水平滚轮，单指重按触控板左下角物理键为鼠标的后退功能键，单指重按触控板右下角物理键为鼠标的前进功能键，单指重按触控板下沿中间物理键为调节鼠标DPI灵敏度（慢/中等/快3段灵敏度），双指重按触控板下沿物理键为滚轮开关（开启鼠标滚轮及触摸板手势功能方便日常应用操作，临时关闭鼠标滚轮及触摸板手势功能以降低游戏误操作率），三指重按触控板下沿物理键为切换滚轮的操作方式（精确式触摸板双指滑动手势/模仿鼠标的滚轮操作，方便少数对触控板双指滑动支持差的应用如PTC Creo可以使用模仿的鼠标滚轮操作），四指重按触控板下沿物理键为切换仿鼠标式触摸板操作方式的开关（关闭时恢复为windows系统原本的触控板方式以方便其他未学习仿鼠标式触摸板操作方法的用户使用，同时也能通过对比体现出仿鼠标式触摸板驱动的强大之处）。
 
@@ -35,4 +35,16 @@ In addition, only the touch panel with Parallel Report Mode hardware has the fun
 
 The free experience beta driver uses an unofficially issued third-party digital signature certificate, so the windows security center will pop up a warning threat. Select "allow on the device" and no window will pop up. The officially issued shared charging version uses a Microsoft Certified Digital signature certificate. It is safer and easier to install without a warning pop-up window.
 
+Description of project folder classification:
 
+
+
+SRC\ Driver source code
+
+Release\ Official release driver installation file for shared charges
+
+TestVersion\ Beta driver installation file for free experience
+
+NewVersion.Txt Latest version number file
+
+Readme.Txt Documentation
