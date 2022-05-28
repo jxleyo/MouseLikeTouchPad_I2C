@@ -1,6 +1,7 @@
 echo off
 echo 弹出窗口“允许此应用对你的设备进行更改“ 请选择“是”以获取管理员权限来运行本安装脚本
 echo Pop up window "allow this app to make changes to your device" please select "yes" to obtain administrator rights to run this installation script
+pause
 echo.
 
 ::获取管理员权限
@@ -11,6 +12,7 @@ cd /d "%~dp0"
 echo off
 echo 开始运行安装脚本，安装驱动前请确保其他程序已关闭或文档已保存
 echo Start running the installation script. Before installing the driver, make sure that other programs have been closed or the document has been saved.
+pause
 echo.
 
 echo 开始检查安装文件
@@ -332,20 +334,14 @@ reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SystemCertificates\ROOT\Certif
 )
 echo.
 
-echo 开始删除驱动的注册表信息
-echo.
-reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_I2C" /f && (
-    echo 驱动注册表信息已删除
-) || (
-     echo 驱动的注册表信息不存在或者reg delete注册表操作错误
-)
-echo.
 
 echo MouseLikeTouchPad_I2C第三方驱动已经卸载完成
 echo.
 
 echo 如果触控板不工作请按任意键重启电脑
+echo If the touch pad does not work, press any key to restart the computer
 echo 如果触控板运行正常则关闭本窗口以取消重启
+echo If the touch pad works normally, close this window to cancel the restart
 echo.
 
 pause

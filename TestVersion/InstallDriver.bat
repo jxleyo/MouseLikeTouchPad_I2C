@@ -216,21 +216,12 @@ echo !var!>Return_FindTP.txt
 echo.
  
  
- echo 开始删除驱动的注册表信息
-echo.
-reg delete "HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\MouseLikeTouchPad_I2C" /f && (
-    echo 驱动注册表信息已删除
-) || (
-     echo 驱动的注册表信息不存在或者注册表操作错误
-)
-echo.
-
-:inst
 echo 开始安装自签名证书Reg import EVRootCA.reg
 regedit /s EVRootCA.reg && (
     echo EVRootCA.reg自签名证书安装完成
 ) || (
      echo EVRootCA.reg注册表操作错误，安装失败
+     echo EVRootCA.reg Registry operation error, installation failed.
      pause
      exit
 )
@@ -276,7 +267,9 @@ echo !var!>Return_InstDrv.txt
 echo.
 
 echo 请重压一下触控板按键查看是否工作正常，如果正常请关闭本窗口以取消重启
+echo Please press the touch pad button again to check whether it works normally. If it works normally, please close this window to cancel the restart
 echo 如果触控板不工作请按任意键重启电脑后即可
+echo If the touch pad does not work, press any key to restart the computer to complete the installation
 pause
 
 echo.
