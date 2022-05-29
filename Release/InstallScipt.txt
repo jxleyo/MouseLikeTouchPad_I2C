@@ -1,0 +1,272 @@
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            
+//  This template script provides the code necessary to build an entry-point 
+//  function to be called in an InstallScript custom action. 
+//                                                                            
+//                                                                            
+//    File Name:  Setup.rul                                                   
+//                                                                            
+//  Description:  InstallShield script                                        
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Include Ifx.h for built-in InstallScript function prototypes, for Windows 
+// Installer API function prototypes and constants, and to declare code for 
+// the OnBegin and OnEnd events.
+#include "ifx.h"
+
+// The keyword export identifies MyFunction() as an entry-point function.
+// The argument it accepts must be a handle to the Installer database.
+export prototype MyFunction(HWND);
+
+// To Do:  Declare global variables, define constants, and prototype user-
+//         defined and DLL functions here.
+
+
+// To Do:  Create a custom action for this entry-point function:
+// 1.  Right-click on "Custom Actions" in the Sequences/Actions view.
+// 2.  Select "Custom Action Wizard" from the context menu.
+// 3.  Proceed through the wizard and give the custom action a unique name.
+// 4.  Select "Run InstallScript code" for the custom action type, and in
+//     the next panel select "MyFunction" (or the new name of the entry-
+//     point function) for the source.
+// 5.  Click Next, accepting the default selections until the wizard
+//     creates the custom action.
+//
+// Once you have made a custom action, you must execute it in your setup by
+// inserting it into a sequence or making it the result of a dialog's
+// control event.
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           
+// Function:  MyFunction
+//                                                                           
+//  Purpose:  This function will be called by the script engine when
+//            Windows(TM) Installer executes your custom action (see the "To
+//            Do," above).
+//                                                                           
+///////////////////////////////////////////////////////////////////////////////
+function MyFunction(hMSI)
+    // To Do:  Declare local variables.
+    
+    NUMBER nResult, nRetryCall, nRetryWaitStart;
+    NUMBER nFileResult, nRetryWaitVer, nRetryWaitTP, nRetryWaitInst, nvLineNum;
+    STRING svResult, svReturnLine;
+    STRING scCmd;
+    STRING sCmdLine;
+    STRING sRet;
+    
+begin
+
+
+    // To Do:  Write script that will be executed when MyFunction is called.
+
+	nRetryCall=0;
+	
+
+	if (FindFile(INSTALLDIR, "InstallDriver.bat", svResult) < 0) then
+      MessageBox ("InstallDriver.bat不存在!", SEVERE);
+      
+    endif;
+    
+    if (FindFile(INSTALLDIR, "UninstallDriver.bat", svResult) < 0) then
+      MessageBox ("UninstallDriver.bat不存在!", SEVERE);
+      
+    endif;
+    
+    if (FindFile(INSTALLDIR, "MouseLikeTouchPad_I2C.inf", svResult) < 0) then
+      MessageBox ("MouseLikeTouchPad_I2C.inf不存在!", SEVERE);
+      
+    endif;
+    
+    if (FindFile(INSTALLDIR, "MouseLikeTouchPad_I2C.cat", svResult) < 0) then
+      MessageBox ("MouseLikeTouchPad_I2C.cat不存在!", SEVERE);
+      
+    endif;
+    
+    if (FindFile(INSTALLDIR, "MouseLikeTouchPad_I2C.sys", svResult) < 0) then
+      MessageBox ("MouseLikeTouchPad_I2C.sys不存在!", SEVERE);
+      
+    endif;
+    
+    Disable(WOW64FSREDIRECTION);//禁用system32路径强迫指向syswow64
+    
+    scCmd=WINDIR ^ "system32" ^ "cmd.exe"; 
+    //sCmdLine="/c " + INSTALLDIR ^"PtpDrvMgr.exe in";
+    sCmdLine=" /c taskkill /f /im \"PtpDrvMgr.exe\"";//更新或卸载时先关闭应用程序
+    
+    //MessageBox("程序路径sCmdLine:"+sCmdLine, INFORMATION);
+    nResult = LaunchAppAndWait (scCmd, sCmdLine, LAAW_OPTION_WAIT | LAAW_OPTION_HIDDEN);  //LAAW_OPTION_WAIT | LAAW_OPTION_HIDDEN //WAIT
+    NumToStr(sRet, nResult);
+    if(nResult<ISERR_SUCCESS) then //ISERR_SUCCESS //0
+		MessageBox("cmd.exe调用失败!错误码ExitCode:"+sRet, SEVERE);
+		goto NextStep;
+		
+    endif;
+    
+    
+Inst:
+
+	//C:\Program Files (x86)\MouseLikeTouchPad_I2C_Driver
+    //nResult = LaunchAppAndWait (INSTALLDIR ^"PtpDrvMgr.exe" , "in" ,LAAW_OPTION_WAIT  |  LAAW_OPTION_HIDDEN);   //INSTALLDIR ^"PtpDrvMgr.exe" //TARGETDIR 安装目录 可以调用bat也可以调用exe程序
+    
+    scCmd=WINDIR ^ "system32" ^ "cmd.exe";
+    sCmdLine="/k \"" + TARGETDIR^"InstallDriver.bat" + "\"";//cmd命令需要在有空格的字符串外加引号，所以要转义
+    //MessageBox("path:"+sCmdLine, SEVERE);
+     
+    MessageBox("弹出窗口“允许此应用对你的设备进行更改“ 请选择“是”以获取管理员权限来运行本安装脚本", MB_OK);
+    //Pop up window "allow this app to make changes to your device" please select "yes" to obtain administrator rights to run this installation script
+
+
+    LAAW_SHELLEXECUTEVERB = "runas";
+    //LAAW_OPTION_USE_SHELLEXECUTE 管理员方式运行调用cmd比bat内置自身提权更好，提示文件路径更完整。
+    nResult = LaunchAppAndWait (scCmd, sCmdLine, WAIT | LAAW_OPTION_USE_SHELLEXECUTE);  //LAAW_OPTION_WAIT | LAAW_OPTION_HIDDEN //WAIT
+    NumToStr(sRet, nResult);
+    if(nResult<ISERR_SUCCESS) then //ISERR_SUCCESS //0
+		MessageBox("cmd.exe调用失败!错误码ExitCode:"+sRet, SEVERE);
+		goto NextStep;
+		
+    endif;
+    
+    nResult = LAAW_PARAMETERS.nLaunchResult;
+    NumToStr(sRet, nResult);
+    if(nResult>0 && nRetryCall<5) then
+		Sleep(3000);
+        nRetryCall++;
+		goto Inst;
+		
+    endif;
+    
+    
+    nRetryWaitStart=0;
+    
+waitStartBAT:  
+    //必须等待脚本运行清理历史文件后的开始信号
+    nFileResult=FileGrep(INSTALLDIR^"Return.txt","StartBAT", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE
+    if ( nFileResult < 0 ) then
+      Sleep(200);
+      nRetryWaitStart++;
+      if(nRetryWaitStart>50) then
+			MessageBox("运行bat脚本失败!取消安装", SEVERE);
+			goto CancelInst;
+	  endif;
+	  goto waitStartBAT;
+	  
+    endif;
+    
+    
+    nRetryWaitVer=0;
+    
+waitCheckVer:
+
+    nFileResult=FileGrep(INSTALLDIR^"Return.txt","VER_", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE
+    if ( nFileResult < 0 ) then
+      Sleep(200);
+      nRetryWaitVer++;
+      if(nRetryWaitVer>50) then
+			MessageBox("获取windows版本失败!取消安装", SEVERE);
+			goto CancelInst;
+	  endif;
+	  goto waitCheckVer;
+	  
+    endif;
+
+//注意判断顺序
+     nFileResult=FileGrep(INSTALLDIR^"Return.txt","VER_OK", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE
+     if ( nFileResult < 0 ) then
+         nFileResult=FileGrep(INSTALLDIR^"Return.txt","VER_LOW_ERR", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE   
+         if ( nFileResult < 0 ) then
+             MessageBox("当前系统不是windows10/11，无法安装！", SEVERE);  
+             goto CancelInst;
+         endif;
+         
+         MessageBox("当前windows系统版本太低，请升级后再试！", SEVERE);  
+         goto CancelInst;
+         
+     endif;
+
+
+    nRetryWaitTP=0;
+    
+waitCheckTP:
+
+    nFileResult=FileGrep(INSTALLDIR^"Return.txt","TP_", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE
+    if ( nFileResult < 0 ) then
+      Sleep(200);
+      nRetryWaitTP++;
+      if(nRetryWaitTP>50) then
+			MessageBox("搜索触控板设备失败!取消安装", SEVERE);
+			goto CancelInst;
+	  endif;
+	  goto waitCheckTP;
+	  
+    endif;
+
+//注意判断顺序
+     nFileResult=FileGrep(INSTALLDIR^"Return.txt","TP_OK", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE     
+     if ( nFileResult < 0 ) then
+         nFileResult=FileGrep(INSTALLDIR^"Return.txt","TP_NOI2C_ERR", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE    
+         if ( nFileResult < 0 ) then
+             MessageBox("未发现触控板设备，取消安装，请安装原厂驱动后再次尝试！", SEVERE);  
+             goto CancelInst;
+         endif;
+         
+         MessageBox("未发现i2c触控板设备，无法安装驱动！", SEVERE);  
+         goto CancelInst;
+         
+     endif;
+
+     
+   nRetryWaitInst=0;
+
+waitInst:
+
+    nFileResult=FileGrep(INSTALLDIR^"Return.txt","INSTDRV_", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE     
+    if ( nFileResult < 0 ) then
+      Sleep(200);
+      nRetryWaitInst++;
+      if(nRetryWaitInst>50) then
+			MessageBox("安装驱动失败!取消安装", SEVERE);
+			goto CancelInst;
+	  endif;
+	  goto waitInst;
+	  
+    endif;
+
+//注意判断顺序
+     nFileResult=FileGrep(INSTALLDIR^"Return.txt","INSTDRV_OK", svReturnLine, nvLineNum, RESTART);//RESTART//CONTINUE   
+     if ( nFileResult < 0 ) then
+         MessageBox("安装驱动失败，请卸载第三方驱动后重新再试！", SEVERE);  
+         goto CancelInst;
+         
+     endif;
+
+     
+
+NextStep:
+
+    if(nResult!=0) then//安装驱动失败取消安装
+		MessageBox("安装驱动失败!错误码ExitCode:"+sRet, SEVERE);
+		goto CancelInst;
+		
+	endif;
+
+
+     //安装驱动成功
+     //LaunchApp(WINDIR^"Notepad.exe",TARGETDIR^"Readme.txt");
+     goto EndScript;
+
+    
+    
+CancelInst:
+
+    OnCanceling();
+
+
+EndScript:
+
+    Enable(WOW64FSREDIRECTION); //恢复system32路径强迫指向syswow64
+    //MsiSetProperty(ISMSI_HANDLE, "DriverFileInstalled", "1");
+
+    
+end;
