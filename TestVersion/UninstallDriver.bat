@@ -59,13 +59,14 @@ echo.
 
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
+echo.
 
  ::删除历史残留文件
 del/f /q hid_dev.txt
 del/f /q i2c_dev.txt
 del/f /q dev*.tmp
 del/f /q drv*.tmp
-del/f /q Return_*.txt
+echo.
 
 echo Check Windows Version..
 ver>winver.txt
@@ -77,8 +78,6 @@ find "10.0." winver.txt || (
 	 echo.
  	del/f /q winver.txt
  	echo.
-	set var=OS_ERR
-	echo !var!>Return_WinVer.txt 
 	pause
  	exit
 ) 
@@ -95,19 +94,16 @@ if ("%winver%" LSS "19041") (
 	echo.
 	del/f /q winver.txt
 	echo.
-	set var=VER_ERR
-	echo !var!>Return_WinVer.txt 
 	pause
 	exit
 )
 
 echo 当前windows系统版本匹配ok
 echo Current Windows system version matches OK
+echo.
 
 del/f /q winver.txt
 echo.
-set var=VER_OK
-echo !var!>Return_WinVer.txt 
 
 
 echo 开始查找所有的HID设备device
@@ -123,8 +119,6 @@ find/i "HID_DEVICE_UP:000D_U:0005" hid_dev.txt || (
      echo 未发现触控板设备，无需卸载驱动
      echo No TouchPad device found, no need to unload the driver.
      echo.
-     set var=NoTP_ERR
-     echo !var!>Return_FindTP.txt
      pause
      exit
 )
@@ -140,8 +134,6 @@ echo 开始查找touchpad触控板对应的父级I2C设备实例InstanceID
 for /f "delims=" %%i in (hid_dev.txt) do (
    set /p="%%i,"<nul>>dev0.tmp
  )
- echo 替换回车ok.
-echo.
 
 ::替换HID_DEVICE_UP:000D_U:0005为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
@@ -149,36 +141,27 @@ for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
     set "str=!str:HID_DEVICE_UP:000D_U:0005=#!"
     set /p="!str!,"<nul>>dev1.tmp
 )
-echo 替换HID_DEVICE_UP:000D_U:0005 ok.
-echo.
 
   ::获取#分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=# tokens=2,*" %%i in (dev1.tmp) do (
    set /p="%%i,"<nul>>dev2.tmp
  )
- echo 获取#后面的文本ok.
-echo.
 
   ::获取:分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=: tokens=2" %%i in (dev2.tmp) do (
    set /p="%%i,"<nul>>dev3.tmp
  )
-  echo 获取:分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (dev3.tmp) do (
   set /p="%%i"<nul>>dev4.tmp
  )
-echo 获取,分隔符前面的文本ok.
-echo.
 
     ::删除空格
  for /f "delims= " %%i in (dev4.tmp) do (
    set "str=%%i"
    echo !str!>i2c_dev_InstanceID.txt
  )
- echo 删除空格ok.
 echo.
 
 del/f /q hid_dev.txt
@@ -202,17 +185,12 @@ find/i "ACPI\PNP0C50" i2c_dev.txt || (
      echo No i2c TouchPad device found, no need to unload the driver.
      echo.
      del/f /q i2c_dev.txt
-     set var=NotI2C_ERR
-     echo !var!>Return_FindTP.txt
      pause
      exit
 )
 
 echo 找到i2c触控板设备
 echo I2C TouchPad device found.
-echo.
-set var=TP_OK
-echo !var!>Return_FindTP.txt
 echo.
  
  
@@ -222,8 +200,6 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      echo No MouseLikeTouchPad_I2C driver found, no need to unload the driver.
      echo.
      del/f /q i2c_dev.txt
-     set var=NoOEM_ERR
-     echo !var!>Return_UnDrv.txt
      pause
      exit
 )
@@ -232,6 +208,8 @@ echo 找到MouseLikeTouchPad_I2C驱动
 echo.
 
 echo 开始查找MouseLikeTouchPad_I2C驱动oem文件名
+echo.
+
  ::删除历史残留文件
 del/f /q drv*.tmp
  echo.
@@ -240,7 +218,6 @@ del/f /q drv*.tmp
 for /f "delims=" %%i in (i2c_dev.txt) do (
    set /p="%%i,"<nul>>drv0.tmp
  )
- echo 替换回车ok.
 
 ::替换mouseliketouchpad_i2c.inf为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (drv0.tmp) do (
@@ -248,15 +225,11 @@ for /f "delims=, tokens=*" %%i in (drv0.tmp) do (
     set "str=!str:mouseliketouchpad_i2c.inf=#!"
     set /p="!str!,"<nul>>drv1.tmp
 )
-echo 替换mouseliketouchpad_i2c.inf ok.
-echo.
 
   ::获取#分隔符前面的文本
  for /f "delims=# tokens=1" %%i in (drv1.tmp) do (
    set /p="%%i"<nul>>drv2.tmp
  )
- echo 获取#分隔符前面的文本ok.
-echo.
 
 ::替换oem为[方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (drv2.tmp) do (
@@ -264,25 +237,21 @@ for /f "delims=, tokens=*" %%i in (drv2.tmp) do (
     set "str=!str:oem=[!"
     set /p="!str!,"<nul>>drv3.tmp
 )
-echo 替换oem ok.
-echo.
 
   ::获取最后一个[分隔符后面的文本，注意tokens要选2及后面的所有列并且nul后面不是追加而是>
  for /f "delims=[ tokens=2,*" %%i in (drv3.tmp) do (
    set /p="%%i,"<nul>drv4.tmp
  )
- echo 获取最后一个[分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (drv4.tmp) do (
   set /p="oem%%i"<nul>oemfilename.txt
  )
-echo 获取,分隔符前面的文本ok.
-echo.
-
-del/f /q drv*.tmp
  echo.
+ 
+  ::删除历史残留文件
+del/f /q drv*.tmp
+echo.
 
 
   ::读取oemfilename
@@ -293,8 +262,8 @@ del/f /q drv*.tmp
  )
 
  :卸载oem第三方驱动
- pnputil /delete-driver "%oemfilename%" /uninstall /force
- echo delete-driver卸载驱动ok
+pnputil /delete-driver "%oemfilename%" /uninstall /force
+echo delete-driver卸载驱动ok
 echo.
 
 pnputil /scan-devices
@@ -310,18 +279,15 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt && (
      echo Failed to unload the driver. Please try again.
      echo.
      del/f /q i2c_dev.txt
-     set var=FAILED_ERR
-     echo !var!>Return_UnDrv.txt
      pause
      exit
 )
 
 del/f /q i2c_dev.txt
+echo.
+
 echo 卸载驱动成功
 echo Unload driver succeeded.
-echo.
-set var=UNDRV_OK
-echo !var!>Return_UnDrv.txt
 echo.
 pause
 

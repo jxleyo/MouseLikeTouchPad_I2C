@@ -59,13 +59,14 @@ echo.
 
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
+echo.
 
  ::删除历史残留文件
 del/f /q hid_dev.txt
 del/f /q i2c_dev.txt
 del/f /q dev*.tmp
 del/f /q drv*.tmp
-del/f /q Return_*.txt
+echo.
 
 echo Check Windows Version..
 ver>winver.txt
@@ -77,8 +78,6 @@ find "10.0." winver.txt || (
 	 echo.
  	del/f /q winver.txt
  	echo.
-	set var=OS_ERR
-	echo !var!>Return_WinVer.txt 
 	pause
  	exit
 ) 
@@ -95,19 +94,16 @@ if ("%winver%" LSS "19041") (
 	echo.
 	del/f /q winver.txt
 	echo.
-	set var=VER_ERR
-	echo !var!>Return_WinVer.txt 
 	pause
 	exit
 )
 
 echo 当前windows系统版本匹配ok
 echo Current Windows system version matches OK.
+echo.
 
 del/f /q winver.txt
 echo.
-set var=VER_OK
-echo !var!>Return_WinVer.txt 
 
 
 echo 开始查找所有的HID设备device
@@ -123,8 +119,6 @@ find/i "HID_DEVICE_UP:000D_U:0005" hid_dev.txt || (
      echo 未发现触控板设备，按任意键退出，请安装原厂驱动后再次尝试
      echo No TouchPad device found. Press any key to exit. Please install the original driver and try again.
      echo.
-     set var=NoTP_ERR
-     echo !var!>Return_FindTP.txt
      pause
      exit
 )
@@ -134,14 +128,12 @@ echo TouchPad device found.
 echo.
 
 echo 开始查找touchpad触控板对应的父级I2C设备实例InstanceID
- echo.
+echo.
  
  ::替换回车换行符为逗号方便分割，注意后面NUL后面为追加>>写入
 for /f "delims=" %%i in (hid_dev.txt) do (
    set /p="%%i,"<nul>>dev0.tmp
  )
- echo 替换回车ok.
-echo.
 
 ::替换HID_DEVICE_UP:000D_U:0005为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
@@ -149,41 +141,32 @@ for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
     set "str=!str:HID_DEVICE_UP:000D_U:0005=#!"
     set /p="!str!,"<nul>>dev1.tmp
 )
-echo 替换HID_DEVICE_UP:000D_U:0005 ok.
-echo.
 
   ::获取#分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=# tokens=2,*" %%i in (dev1.tmp) do (
    set /p="%%i,"<nul>>dev2.tmp
  )
- echo 获取#后面的文本ok.
-echo.
 
   ::获取:分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=: tokens=2" %%i in (dev2.tmp) do (
    set /p="%%i,"<nul>>dev3.tmp
  )
-echo 获取:分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (dev3.tmp) do (
   set /p="%%i"<nul>>dev4.tmp
  )
-echo 获取,分隔符前面的文本ok.
-echo.
 
     ::删除空格
  for /f "delims= " %%i in (dev4.tmp) do (
    set "str=%%i"
    echo !str!>i2c_dev_InstanceID.txt
  )
- echo 删除空格ok.
 echo.
 
 del/f /q hid_dev.txt
 del/f /q dev*.tmp
- echo.
+echo.
  
 
  ::验证InstanceID
@@ -202,17 +185,12 @@ find/i "ACPI\PNP0C50" i2c_dev.txt || (
      echo No I2C TouchPad device found, unable to install driver.
      echo.
      del/f /q i2c_dev.txt
-      set var=NotI2C_ERR
-     echo !var!>Return_FindTP.txt
      pause
      exit
 )
 
 echo 找到i2c触控板设备
 echo I2C TouchPad device found.
-echo.
-set var=TP_OK
-echo !var!>Return_FindTP.txt
 echo.
  
  
@@ -229,9 +207,9 @@ echo.
 
 echo 开始安装新驱动
  ::安装驱动，只添加到驱动库中不安装，注意后面一定不要加/install
-  pnputil /add-driver MouseLikeTouchPad_I2C.inf
-  echo add-driver安装驱动ok
-  echo.
+ pnputil /add-driver MouseLikeTouchPad_I2C.inf
+echo add-driver安装驱动ok
+echo.
   
  ::删除i2c触控板设备
 pnputil /remove-device "%i2c_dev_InstanceID%"
@@ -252,18 +230,15 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      echo Failed to install the driver. Please uninstall the third-party driver and try again.
      echo.
      del/f /q i2c_dev.txt
-     set var=FAILED_ERR
-     echo !var!>Return_InstDrv.txt
      pause
      exit
 )
 
 del/f /q i2c_dev.txt
+echo.
+
 echo 安装驱动成功
 echo Driver installed successfully.
-echo.
-set var=INSTDRV_OK
-echo !var!>Return_InstDrv.txt
 echo.
 
 echo 请重压一下触控板按键查看是否工作正常，如果正常请关闭本窗口以取消重启
