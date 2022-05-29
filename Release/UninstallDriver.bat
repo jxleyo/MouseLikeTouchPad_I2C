@@ -45,7 +45,6 @@ if exist MouseLikeTouchPad_I2C.sys (
 )
 
 
-
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
 echo.
@@ -55,7 +54,16 @@ del/f /q hid_dev.txt
 del/f /q i2c_dev.txt
 del/f /q dev*.tmp
 del/f /q drv*.tmp
-del/f /q Return_*.txt
+echo.
+
+::删除历史记录文件
+if exist Return.txt (
+    del/f /q Return.txt
+)
+echo.
+
+::写入开始运行bat的信号
+echo StartBAT>Return.txt
 echo.
 
 echo Check Windows Version..
@@ -68,8 +76,8 @@ find "10.0." winver.txt || (
 	 echo.
  	del/f /q winver.txt
  	echo.
-	set var=OS_ERR
-	echo !var!>Return_WinVer.txt 
+	set var=VER_OS_ERR
+	echo !var!>>Return.txt 
  	exit
 ) 
 
@@ -85,8 +93,8 @@ if ("%winver%" LSS "19041") (
 	echo.
 	del/f /q winver.txt
 	echo.
-	set var=VER_ERR
-	echo !var!>Return_WinVer.txt 
+	set var=VER_LOW_ERR
+	echo !var!>>Return.txt 
 	exit
 )
 
@@ -96,7 +104,7 @@ echo Current Windows system version matches OK
 del/f /q winver.txt
 echo.
 set var=VER_OK
-echo !var!>Return_WinVer.txt 
+echo !var!>>Return.txt 
 echo.
 
 echo 开始查找所有的HID设备device
@@ -112,8 +120,8 @@ find/i "HID_DEVICE_UP:000D_U:0005" hid_dev.txt || (
      echo 未发现触控板设备，无需卸载驱动
      echo No TouchPad device found, no need to unload the driver.
      echo.
-     set var=NoTP_ERR
-     echo !var!>Return_FindTP.txt
+     set var=TP_NODEV_ERR
+     echo !var!>>Return.txt
      exit
 )
 
@@ -180,8 +188,8 @@ find/i "ACPI\PNP0C50" i2c_dev.txt || (
      echo No i2c TouchPad device found, no need to unload the driver.
      echo.
      del/f /q i2c_dev.txt
-     set var=NotI2C_ERR
-     echo !var!>Return_FindTP.txt
+      set var=TP_NOI2C_ERR
+     echo !var!>>Return.txt
      exit
 )
 
@@ -189,7 +197,7 @@ echo 找到i2c触控板设备
 echo I2C TouchPad device found.
 echo.
 set var=TP_OK
-echo !var!>Return_FindTP.txt
+echo !var!>>Return.txt
 echo.
  
  
@@ -199,8 +207,8 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      echo No MouseLikeTouchPad_I2C driver found, no need to unload the driver.
      echo.
      del/f /q i2c_dev.txt
-     set var=NoOEM_ERR
-     echo !var!>Return_UnDrv.txt
+     set var=DRV_OEM_ERR
+     echo !var!>>Return.txt
      exit
 )
 
@@ -280,8 +288,8 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt && (
      echo Failed to unload the driver. Please try again.
      echo.
      del/f /q i2c_dev.txt
-     set var=FAILED_ERR
-     echo !var!>Return_UnDrv.txt
+     set var=UNDRV_ERR
+     echo !var!>>Return.txt
      exit
 )
 
@@ -290,7 +298,7 @@ echo 卸载驱动成功
 echo Unload driver succeeded.
 echo.
 set var=UNDRV_OK
-echo !var!>Return_UnDrv.txt
+echo !var!>>Return.txt
 echo.
 
 
