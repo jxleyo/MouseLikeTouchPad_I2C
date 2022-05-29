@@ -178,6 +178,7 @@ del/f /q dev*.tmp
  
  ::注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+echo.
 
  ::检查是否为i2c设备device
 find/i "ACPI\PNP0C50" i2c_dev.txt || (
@@ -273,6 +274,7 @@ echo.
 
 ::验证是否卸载成功，注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+ echo.
  
 find/i "MouseLikeTouchPad_I2C" i2c_dev.txt && (
      echo 卸载驱动失败，请重新再试
