@@ -43,11 +43,12 @@ if exist MouseLikeTouchPad_I2C.sys (
     pause
     exit
 )
-echo.
+
 
 
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
+echo.
 
  ::删除历史残留文件
 del/f /q hid_dev.txt
@@ -55,6 +56,7 @@ del/f /q i2c_dev.txt
 del/f /q dev*.tmp
 del/f /q drv*.tmp
 del/f /q Return_*.txt
+echo.
 
 echo Check Windows Version..
 ver>winver.txt
@@ -95,7 +97,7 @@ del/f /q winver.txt
 echo.
 set var=VER_OK
 echo !var!>Return_WinVer.txt 
-
+echo.
 
 echo 开始查找所有的HID设备device
 pnputil /scan-devices
@@ -120,14 +122,12 @@ echo TouchPad device found.
 echo.
 
 echo 开始查找touchpad触控板对应的父级I2C设备实例InstanceID
- echo.
+echo.
  
  ::替换回车换行符为逗号方便分割，注意后面NUL后面为追加>>写入
 for /f "delims=" %%i in (hid_dev.txt) do (
    set /p="%%i,"<nul>>dev0.tmp
  )
- echo 替换回车ok.
-echo.
 
 ::替换HID_DEVICE_UP:000D_U:0005为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
@@ -135,36 +135,27 @@ for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
     set "str=!str:HID_DEVICE_UP:000D_U:0005=#!"
     set /p="!str!,"<nul>>dev1.tmp
 )
-echo 替换HID_DEVICE_UP:000D_U:0005 ok.
-echo.
 
   ::获取#分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=# tokens=2,*" %%i in (dev1.tmp) do (
    set /p="%%i,"<nul>>dev2.tmp
  )
- echo 获取#后面的文本ok.
-echo.
 
   ::获取:分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=: tokens=2" %%i in (dev2.tmp) do (
    set /p="%%i,"<nul>>dev3.tmp
  )
-  echo 获取:分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (dev3.tmp) do (
   set /p="%%i"<nul>>dev4.tmp
  )
-echo 获取,分隔符前面的文本ok.
-echo.
 
     ::删除空格
  for /f "delims= " %%i in (dev4.tmp) do (
    set "str=%%i"
    echo !str!>i2c_dev_InstanceID.txt
  )
- echo 删除空格ok.
 echo.
 
 del/f /q hid_dev.txt
@@ -181,6 +172,7 @@ del/f /q dev*.tmp
  
  ::注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+echo.
 
  ::检查是否为i2c设备device
 find/i "ACPI\PNP0C50" i2c_dev.txt || (
@@ -216,6 +208,8 @@ echo 找到MouseLikeTouchPad_I2C驱动
 echo.
 
 echo 开始查找MouseLikeTouchPad_I2C驱动oem文件名
+echo.
+
  ::删除历史残留文件
 del/f /q drv*.tmp
  echo.
@@ -224,7 +218,6 @@ del/f /q drv*.tmp
 for /f "delims=" %%i in (i2c_dev.txt) do (
    set /p="%%i,"<nul>>drv0.tmp
  )
- echo 替换回车ok.
 
 ::替换mouseliketouchpad_i2c.inf为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (drv0.tmp) do (
@@ -232,15 +225,11 @@ for /f "delims=, tokens=*" %%i in (drv0.tmp) do (
     set "str=!str:mouseliketouchpad_i2c.inf=#!"
     set /p="!str!,"<nul>>drv1.tmp
 )
-echo 替换mouseliketouchpad_i2c.inf ok.
-echo.
 
   ::获取#分隔符前面的文本
  for /f "delims=# tokens=1" %%i in (drv1.tmp) do (
    set /p="%%i"<nul>>drv2.tmp
  )
- echo 获取#分隔符前面的文本ok.
-echo.
 
 ::替换oem为[方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (drv2.tmp) do (
@@ -248,25 +237,21 @@ for /f "delims=, tokens=*" %%i in (drv2.tmp) do (
     set "str=!str:oem=[!"
     set /p="!str!,"<nul>>drv3.tmp
 )
-echo 替换oem ok.
-echo.
 
   ::获取最后一个[分隔符后面的文本，注意tokens要选2及后面的所有列并且nul后面不是追加而是>
  for /f "delims=[ tokens=2,*" %%i in (drv3.tmp) do (
    set /p="%%i,"<nul>drv4.tmp
  )
- echo 获取最后一个[分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (drv4.tmp) do (
   set /p="oem%%i"<nul>oemfilename.txt
  )
-echo 获取,分隔符前面的文本ok.
 echo.
 
+ ::删除历史残留文件
 del/f /q drv*.tmp
- echo.
+echo.
 
 
   ::读取oemfilename
@@ -288,6 +273,7 @@ echo.
 
 ::验证是否卸载成功，注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+ echo.
  
 find/i "MouseLikeTouchPad_I2C" i2c_dev.txt && (
      echo 卸载驱动失败，请重新再试

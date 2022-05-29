@@ -48,6 +48,7 @@ echo.
 
 ::开启延迟变量扩展
 setlocal enabledelayedexpansion
+echo.
 
  ::删除历史残留文件
 del/f /q hid_dev.txt
@@ -55,6 +56,7 @@ del/f /q i2c_dev.txt
 del/f /q dev*.tmp
 del/f /q drv*.tmp
 del/f /q Return_*.txt
+echo.
 
 echo Check Windows Version..
 ver>winver.txt
@@ -75,7 +77,7 @@ find "10.0." winver.txt || (
  for /f "delims=[.] tokens=4" %%i in (winver.txt) do (
    set "winver=%%i"
  )
- 
+
 ::数值字符串的值大小比较，注意需要引号，并且实际上数字字符串位数不同时大小比较不是准确的，比如2041和19041相比较会是错误结果
 if ("%winver%" LSS "19041") (
      echo 当前windows系统版本太低，请升级后再试
@@ -90,12 +92,13 @@ if ("%winver%" LSS "19041") (
 
 echo 当前windows系统版本匹配ok
 echo Current Windows system version matches OK.
+echo.
 
 del/f /q winver.txt
 echo.
 set var=VER_OK
 echo !var!>Return_WinVer.txt 
-
+echo.
 
 echo 开始查找所有的HID设备device
 pnputil /scan-devices
@@ -120,14 +123,12 @@ echo TouchPad device found.
 echo.
 
 echo 开始查找touchpad触控板对应的父级I2C设备实例InstanceID
- echo.
+echo.
  
  ::替换回车换行符为逗号方便分割，注意后面NUL后面为追加>>写入
 for /f "delims=" %%i in (hid_dev.txt) do (
    set /p="%%i,"<nul>>dev0.tmp
  )
- echo 替换回车ok.
-echo.
 
 ::替换HID_DEVICE_UP:000D_U:0005为#方便分割，注意set /p需要加逗号
 for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
@@ -135,41 +136,32 @@ for /f "delims=, tokens=*" %%i in (dev0.tmp) do (
     set "str=!str:HID_DEVICE_UP:000D_U:0005=#!"
     set /p="!str!,"<nul>>dev1.tmp
 )
-echo 替换HID_DEVICE_UP:000D_U:0005 ok.
-echo.
 
   ::获取#分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=# tokens=2,*" %%i in (dev1.tmp) do (
    set /p="%%i,"<nul>>dev2.tmp
  )
- echo 获取#后面的文本ok.
-echo.
 
   ::获取:分隔符后面的文本，注意set /p需要加逗号
  for /f "delims=: tokens=2" %%i in (dev2.tmp) do (
    set /p="%%i,"<nul>>dev3.tmp
  )
-echo 获取:分隔符后面的文本ok.
-echo.
 
    ::获取,分隔符前面的文本
  for /f "delims=, tokens=1" %%i in (dev3.tmp) do (
   set /p="%%i"<nul>>dev4.tmp
  )
-echo 获取,分隔符前面的文本ok.
-echo.
 
     ::删除空格
  for /f "delims= " %%i in (dev4.tmp) do (
    set "str=%%i"
    echo !str!>i2c_dev_InstanceID.txt
  )
- echo 删除空格ok.
 echo.
 
 del/f /q hid_dev.txt
 del/f /q dev*.tmp
- echo.
+echo.
  
 
  ::验证InstanceID
@@ -181,6 +173,7 @@ del/f /q dev*.tmp
 
  ::注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+ echo.
  
  ::检查是否为i2c设备device
 find/i "ACPI\PNP0C50" i2c_dev.txt || (
@@ -218,6 +211,7 @@ echo.
 
 ::验证是否安装成功，注意加/connected表示已经启动
  pnputil /enum-devices /connected /instanceid "%i2c_dev_InstanceID%" /ids /relations /drivers >i2c_dev.txt
+ echo.
  
 find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
      echo 安装驱动失败，请卸载第三方驱动后重新再试
@@ -230,6 +224,8 @@ find/i "MouseLikeTouchPad_I2C" i2c_dev.txt || (
 )
 
 del/f /q i2c_dev.txt
+echo.
+
 echo 安装驱动成功
 echo Driver installed successfully.
 echo.
