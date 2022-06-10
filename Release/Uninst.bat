@@ -29,6 +29,9 @@ echo.
 if exist Return_UninstDrv.txt (
     del/f /q Return_UninstDrv.txt
 )
+if exist UninstDrvSuccess.txt (
+    del/f /q UninstDrvSuccess.txt
+)
 echo.
 
 
@@ -78,6 +81,6 @@ echo Ð¶ÔØÇý¶¯³É¹¦
 echo Unload driver succeeded.
 echo.
 echo UNDRV_OK >Return_UninstDrv.txt
-echo UNDRV_OK >Return.txt
+echo UNDRV_OK >UninstDrvSuccess.txt
 echo.
 

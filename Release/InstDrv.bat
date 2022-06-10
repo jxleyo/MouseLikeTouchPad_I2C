@@ -28,6 +28,9 @@ echo.
 if exist Return_InstDrv.txt (
     del/f /q Return_InstDrv.txt
 )
+if exist InstDrvSuccess.txt (
+    del/f /q InstDrvSuccess.txt
+)
 echo.
 
 echo 开始查找所有的HID设备device
