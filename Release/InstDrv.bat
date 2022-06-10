@@ -52,7 +52,6 @@ find/i "ACPI\MSFT0001" hid_dev.txt || (
 
 echo 找到touchpad触控板设备
 echo TouchPad device found.
-echo ACPI\MSFT0001 >MSFT0001_FOUND.txt
 echo.
 
  ::安装驱动，添加到驱动库中并且安装
