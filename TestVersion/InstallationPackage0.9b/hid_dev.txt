@@ -1,0 +1,94 @@
+Microsoft PnP 工具
+
+实例 ID:                HID\VID_1C4F&PID_0026&MI_01&Col02\8&40651c5&0&0001
+设备描述:         符合 HID 标准的系统控制器
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          (标准系统设备)
+状态:                     已启动
+驱动程序名称:                input.inf
+硬件 ID:               HID\VID_1C4F&PID_0026&REV_0110&MI_01&Col02
+                            HID\VID_1C4F&PID_0026&MI_01&Col02
+                            HID\VID_1C4F&UP:0001_U:0080
+                            HID_DEVICE_SYSTEM_CONTROL
+                            HID_DEVICE_UP:0001_U:0080
+                            HID_DEVICE
+父级:                     USB\VID_1C4F&PID_0026&MI_01\7&130832ed&1&0001
+
+实例 ID:                HID\VID_1C4F&PID_0026&MI_01&Col01\8&40651c5&0&0000
+设备描述:         符合 HID 标准的用户控制设备
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          Microsoft
+状态:                     已启动
+驱动程序名称:                hidserv.inf
+硬件 ID:               HID\VID_1C4F&PID_0026&REV_0110&MI_01&Col01
+                            HID\VID_1C4F&PID_0026&MI_01&Col01
+                            HID\VID_1C4F&UP:000C_U:0001
+                            HID_DEVICE_SYSTEM_CONSUMER
+                            HID_DEVICE_UP:000C_U:0001
+                            HID_DEVICE
+父级:                     USB\VID_1C4F&PID_0026&MI_01\7&130832ed&1&0001
+
+实例 ID:                USB\VID_1C4F&PID_0026&MI_00\7&130832ed&1&0000
+设备描述:         USB 输入设备
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          (标准系统设备)
+状态:                     已启动
+驱动程序名称:                input.inf
+硬件 ID:               USB\VID_1C4F&PID_0026&REV_0110&MI_00
+                            USB\VID_1C4F&PID_0026&MI_00
+兼容 ID:             USB\Class_03&SubClass_01&Prot_01
+                            USB\Class_03&SubClass_01
+                            USB\Class_03
+父级:                     USB\VID_1C4F&PID_0026\6&363b4ca8&0&6
+子级:                   HID\VID_1C4F&PID_0026&MI_00\8&1fd0ebfd&0&0000
+
+实例 ID:                USB\VID_09DA&PID_C10A\6&363b4ca8&0&5
+设备描述:         USB 输入设备
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          (标准系统设备)
+状态:                     已启动
+驱动程序名称:                input.inf
+硬件 ID:               USB\VID_09DA&PID_C10A&REV_1403
+                            USB\VID_09DA&PID_C10A
+兼容 ID:             USB\Class_03&SubClass_01&Prot_02
+                            USB\Class_03&SubClass_01
+                            USB\Class_03
+父级:                     USB\ROOT_HUB30\5&29fd92ab&0&0
+子级:                   HID\VID_09DA&PID_C10A&Col01\7&24e92f25&1&0000
+                            HID\VID_09DA&PID_C10A&Col02\7&24e92f25&1&0001
+
+实例 ID:                USB\VID_1C4F&PID_0026&MI_01\7&130832ed&1&0001
+设备描述:         USB 输入设备
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          (标准系统设备)
+状态:                     已启动
+驱动程序名称:                input.inf
+硬件 ID:               USB\VID_1C4F&PID_0026&REV_0110&MI_01
+                            USB\VID_1C4F&PID_0026&MI_01
+兼容 ID:             USB\Class_03&SubClass_00&Prot_00
+                            USB\Class_03&SubClass_00
+                            USB\Class_03
+父级:                     USB\VID_1C4F&PID_0026\6&363b4ca8&0&6
+子级:                   HID\VID_1C4F&PID_0026&MI_01&Col01\8&40651c5&0&0000
+                            HID\VID_1C4F&PID_0026&MI_01&Col02\8&40651c5&0&0001
+
+实例 ID:                HID\VID_09DA&PID_C10A&Col02\7&24e92f25&1&0001
+设备描述:         符合 HID 标准的供应商定义设备
+类名:                 HIDClass
+类 GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+制造商名称:          (标准系统设备)
+状态:                     已启动
+驱动程序名称:                input.inf
+硬件 ID:               HID\VID_09DA&PID_C10A&REV_1403&Col02
+                            HID\VID_09DA&PID_C10A&Col02
+                            HID\VID_09DA&UP:FFA0_U:00A5
+                            HID_DEVICE_UP:FFA0_U:00A5
+                            HID_DEVICE_UPR:FF00-FFFF
+                            HID_DEVICE
+父级:                     USB\VID_09DA&PID_C10A\6&363b4ca8&0&5
+
