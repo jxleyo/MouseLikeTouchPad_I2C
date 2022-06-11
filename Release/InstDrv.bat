@@ -19,44 +19,50 @@ setlocal enabledelayedexpansion
 echo.
 
  ::删除历史残留文件
- if exist hid_dev.txt (
-    del/f /q hid_dev.txt
+ if exist LogFIle\hid_dev.txt (
+    del/f /q LogFIle\hid_dev.txt
 )
 echo.
 
 ::删除历史记录文件
-if exist Return_InstDrv.txt (
-    del/f /q Return_InstDrv.txt
+if exist LogFIle\Return_InstDrv.txt (
+    del/f /q LogFIle\Return_InstDrv.txt
 )
-if exist InstDrvSuccess.txt (
-    del/f /q InstDrvSuccess.txt
+if exist LogFIle\InstDrvSuccess.txt (
+    del/f /q LogFIle\InstDrvSuccess.txt
 )
 echo.
+
+::检测目录
+if not exist LogFIle (
+    md LogFIle
+    echo.
+)
 
 echo 开始查找所有的HID设备device
 pnputil /scan-devices
 echo scan-devices扫描设备ok
 echo.
-pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >hid_dev.txt
+pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >LogFIle\hid_dev.txt
 echo enum-devices枚举设备ok
 echo.
 
 ::检查是否找到微软ACPI\MSFT0001标准硬件ID的touchpad触控板设备ACPI\VEN_MSFT&DEV_0001
-find/i "ACPI\MSFT0001" hid_dev.txt || (
+find/i "ACPI\MSFT0001" LogFIle\hid_dev.txt || (
      echo 未发现触控板设备。
      echo No TouchPad device found. 
      echo.
-     echo NotFoundTP >Return_InstDrv.txt
+     echo NotFoundTP >LogFIle\Return_InstDrv.txt
      exit
 )
 
 echo 找到touchpad触控板设备
 echo TouchPad device found.
-echo ACPI\MSFT0001 >TouchPad_I2C_FOUND.txt
+echo ACPI\MSFT0001 >LogFIle\TouchPad_I2C_FOUND.txt
 echo.
 
  ::安装驱动，添加到驱动库中并且安装
-  pnputil /add-driver MouseLikeTouchPad_I2C.inf /install
+  pnputil /add-driver Driver\MouseLikeTouchPad_I2C.inf /install
   echo add-driver安装驱动ok
   echo.
   
@@ -67,26 +73,26 @@ echo scan-devices扫描设备ok
 echo.
 
 ::验证是否安装成功，注意加/connected表示已经启动
-pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >hid_dev.txt
+pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >LogFIle\hid_dev.txt
 echo enum-devices枚举设备ok
 echo.
  
-find/i "MouseLikeTouchPad_I2C" hid_dev.txt || (
+find/i "MouseLikeTouchPad_I2C" LogFIle\hid_dev.txt || (
      echo 安装驱动失败，请稍后再试
      echo Failed to install the driver. Please  try again later.
      echo.
-     echo INSTDRV_FAILED >Return_InstDrv.txt
-     del/f /q hid_dev.txt
+     echo INSTDRV_FAILED >LogFIle\Return_InstDrv.txt
+     del/f /q LogFIle\hid_dev.txt
      exit
 )
 
-del/f /q hid_dev.txt
+del/f /q LogFIle\hid_dev.txt
 echo.
 
 echo 安装驱动成功
 echo Driver installed successfully.
 echo.
-echo INSTDRV_OK >Return_InstDrv.txt
-echo INSTDRV_OK >InstDrvSuccess.txt
+echo INSTDRV_OK >LogFIle\Return_InstDrv.txt
+echo INSTDRV_OK >LogFIle\InstDrvSuccess.txt
 echo.
 

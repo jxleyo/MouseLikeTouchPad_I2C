@@ -19,35 +19,37 @@ setlocal enabledelayedexpansion
 echo.
 
  ::删除历史残留文件
- if exist hid_dev.txt (
-    del/f /q hid_dev.txt
+ if exist LogFIle\hid_dev.txt (
+    del/f /q LogFIle\hid_dev.txt
 )
 echo.
 
 
 ::删除历史记录文件
-if exist Return_UninstDrv.txt (
-    del/f /q Return_UninstDrv.txt
+if exist LogFIle\Return_UninstDrv.txt (
+    del/f /q LogFIle\Return_UninstDrv.txt
 )
-if exist UninstDrvSuccess.txt (
-    del/f /q UninstDrvSuccess.txt
+if exist LogFIle\UninstDrvSuccess.txt (
+    del/f /q LogFIle\UninstDrvSuccess.txt
 )
 echo.
 
+::检测目录
+if not exist LogFIle (
+    md LogFIle
+    echo.
+)
 
-if exist OEMDriverName.txt (
-       echo OEM驱动文件名存在。
-       echo.
-) else (
+if not exist LogFIle\OEMDriverName.txt (
      echo 获取OEM驱动文件名失败。
      echo Failed to unload the driver. 
-     echo OEM_FAILED >Return_UninstDrv.txt
+     echo OEM_FAILED >LogFIle\Return_UninstDrv.txt
      echo.
      exit
 )
 
   ::从OEMDriverName.txt文件读取oemfilename
-  for /f "delims=" %%i in (OEMDriverName.txt) do (
+  for /f "delims=" %%i in (LogFIle\OEMDriverName.txt) do (
    set "oemfilename=%%i"
    echo oemfilename="!oemfilename!"
    echo.
@@ -64,23 +66,23 @@ echo.
 
 
 ::验证是否卸载成功，注意加/connected表示已经启动
-pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >hid_dev.txt
+pnputil /enum-devices /connected /class {745a17a0-74d3-11d0-b6fe-00a0c90f57da}  /ids /relations >LogFIle\hid_dev.txt
  echo.
  
-find/i "MouseLikeTouchPad_I2C" hid_dev.txt && (
+find/i "MouseLikeTouchPad_I2C" LogFIle\hid_dev.txt && (
      echo 卸载驱动失败。
      echo Failed to unload the driver. 
-     echo UNDRV_FAILED >Return_UninstDrv.txt
+     echo UNDRV_FAILED >LogFIle\Return_UninstDrv.txt
      echo.
-     del/f /q hid_dev.txt
+     del/f /q LogFIle\hid_dev.txt
      exit
 )
 
-del/f /q hid_dev.txt
+del/f /q LogFIle\hid_dev.txt
 echo 卸载驱动成功
 echo Unload driver succeeded.
 echo.
-echo UNDRV_OK >Return_UninstDrv.txt
-echo UNDRV_OK >UninstDrvSuccess.txt
+echo UNDRV_OK >LogFIle\Return_UninstDrv.txt
+echo UNDRV_OK >LogFIle\UninstDrvSuccess.txt
 echo.
 
