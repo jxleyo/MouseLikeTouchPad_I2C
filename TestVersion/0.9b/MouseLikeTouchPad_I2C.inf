@@ -1,0 +1,88 @@
+[Version]
+Signature = "$WINDOWS NT$"
+Class = HIDClass
+ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Provider = %ManufacturerName%
+CatalogFile = MouseLikeTouchPad_I2C.cat
+PnpLockdown=1	
+DriverVer = 04/29/2022,11.15.9.65
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[ControlFlags]
+ExcludeFromSelect = *
+
+[SourceDisksNames]
+99 = %DiskName%,,,""
+
+[SourceDisksFiles]
+MouseLikeTouchPad_I2C.sys  = 99,,
+
+[Manufacturer]
+%ManufacturerName%=MouseLikeTouchPad_I2C,NTamd64...1
+
+[MouseLikeTouchPad_I2C.NTamd64...1]
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
+
+
+[MouseLikeTouchPad_I2C_Device.NT]
+CopyFiles=MouseLikeTouchPad_I2C_Device.CopyFiles
+
+[MouseLikeTouchPad_I2C_Device.CopyFiles]
+MouseLikeTouchPad_I2C.sys,,,0x100
+
+[MouseLikeTouchPad_I2C_Device.NT.HW]
+AddReg = MouseLikeTouchPad_I2C_Device.AddReg,MouseLikeTouchPad_I2C_Device.Configuration.AddReg
+Include=pci.inf
+Needs=PciD3ColdSupported.HW
+
+[MouseLikeTouchPad_I2C_Device.AddReg]
+HKR,,"UpperFilters",0x00010000,"mshidkmdf"
+
+[MouseLikeTouchPad_I2C_Device.Configuration.AddReg]
+HKR,,"EnhancedPowerManagementEnabled",0x00010001,1
+HKR,,"DeviceResetNotificationEnabled",0x00010001,1
+HKR,,"LegacyTouchScaling",0x00010001,1
+
+
+
+
+;-------------- Service installation
+[MouseLikeTouchPad_I2C_Device.NT.Services]
+AddService = MouseLikeTouchPad_I2C,0x00000002, MouseLikeTouchPad_I2C_Service_Inst
+
+[MouseLikeTouchPad_I2C_Service_Inst]
+DisplayName    = %MouseLikeTouchPad_I2C.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\MouseLikeTouchPad_I2C.sys
+LoadOrderGroup = Extended Base
+
+
+[MouseLikeTouchPad_I2C_Device.NT.Wdf]
+KmdfService =  MouseLikeTouchPad_I2C, MouseLikeTouchPad_I2C_wdfsect
+
+[MouseLikeTouchPad_I2C_wdfsect]
+KmdfLibraryVersion = 1.15
+
+[Strings]
+ManufacturerName = "jxleyo.HRP"
+HardWareId="*MouseLikeTouchPad_I2C"
+DiskName = "MouseLikeTouchPad_I2C Installation Disk"
+MouseLikeTouchPad_I2C.DeviceDesc = "MouseLikeTouchPad_I2C"
+MouseLikeTouchPad_I2C.SVCDESC = "MouseLikeTouchPad_I2C Service"
+
+;Non-Localizable
+SERVICE_KERNEL_DRIVER  = 0x1 
+SERVICE_ERROR_IGNORE   = 0x0 
+SERVICE_ERROR_NORMAL   = 0x1 
+SERVICE_ERROR_SEVERE   = 0x2 
+SERVICE_ERROR_CRITICAL = 0x3 
+
+
+;REG_DWORD             = 0x00010001
+
