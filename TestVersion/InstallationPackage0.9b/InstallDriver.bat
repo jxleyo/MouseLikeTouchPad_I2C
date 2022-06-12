@@ -82,7 +82,7 @@ find "10.0." winver.txt || (
  	exit
 ) 
 
- ::windows10v2004最早版本号10.0.19041.264 //10.0.a.b格式，直接判断a>=19041即可，注意delims会把回车换行符自动算作分隔符所以多行情况下tokens的数值设置需要计算换行情况下的列号
+ ::Win10 Build 19041.208(v2004)正式版 //10.0.a.b格式，直接判断a>=19041即可，注意delims会把回车换行符自动算作分隔符所以多行情况下tokens的数值设置需要计算换行情况下的列号
  for /f "delims=[.] tokens=4" %%i in (winver.txt) do (
    set "winver=%%i"
  )
