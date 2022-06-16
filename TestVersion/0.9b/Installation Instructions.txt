@@ -12,20 +12,14 @@ The free experience beta driver uses an unofficially issued third-party digital 
 
 
 Driver download£º
-(1)Method 1:
-Copy the following link to the browser address bar and press enter
-https://github.com/jxleyo/MouseLikeTouchPad_I2C/archive/refs/heads/main.zip
-Direct download driver
-
-(2) Method 2:
 Copy the following link to the browser address bar and press enter to enter the download page
-https://github.com/jxleyo/MouseLikeTouchPad_I2C
-Click the green code button and then click download zip to download
+https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
+Select different installation package versions to download directly
 
 Installation and uninstallation methods:
 Unzip the downloaded driver zip file to any location on Disk C and open it (you may not be able to obtain administrator permission for placing other disks), enter the TestVersion subfolder, install / uninstall the driver by open InstallDriver.bat/UninstallDriver.bat file and according to the text prompt in the window, the driver installation / uninstallation can be completed.
 
-The manual installation method is to prepare an external mouse to avoid the failure of operating the computer during the installation process, and then double-click to open EVRootCA.reg file import registry, right click MouseLikeTouchPad_I2C.inf Select Install from the pop-up menu of INF file. Right click on the start menu to open the device manager or search the device manager. Expand the ergonomic input device / human-computer interface device. If there is a MouseLikeTouchPad_I2C device with a yellow exclamation point(if not exist, the driver has been installed ok) ,it needs to install the original driver ,Double click to open the properties dialog box, click the update driver button in the driver tab, select browse my computer to find the driver, and select let me select the next step from the list of available drivers on the computer to ensure that the display of compatible hardware is checked, If there is an I2C hid device in the model list, select this item (if not, select other options except MouseLikeTouchPad_I2C) and the next step can be completed.
+The manual installation method is to prepare an external mouse to avoid the failure of operating the computer during the installation process, and then double-click to open EVRootCA.reg file import registry, right click MouseLikeTouchPad_I2C.inf Select Install from the pop-up menu of INF file. Right click on the start menu to open the device manager or search the device manager. Expand the ergonomic input device / human-computer interface device. If there is a MouseLikeTouchPad_I2C device with a yellow exclamation point(if not exist, the driver has been installed ok) ,it needs to install the original driver ,Double click to open the properties dialog box, click the update driver button in the driver tab, select browse my computer to find the driver, and select let me select the next step from the list of available drivers on the computer to ensure that the display of compatible hardware is checked, If there is an I2C hid device in the model list, select this item (if not, select other options except MouseLikeTouchPad_I2C) and The installation can be completed in the next step. If there is no check box showing compatible hardware but a single column table, find the human-computer interface device and select the next step for installation.
 
 
 the operation video tutorial website:

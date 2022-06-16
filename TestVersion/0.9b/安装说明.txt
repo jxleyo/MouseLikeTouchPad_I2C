@@ -11,20 +11,14 @@ MouseLikeTouchPad_I2C Hid Driver for windows仿鼠标式触摸板驱动
 
 
 驱动下载：
-(1)方法1：
-复制下面的链接到浏览器地址栏后回车
-https://github.com/jxleyo/MouseLikeTouchPad_I2C/archive/refs/heads/main.zip
-直接下载驱动
-
-(2)方法2：
 复制下面的链接到浏览器地址栏后回车进入下载页面
-https://github.com/jxleyo/MouseLikeTouchPad_I2C
-点击绿色的code按钮后再点击Download ZIP进行下载
+https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
+选择不同的安装包版本直接下载
 
 安装和卸载方法：
 下载的驱动zip文件解压到C盘任意位置后打开(放其他盘可能获取不到管理员权限)，进入TestVersion子文件夹，安装/卸载驱动分别打开InstallDriver.bat/UninstallDriver.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载。
 
-手动安装方法为先准备一个外置鼠标避免安装过程中失败无法操作电脑，然后双击打开EVRootCA.reg文件导入注册表，右键单击MouseLikeTouchPad_I2C.inf文件弹出菜单选择安装，在开始菜单右键打开设备管理器或者搜索设备管理器打开，展开人体学输入设备/人机接口设备，如果有黄色感叹号的的MouseLikeTouchPad_I2C设备则需要安装原厂驱动（没有的话就已经安装完成）双击打开属性对话框，点击驱动程序标签页里面的更新驱动程序按钮，选择浏览我的电脑以查找驱动程序后下一步，选择让我从计算机上的可用驱动程序列表中选取后下一步，确保已经勾选显示兼容硬件，在型号列表中有I2C HID设备就选择该项（没有的话就选择除了MouseLikeTouchPad_I2C以外的其他选项）后下一步即可安装完成。
+手动安装方法为先准备一个外置鼠标避免安装过程中失败无法操作电脑，然后双击打开EVRootCA.reg文件导入注册表，右键单击MouseLikeTouchPad_I2C.inf文件弹出菜单选择安装，在开始菜单右键打开设备管理器或者搜索设备管理器打开，展开人体学输入设备/人机接口设备，如果有黄色感叹号的的MouseLikeTouchPad_I2C设备则需要安装原厂驱动（没有的话就已经安装完成）双击打开属性对话框，点击驱动程序标签页里面的更新驱动程序按钮，选择浏览我的电脑以查找驱动程序后下一步，选择让我从计算机上的可用驱动程序列表中选取后下一步，确保已经勾选显示兼容硬件，在型号列表中有I2C HID设备就选择该项（没有的话就选择除了MouseLikeTouchPad_I2C以外的其他选项）后下一步即可安装完成，如果没有显示兼容硬件的复选框出现而是1一个单列表则找到人机接口设备选择下一步安装。
 
 
 使用操作视频教程网址：
