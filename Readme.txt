@@ -12,10 +12,17 @@ MouseLikeTouchPad_I2C Hid Driver for windows10仿鼠标式触摸板驱动
 
 项目文件夹分类说明：
 SRC\	驱动程序源代码
-Release\	共享收费的正式发行版驱动程序安装文件
-TestVersion\	免费体验的测试版驱动程序安装文件
 NewVersion.txt	最新版本号文件
 Readme.txt	说明文件
+
+驱动下载：
+复制下面的链接到浏览器地址栏后回车进入下载页面
+https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
+选择不同的安装包版本直接下载
+
+使用操作视频教程网址：
+https://space.bilibili.com/409976933
+https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
 
 
 MouseLikeTouchPad_I2C Hid Driver for windows仿鼠标式触摸板驱动
@@ -34,13 +41,16 @@ Description of project folder classification:
 
 SRC\ Driver source code
 
-Release\ Official release driver installation file for shared charges
-
-TestVersion\ Beta driver installation file for free experience
-
 NewVersion.Txt Latest version number file
 
 Readme.Txt Documentation
 
 
+Driver download：
+Copy the following link to the browser address bar and press enter to enter the download page
+https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
+Select different installation package versions to download directly
 
+the operation video tutorial website:
+https://space.bilibili.com/409976933
+https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
