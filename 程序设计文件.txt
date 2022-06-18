@@ -7,7 +7,6 @@ Manual.doc(ËµÃ÷ÊÖ²á£¬°üÀ¨´¥Ãþ°åÊÖÖ¸¹¦ÄÜ¶¨ÒåÍ¼Ê¾¡¢²Ù×÷·½Ê½Í¼½â¼°ÎÄ×ÖËµÃ÷¡¢¹Ù·½ÊÓÆ
 EULA.rtf£¨×îÖÕÓÃ»§Ðí¿ÉÐ­Òé£©
 VideoTutorial.lnk(ÊÓÆµ½Ì³ÌÁ´½Ó)
 
-
 MSI°²×°°ü³ÌÐòÁ÷³Ì£º
 ÏÔÊ¾»¶Ó­½çÃæ¡¢EULA.rtf£¨×îÖÕÓÃ»§Ðí¿ÉÐ­Òé£©¡¢°²×°Â·¾¶£¨¸ü¸Ä½ûÓÃ±ä»Ò£©
 ¸´ÖÆÎÄ¼þµ½Program FilesÎÄ¼þ¼Ð
@@ -15,11 +14,10 @@ MSI°²×°°ü³ÌÐòÁ÷³Ì£º
 ´´½¨×ÀÃæ¿ì½Ý·½Ê½£¨ÊÓÆµ½Ì³ÌÁ´½Ó¡¢ËµÃ÷ÊÖ²áÁ´½Ó£©
 ´´½¨¿ªÊ¼²Ëµ¥Á´½Ó£¨ÊÓÆµ½Ì³ÌÁ´½Ó¡¢ËµÃ÷ÊÖ²áÁ´½Ó¡¢Ð¶ÔØ³ÌÐòÁ´½Ó¡¢EULAÐ­ÒéÁ´½Ó£©
 
-
 MouseLikeTouchPad_TraySvc.exe³ÌÐò¹¦ÄÜºÍÁ÷³ÌÎÞ²ÎÊýÏµÍ³ÍÐÅÌ½çÃæÄ£Ê½£º
 ×¢²á¼ì²â£¨¿ª»ú¼°Ã¿Ìì¼ì²âÒ»´Î£¬×¢²á±êÖ¾±£´æÔÚ×¢²á±íÏî¡¾Ð¶ÔØÇý¶¯Ê±²»»áÇå³ý¡¿£¬µ½ÆÚÎ´×¢²áµ¯³ö´°¿ÚÌáÊ¾¡¾ÄúµÄÈí¼þÊÔÓÃÊ±¼äÒÑ¾­µ½ÆÚ£¬Çë¸¶·Ñ×¢²áºóÊ¹ÓÃ¡¿£©
 TrayÍÐÅÌÍ¼±êÃ°ÅÝÏÔÊ¾ÉèÖÃ£¨¼à²âÉèÖÃ±ä»¯Ê±£©ÍÐÅÌÉèÖÃ×´Ì¬¶¯Ì¬¸üÐÂÍ¼±ê£¬£¨Êó±êÁéÃô¶È¡¢¹öÂÖ¿ª¹Ø¡¢¹öÂÖ·½Ê½¡¢´¥¿Ø°å²Ù×÷·½Ê½±ä»¯¶¼¶ÔÓ¦²»Í¬µÄÍ¼±ê£©
-°æ±¾ÐÅÏ¢ÎÄ±¾ÉÏÊó±êoverÌáÊ¾£¨¼ì²é¸üÐÂ£©¿Éµã»÷£¬£¨ÒÑ¾­ÊÇ×îÐÂ°æ±¾/ÓÐÐÂ°æ±¾Çý¶¯¡¾ÏÂÔØÐÂÇý¶¯°´Å¥µã»÷µ÷ÓÃä¯ÀÀÆ÷ÏÂÔØ¡¿£©
+
 
 
 
