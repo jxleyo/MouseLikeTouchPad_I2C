@@ -1375,8 +1375,13 @@ UninstDrvSuccess:
     //删除快捷方式和注册表卸载项
     UninstallShortcut();
 
+    //不存在驱动
+    ExitCode = EXIT_OK;
+    MessageBox(NULL, L"卸载驱动成功！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
+
     //删除程序目录文件
-    DelDir(exeFilePath);
+    DelProgramFilesDir(exeFilePath);//注意成功提示对话框在删除之前运行避免冲突
+    //DelDir(exeFilePath);//程序目录中还在运行删除不了需要特殊处理
 
     //TCHAR szProgramFilePath[MAX_PATH];
     //if (GetProgramFilePath(szProgramFilePath)) {
@@ -1385,10 +1390,6 @@ UninstDrvSuccess:
     //    wcscat_s(szPath, L"\\MouseLikeTouchPad");
     //    DelDir(szPath);
     //}
-
-    //不存在驱动
-    MessageBox(NULL, L"卸载驱动成功！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
-    ExitCode = EXIT_OK;
 
 }
 
@@ -2206,7 +2207,7 @@ BOOL DelDir(LPCWSTR lpszPath)
     //而SecureZeroMemory则不会引发此问题，保证缓冲区的内容会被正确的清零。
     //如果涉及到比较敏感的内容，尽量使用SecureZeroMemory函数。
 
-
+    
     FileOp.fFlags = FOF_NOCONFIRMATION;//操作与确认标志 
 
     FileOp.hNameMappings = NULL; // 文件映射
@@ -2233,7 +2234,7 @@ BOOL DelDir(LPCWSTR lpszPath)
     //WideCharToMultiByte(CP_ACP, 0, lpszPath, -1, pszMultiByte, iSize, NULL, NULL);
 
     //char cmdline[_MAX_PATH];//源文件路径  
-    //strcpy(cmdline, "cmd.exe /k rd /S /Q");
+    //strcpy(cmdline, "cmd.exe /c rd /S /Q");
     //strcat(cmdline, " \"");
     //strcat(cmdline, pszMultiByte);
     //strcat(cmdline, "\"");
@@ -2281,4 +2282,46 @@ BOOL GetProgramFilePath(wchar_t* szPath) {//得到程序安装路径
     }
 
     return bRet;
+}
+
+void DeleteApplicationSelf()
+{
+    TCHAR szCommandLine[MAX_PATH + 10];
+
+    //设置本程序进程基本为实时执行，快速退出。
+    SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    //通知资源管理器不显示本程序，当然如果程序没有真正的删除，刷新资源管理器后仍会显示出来的。
+    SHChangeNotify(SHCNE_DELETE, SHCNF_PATH, _pgmptr, NULL);
+
+    //调用cmd传入参数以删除自己
+    TCHAR szFilePath[MAX_PATH];
+    wsprintf(szFilePath, L"\"%s\"", _pgmptr);
+    wsprintf(szCommandLine, L"/c rd /S /Q ", szFilePath);
+    ShellExecute(NULL, L"open", L"cmd.exe", szCommandLine, NULL, SW_HIDE);
+
+    ExitProcess(0);
+}
+
+void DelProgramFilesDir(LPCWSTR lpszPath)
+{
+    TCHAR szArg[MAX_PATH + 10];
+
+    //设置本程序进程基本为实时执行，快速退出。
+    SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    //通知资源管理器不显示本程序，当然如果程序没有真正的删除，刷新资源管理器后仍会显示出来的。
+    SHChangeNotify(SHCNE_RMDIR, SHCNF_PATH, exeFilePath, NULL);//设置为目录删除SHCNE_RMDIR
+
+    //调用cmd传入参数以删除自己
+
+    char cmdline[_MAX_PATH];//源文件路径  
+    wcscpy_s(szArg, L"/c rd /S /Q");
+    wcscat_s(szArg, L" \"");
+    wcscat_s(szArg, exeFilePath);
+    wcscat_s(szArg, L"\"");
+
+    ShellExecute(NULL, L"open", L"cmd.exe", szArg, NULL, SW_HIDE);
+
+    ExitProcess(0);
 }

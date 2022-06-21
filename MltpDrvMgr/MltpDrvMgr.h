@@ -52,6 +52,7 @@ BOOL WriteBinReg(LPCWSTR szPath, LPCWSTR szKey, LPBYTE dwValue, DWORD dwSize);
 BOOL ReadBinReg(LPCWSTR szPath, LPCWSTR szKey, DWORD* dwValue, DWORD* dwSize);
 BOOL DelRegkey(LPCWSTR szPath, LPCWSTR szKey);
 BOOL DelDir(LPCWSTR lpszPath);
+void DelProgramFilesDir(LPCWSTR lpszPath);
 BOOL GetDesktopPath(wchar_t* szPath);
 BOOL GetProgramsPath(wchar_t* szPath);
 BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR strShortcutName, LPCWSTR strDestDir);
