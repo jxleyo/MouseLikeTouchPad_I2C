@@ -93,10 +93,7 @@ BOOL CMltpSvcDlg::OnInitDialog()
 		PostMessage(WM_SYSCOMMAND, SC_CLOSE, 0);
 	}
 	
-	WriteRegFlag();
-	//StartMonitorRegStatus();
-	//CheckRegStatus();//检测软件注册状态
-
+	CheckRegStatus();//检测软件注册状态
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -260,7 +257,7 @@ LRESULT CMltpSvcDlg::OnSystemTray(WPARAM wParam, LPARAM lParam)
 
 	{
 		case WM_LBUTTONUP: {// 左键起来时显示主窗口
-			this->ShowWindow(SW_SHOWNORMAL);         // 
+			this->ShowWindow(SW_SHOWNORMAL);         // 	
 		}
 						 break;
 
@@ -519,12 +516,20 @@ void CMltpSvcDlg::OnTimer(UINT_PTR nIDEvent)
 
 void CMltpSvcDlg::CheckRegStatus()
 {
-	TCHAR szPath[] = L"LogFile\\Registry.dat";
-	DWORD Value = 1;
-	//读取文件
-	
-	CString str;
-	str.Format(L"%d", IsRegistered);
+	IsRegistered = FALSE;
+
+	//读取注册表当前用户，每次驱动程序启动时会把注册表HKEY_LOCAL_MACHINE项的注册键值复制到当前用户使得服务程序的权限得以读取到
+	//注册成功时也会同时写入当前用户注册表项，并重新启动服务程序刷新状态
+	DWORD dwSize = 0;
+	BYTE dwValue[256];
+	if (ReadBinReg(L"Software\\MouseLikeTouchPad", L"RegKey", dwValue, &dwSize)) {
+		if (dwSize == 32) {//32为测试值
+			IsRegistered = TRUE;
+		}	
+	}
+
+	//CString str;
+	//str.Format(L"%d", IsRegistered);
 	//AfxMessageBox(str, MB_OK, MB_ICONSTOP);
 
 
@@ -538,13 +543,6 @@ void CMltpSvcDlg::CheckRegStatus()
 	}
 }
 
-
-void CMltpSvcDlg::WriteRegFlag()
-{
-	TCHAR szPath[] = L"LogFile\\Registry.dat";
-	DWORD Value = 1;
-	//写入文件
-}
 
 BOOL CMltpSvcDlg::WriteInstalledTime()
 {
@@ -578,4 +576,24 @@ void CMltpSvcDlg::OnNMClickSyslinkVideotutor(NMHDR* pNMHDR, LRESULT* pResult)
 	*pResult = 0;
 }
 
+BOOL CMltpSvcDlg::ReadBinReg(LPCWSTR szPath, LPCWSTR szKey, LPBYTE dwValue, DWORD* dwSize)
+{
+	BOOL bSuccess = FALSE;
+	HKEY hKEY;
+	if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, szPath, 0, KEY_READ, &hKEY))//非管理员程序只能读取当前用户的注册表
+	{
+		*dwSize = 0;
+		DWORD dwType = REG_BINARY;
+
+		if (RegQueryValueEx(hKEY, szKey, 0, &dwType, dwValue, dwSize) != ERROR_SUCCESS)
+		{
+			printf("RegQueryValueEx err！\n");
+		}
+
+		RegCloseKey(hKEY);
+		bSuccess = TRUE;
+	}
+
+	return bSuccess;
+}
 

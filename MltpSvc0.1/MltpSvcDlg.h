@@ -75,7 +75,6 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	CStatic m_Static_Ver;
 	void CheckRegStatus();
-	void WriteRegFlag();
 	bool IsRegistered;
 
 
@@ -83,6 +82,8 @@ public:
 	BOOL ReadInstalledTime(CTime* time);
 
 	afx_msg void OnNMClickSyslinkVideotutor(NMHDR* pNMHDR, LRESULT* pResult);
+
+	BOOL ReadBinReg(LPCWSTR szPath, LPCWSTR szKey, LPBYTE dwValue, DWORD* dwSize);
 };
 
 
