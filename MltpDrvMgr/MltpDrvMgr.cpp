@@ -1200,8 +1200,12 @@ InstSuccess:
     MessageBox(NULL, L"安装驱动成功！请重新启动电脑生效！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
     ExitCode = EXIT_OK;
 
-    //启动托盘服务程序
-    WinExec("MouseLikeTouchPad_TraySvc.exe ShowDialog", SW_NORMAL);
+    //创建快捷方式
+    InstallShortcut();
+
+
+    //启动服务程序
+    WinExec("MltpSvc.exe ShowDialog", SW_NORMAL);
 }
 
 void Uninstall() {
@@ -1248,15 +1252,15 @@ FindDev:
 
     if (!LogFileExist(L"TouchPad_FOUND.txt")) {
         MessageBox(NULL, L"未找到匹配的触控板设备，无需卸载驱动，可直接卸载程序。", L"MltpDrvMgr", MB_OK);
-        ExitCode = EXIT_OK;//这里不用安装，直接返回成功
-        return;
+        ExitCode = EXIT_OK;//这里不用安装，直接返回成功，但是跳到末尾清理程序
+        goto UninstDrvSuccess;
     }
     DelLogFile(L"TouchPad_FOUND.txt");
 
     if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
         MessageBox(NULL, L"未找到匹配的I2C总线触控板设备，无需卸载驱动，可直接卸载程序。", L"MltpDrvMgr", MB_OK);
-        ExitCode = EXIT_OK;//这里不用安装，直接返回成功
-        return;
+        ExitCode = EXIT_OK;//这里不用安装，直接返回成功，但是跳到末尾清理程序
+        goto UninstDrvSuccess;
     }
 
 
@@ -1367,6 +1371,20 @@ UninstDrvSuccess:
     while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
     while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
+
+    //删除快捷方式和注册表卸载项
+    UninstallShortcut();
+
+    //删除程序目录文件
+    DelDir(exeFilePath);
+
+    //TCHAR szProgramFilePath[MAX_PATH];
+    //if (GetProgramFilePath(szProgramFilePath)) {
+    //    TCHAR szPath[MAX_PATH];
+    //    wcscpy_s(szPath, szProgramFilePath);
+    //    wcscat_s(szPath, L"\\MouseLikeTouchPad");
+    //    DelDir(szPath);
+    //}
 
     //不存在驱动
     MessageBox(NULL, L"卸载驱动成功！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
@@ -2237,4 +2255,30 @@ BOOL DelDir(LPCWSTR lpszPath)
     //printf(cmdline);
 
     //return TRUE;
+}
+
+
+BOOL GetProgramFilePath(wchar_t* szPath) {//得到程序安装路径 
+    BOOL bRet = FALSE;
+
+    TCHAR Path[MAX_PATH + 1];
+    LPITEMIDLIST pidl;
+    LPMALLOC pShell;
+    if (SUCCEEDED(SHGetMalloc(&pShell)))
+    {
+        if (SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_PROGRAM_FILES, &pidl)))
+        {
+            bRet = SHGetPathFromIDList(pidl, Path);
+            if (!bRet)
+            {
+                pShell->Free(pidl);
+            }
+            else {
+                wcscpy(szPath, Path);
+            }
+            pShell->Release();
+        }
+    }
+
+    return bRet;
 }

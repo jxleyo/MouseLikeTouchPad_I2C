@@ -55,6 +55,7 @@ BOOL DelDir(LPCWSTR lpszPath);
 BOOL GetDesktopPath(wchar_t* szPath);
 BOOL GetProgramsPath(wchar_t* szPath);
 BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR strShortcutName, LPCWSTR strDestDir);
+BOOL GetProgramFilePath(wchar_t* szPath);
 
 BOOL DirExist(LPCWSTR szFilePathName);
 BOOL FileExist(LPCWSTR szFilePathName);
