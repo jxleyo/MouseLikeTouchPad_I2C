@@ -1,0 +1,46 @@
+
+END-USER LICENSE AGREEMENT FOR MouseLikeTouchPad_Driver.
+========================================
+
+IMPORTANT - READ CAREFULLY: This End-User License Agreement is a legal agreement between you (either an individual or a single entity) and jxleyo.HRP(DaYu county Leyo Electronic Technology Department). for the product identified above, which includes computer software and may include associated media, printed materials, and "online" or electronic documentation ("SOFTWARE PRODUCT"). By installing, copying, or otherwise using the SOFTWARE PRODUCT, you agree to be bound by the terms of this End-User License Agreement, do not install or use the SOFTWARE PRODUCT; you may however, return it to your place of purchase for a full refund.
+
+SOFTWARE PRODUCT LICENSE
+
+The SOFTWARE PRODUCT is protected by copyright laws and international copyright treaties, as well as other intellectual property laws and treaties. The SOFTWARE PRODUCT is licensed, not sold. You may not rent, lease, or lend the SOFTWARE PRODUCT. You may permanently transfer all your rights under this End-User License Agreement, provided you retain no copies, you transfer all of the SOFTWARE PRODUCT and this End-User License Agreement, and the recipient agrees to the terms of this End-User License Agreement 
+
+GRANT OF LICENSE
+
+This program version may be installed on a maximum of two computers, so long as it is ONLY running on one system at any time: i.e. one installation at home and one installation at the office and used only by the licensee. The simultaneous use of this SOFTWARE PRODUCT by multiple personnel requires additional licenses. Use of this SOFTWARE PRODUCT over an internal network requires separate license for each user. The licensee shall not use, copy, rent, lease, sell, modify, decompile, disassemble, reverse engineer, or transfer the licensed SOFTWARE PRODUCT except as provided in this agreement. Any such unauthorized use shall result in immediate termination of this license.
+
+LIABILITY
+
+We try to keep my SOFTWARE PRODUCT as bug free as possible. However, it is a general rule, that no software is ever error free, and the number of errors increases with the complexity of the program. We cannot guarantee that this SOFTWARE PRODUCT will run in every environment, on any Windows compatible machine, or together with any other application, without producing errors. Any liability for damage of any sort is hereby denied. In no event shall EZB Systems, Inc. or its suppliers be liable for any special, incidental, indirect, or consequential damages whatsoever (including, without limitation, damages for loss of business profits, business interruption, loss of business information, or any other pecuniary loss) arising out of the use of or inability to use the SOFTWARE PRODUCT. In any case, the liability is limited to the registration fee. Please evaluate this SOFTWARE PRODUCT with not critical data. Should you detect errors before registration, the user accepts the SOFTWARE PRODUCT errors after registration. Any description of SOFTWARE PRODUCT errors will be accepted, but we cannot guarantee that the errors can be corrected.
+
+Thank you for your understanding and cooperation.
+
+jxleyo.HRP(DaYu county Leyo Electronic Technology Department).
+
+The MouseLikeTouchPad_Driver Author.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+MouseLiketoTouchPad驱动程序的最终用户许可协议。
+========================================
+重要信息-请仔细阅读：本最终用户许可协议是您（个人或单个实体）与jxleyo.HRP(大余县乐友电子科技)之间就上述产品达成的法律协议，其中包括计算机软件，可能包括相关媒体、印刷材料和“在线”或电子文档（“软件产品”）。通过安装、复制或以其他方式使用软件产品，即表示您同意受本最终用户许可协议条款的约束，不安装或使用软件产品；但是，您可以将其退回您的购买地，以获得全额退款。
+
+软件产品许可证
+
+软件产品受版权法和国际版权条约以及其他知识产权法和条约的保护。软件产品已获得许可，未出售。您不得出租、租赁或出借软件产品。您可以永久转让本最终用户许可协议下的所有权利，前提是您不保留任何副本，您转让所有软件产品和本最终用户许可协议，并且接收方同意本最终用户许可协议的条款
+
+许可证的授予
+此程序版本最多可安装在两台计算机上，只要它在任何时候仅在一个系统上运行：即一个安装在家中，一个安装在办公室，并且仅由被许可方使用。多人同时使用此软件产品需要额外的许可证。通过内部网络使用此软件产品需要为每个用户提供单独的许可证。除非本协议另有规定，否则被许可方不得使用、复制、出租、租赁、出售、修改、反编译、反汇编、反向工程或转让许可软件产品。任何此类未经授权的使用将导致本许可证立即终止。
+
+责任
+我们尽量保持我的软件产品没有bug。然而，一般的规则是，任何软件都不会没有错误，错误的数量会随着程序的复杂性而增加。我们无法保证此软件产品在任何环境、任何Windows兼容计算机上或与任何其他应用程序一起运行时都不会产生错误。特此拒绝承担任何类型的损害责任。在任何情况下，jxleyo.HRP(大余县乐友电子科技)或其供应商均不对因使用或无法使用软件产品而造成的任何特殊、偶然、间接或后果性损害（包括但不限于商业利润损失、业务中断、商业信息损失或任何其他金钱损失）负责。在任何情况下，责任仅限于注册费。请使用非关键数据评估此软件产品。如果您在注册前检测到错误，用户将在注册后接受软件产品错误。任何软件产品错误的描述都将被接受，但我们不能保证这些错误能够得到纠正。
+
+
+感谢您的理解与合作。
+
+jxleyo.HRP(大余县乐友电子科技)。
+
+MouseLiketoTouchPad驱动程序作者。
+
