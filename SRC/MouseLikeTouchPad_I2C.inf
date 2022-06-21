@@ -48,8 +48,6 @@ HKR,,"DeviceResetNotificationEnabled",0x00010001,1
 HKR,,"LegacyTouchScaling",0x00010001,1
 
 
-
-
 ;-------------- Service installation
 [MouseLikeTouchPad_I2C_Device.NT.Services]
 AddService = MouseLikeTouchPad_I2C,0x00000002, MouseLikeTouchPad_I2C_Service_Inst
@@ -83,6 +81,4 @@ SERVICE_ERROR_NORMAL   = 0x1
 SERVICE_ERROR_SEVERE   = 0x2 
 SERVICE_ERROR_CRITICAL = 0x3 
 
-
 ;REG_DWORD             = 0x00010001
-

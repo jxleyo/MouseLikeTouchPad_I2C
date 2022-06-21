@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <ntddk.h>
 #include <ntstrsafe.h>
 #include <ntintsafe.h>
