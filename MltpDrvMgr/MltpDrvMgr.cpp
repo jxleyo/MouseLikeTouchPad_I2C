@@ -1215,6 +1215,9 @@ InstSuccess:
 }
 
 void Uninstall() {
+    //终止服务程序运行
+    WinExec("taskkill /f /im MltpSvc.exe", SW_HIDE);
+
     INT nRet = 0;////-0 系统内存或资源不足//--ERROR_BAD_FORMAT.EXE文件格式无效（比如不是32位应用程序）//--ERROR_FILE_NOT_FOUND 指定的文件设有找到//--ERROR_PATH_NOT_FOUND
     INT retry = 0;
     INT nTry = 0;
