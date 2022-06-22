@@ -539,11 +539,13 @@ void CMltpSvcDlg::CheckRegStatus()
 		ReadInstalledTime(&instTime);
 
 		CTime curTime = CTime::GetCurrentTime();//获取当前时间
+		//CString strCurTime = curTime.Format(TEXT("%Y-%m-%d %H:%M:%S"));
 
-		if (curTime > instTime + 30) {
+		CTimeSpan span = curTime - instTime;//时间差
+		LONG interval = span.GetDays();
+		if (interval >30) {
 			AfxMessageBox(L"您的试用期已经超过，请购买软件并注册！", MB_OK, MB_ICONSTOP);
 		}
-
 	}
 }
 
@@ -566,7 +568,12 @@ BOOL CMltpSvcDlg::ReadInstalledTime(CTime* time)
 	BOOL bSuccess = FALSE;
 	TCHAR szPath[] = L"LogFile\\Installed.dat";
 
-	//读取文件
+	//获取文件属性
+    CFileStatus FileStatus;
+	CFile::GetStatus(szPath,FileStatus);
+
+	//创建时间
+	*time = FileStatus.m_ctime;
 
 	return bSuccess;
 }
