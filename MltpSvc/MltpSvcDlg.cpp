@@ -535,49 +535,42 @@ void CMltpSvcDlg::CheckRegStatus()
 		m_Button_Reg.EnableWindow(TRUE);
 		m_Static_RegInfo.SetWindowText(L"软件未注册(30天使用期)");
 
-		CTime instTime;
-		ReadInstalledTime(&instTime);
-
-		CTime curTime = CTime::GetCurrentTime();//获取当前时间
-		//CString strCurTime = curTime.Format(TEXT("%Y-%m-%d %H:%M:%S"));
-
-		CTimeSpan span = curTime - instTime;//时间差
-		LONG interval = span.GetDays();
-		if (interval >30) {
-			AfxMessageBox(L"您的试用期已经超过，请购买软件并注册！", MB_OK, MB_ICONSTOP);
+		if (!LogFileExist(L"Installed.dat")) {
+			AfxMessageBox(L"您的软件未正确安装，点击确定后请选择允许更改计算机完成安装！", MB_OK, MB_ICONSTOP);
+			INT ret = (INT)ShellExecute(NULL, L"open", L"MltpDrvMgr.exe", L"Install", NULL, SW_NORMAL);//调用注册程序
+			if (ret <= 32) {
+				AfxMessageBox(L"ShellExecute Call MltpDrvMgr.exe err!", MB_OK, MB_ICONSTOP);
+			}
+			else {
+				ExitProcess(0);//快速退出程序
+			}
 		}
+		else {
+			
+			TCHAR szPath[] = L"LogFile\\Installed.dat";
+
+			//获取文件属性
+			CFileStatus FileStatus;
+			if (CFile::GetStatus(szPath, FileStatus)) {
+				//创建时间
+				CTime instTime = FileStatus.m_ctime;
+
+				CTime curTime = CTime::GetCurrentTime();//获取当前时间
+				//CString strCurTime = curTime.Format(TEXT("%Y-%m-%d %H:%M:%S"));
+				//str.Format(_T("%d-%2d-%2d %2d:%2d:%2d"), time.GetYear(), time.GetMonth(), time.GetDay(), time.GetHour(), time.GetMinute(), time.GetSecond());
+
+				CTimeSpan span = curTime - instTime;//时间差
+				LONG interval = span.GetDays();
+				if (interval > 30) {
+					AfxMessageBox(L"您的试用期已经超过，请购买软件并注册！", MB_OK, MB_ICONSTOP);
+				}
+			}
+			else {
+				AfxMessageBox(L"检测注册失败！", MB_OK, MB_ICONSTOP);
+			}		
+		}		
 	}
 }
-
-
-BOOL CMltpSvcDlg::WriteInstalledTime()
-{
-	BOOL bSuccess = FALSE;
-	TCHAR szPath[] = L"LogFile\\Installed.dat";
-	CTime time = CTime::GetCurrentTime();//获取当前时间
-	CString str;
-	str.Format(_T("%d-%2d-%2d %2d:%2d:%2d"), time.GetYear(), time.GetMonth(), time.GetDay(), time.GetHour(), time.GetMinute(), time.GetSecond());
-
-	//写入文件
-
-	return bSuccess;
-}
-
-BOOL CMltpSvcDlg::ReadInstalledTime(CTime* time)
-{
-	BOOL bSuccess = FALSE;
-	TCHAR szPath[] = L"LogFile\\Installed.dat";
-
-	//获取文件属性
-    CFileStatus FileStatus;
-	CFile::GetStatus(szPath,FileStatus);
-
-	//创建时间
-	*time = FileStatus.m_ctime;
-
-	return bSuccess;
-}
-
 
 
 void CMltpSvcDlg::OnNMClickSyslinkVideotutor(NMHDR* pNMHDR, LRESULT* pResult)

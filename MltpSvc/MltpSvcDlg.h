@@ -78,9 +78,6 @@ public:
 	bool IsRegistered;
 
 
-	BOOL WriteInstalledTime();
-	BOOL ReadInstalledTime(CTime* time);
-
 	afx_msg void OnNMClickSyslinkVideotutor(NMHDR* pNMHDR, LRESULT* pResult);
 
 	BOOL ReadBinReg(LPCWSTR szPath, LPCWSTR szKey, LPBYTE dwValue, DWORD* dwSize);
