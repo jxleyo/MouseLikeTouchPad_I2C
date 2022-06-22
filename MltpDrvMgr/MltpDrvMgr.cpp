@@ -2095,7 +2095,12 @@ void Register()
     }
     
     if (isRegistered) {
+        //终止和重启服务程序运行
+        WinExec("taskkill /f /im MltpSvc.exe", SW_HIDE);
         MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
+
+        //重启服务程序运行
+        WinExec("MltpSvc.exe SHowDialog", SW_SHOW);
 
         int result = MessageBox(NULL,L"熟练使用本触摸板驱动后可以不需要开机启动帮助服务程序，确定删除开机启动项吗？", L"MltpSvc", MB_YESNO);
         switch (result)
