@@ -167,8 +167,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     else if (wcscmp(lpCmdLine, L"UninstallShortcut") == 0) {//卸载快捷方式
         UninstallShortcut();
     }
-    else if (wcscmp(lpCmdLine, L"Register") == 0) {//注册软件
-        Register();
+    else if (wcscmp(lpCmdLine, L"UnStartup") == 0) {//删除开机启动项
+        UnStartup();
     }
     //else if (wcscmp(lpCmdLine, L"") == 0) {//无参数对话框模式
 
@@ -1203,6 +1203,9 @@ InstSuccess:
     //创建快捷方式
     InstallShortcut();
 
+    if (!LogFileExist(L"Installed.dat")) {//首次安装记录文件不存在
+        NewLogFile(L"Installed.dat");//创建安装记录文件，属性带有时间供注册检测程序读取使用
+    }
 
     //启动服务程序
     WinExec("MltpSvc.exe ShowDialog", SW_NORMAL);
@@ -1371,6 +1374,10 @@ UninstDrvSuccess:
     while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
     while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
+
+    //
+    //删除开机启动项
+    DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc");
 
     //删除快捷方式和注册表卸载项
     UninstallShortcut();
@@ -1887,6 +1894,12 @@ void InstallShortcut()
         }   
     }
 
+    //
+    //创建开机启动项
+    wcscpy_s(szSourcePath, exeFilePath);//不含/
+    wcscat_s(szSourcePath, L"\\MltpSvc.exe");
+    WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc", szSourcePath);
+
     //创建注册表程序卸载项
     TCHAR strUninstDir[MAX_PATH];
     wcscpy_s(strUninstDir, exeFilePath);
@@ -1916,6 +1929,9 @@ void UninstallShortcut()
             //MessageBox(NULL, szPath, L"DelTree err", MB_OK);
         }
     }
+
+    //删除开机启动项
+    DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc");
 
     //删除注册表程序卸载项
     SHDeleteKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MouseLikeTouchPad"); //删除项(包含子项)
@@ -2045,16 +2061,34 @@ BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR str
 
 }
 
+void UnStartup()
+{
+    //删除开机启动项
+    if (DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc")) {
+        MessageBox(NULL, L"软件开机启动项删除成功!", L"MltpDrvMgr", MB_OK);
+    }
+    else {
+        MessageBox(NULL, L"软件开机启动项删除失败!", L"MltpDrvMgr", MB_ICONSTOP);
+    }
+}
+
 void Register()
 {
-    TCHAR data[] = L"oaoihohsfhiofedefsfe";//测试字符串
-
-    if (WriteBinReg(L"Software\\MouseLikeTouchPad", L"RegKey", (LPBYTE)data, sizeof(data))){
+    TCHAR data[] = L"JXLEYO-HRP-MLTP-DRVR";//SN注册序列号字符串,实际软件注册验证不检测内容，只有注册文件存在即表示成功
+    if (NewLogFile(L"RegKey.dat")) {
         MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
     }
     else {
         MessageBox(NULL, L"软件注册失败，请重新尝试!", L"MltpDrvMgr", MB_ICONSTOP);
     }
+
+
+    //if (WriteBinReg(L"Software\\MouseLikeTouchPad", L"RegKey", (LPBYTE)data, sizeof(data))){
+    //    MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
+    //}
+    //else {
+    //    MessageBox(NULL, L"软件注册失败，请重新尝试!", L"MltpDrvMgr", MB_ICONSTOP);
+    //}
 }
 
 

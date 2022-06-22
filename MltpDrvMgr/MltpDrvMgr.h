@@ -44,6 +44,7 @@ void Uninstall();
 
 void InstallShortcut();
 void UninstallShortcut();
+void UnStartup();
 void Register();
 BOOL WriteSzReg(LPCWSTR szPath, LPCWSTR szKey, LPCWSTR dwValue);
 BOOL ReadDWordReg(LPCWSTR szPath, LPCWSTR szKey, DWORD* dwValue);
