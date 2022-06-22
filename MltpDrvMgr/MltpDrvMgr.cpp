@@ -1882,7 +1882,7 @@ void InstallShortcut()
     TCHAR szDesktopPath[MAX_PATH];
     if (GetDesktopPath(szDesktopPath)) {
         //MessageBox(NULL, szDesktopPath, L"GetDesktopPath", MB_OK);
-        if (!CreateShotCut(szSourcePath, L"MltpSvc.exe", L"MltpSvc", szDesktopPath)) {
+        if (!CreateShotCut(szSourcePath, L"MltpSvc.exe", L"ShowDialog", L"仿鼠标触摸板服务指南", szDesktopPath)) {
             //MessageBox(NULL, szSourcePath, L"CreateShotCut szDesktopPath err", MB_OK);
         }
     }
@@ -1900,9 +1900,11 @@ void InstallShortcut()
 
          //创建文件夹（子目录）
         if (CreateDirectory(strDestDir, NULL)) {//程序组文件夹必须存在才能建立快捷方式
-            if (!CreateShotCut(szSourcePath, L"MltpSvc.exe", L"MltpSvc", strDestDir)) {
-                //MessageBox(NULL, szSourcePath, L"CreateShotCut szProgramsPath err", MB_OK);
-            }
+            CreateShotCut(szSourcePath, L"MltpSvc.exe", L"ShowDialog", L"仿鼠标触摸板服务指南", strDestDir);//仿鼠标触摸板服务指南//MouseLikeTouchPad Service Information
+            //MessageBox(NULL, szSourcePath, L"CreateShotCut szProgramsPath err", MB_OK);
+
+            CreateShotCut(szSourcePath, L"MltpDrvMgr.exe", L"Uninstall", L"仿鼠标触摸板卸载程序", strDestDir);//仿鼠标触摸板卸载程序//MouseLikeTouchPad Uninstaller
+
         }   
     }
 
@@ -1910,13 +1912,13 @@ void InstallShortcut()
     //创建开机启动项
     wcscpy_s(szSourcePath, exeFilePath);//不含/
     wcscat_s(szSourcePath, L"\\MltpSvc.exe");
-    WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc", szSourcePath);
+    WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"仿鼠标触摸板服务指南", szSourcePath);
 
     //创建注册表程序卸载项
     TCHAR strUninstDir[MAX_PATH];
     wcscpy_s(strUninstDir, exeFilePath);
     wcscat_s(strUninstDir, L"\\MltpDrvMgr.exe Uninstall");
-    WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MouseLikeTouchPad", L"DisplayName", L"MouseLikeTouchPad卸载程序");
+    WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MouseLikeTouchPad", L"DisplayName", L"仿鼠标触摸板卸载程序");//MouseLikeTouchPad Uninstaller
     WriteSzReg(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MouseLikeTouchPad", L"UninstallString", strUninstDir);
 
 }
@@ -2002,7 +2004,7 @@ BOOL GetProgramsPath(wchar_t* szPath) {//得到公共的程序组路径
 }
 
 
-BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR strShortcutName, LPCWSTR strDestDir)
+BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR strArg, LPCWSTR strShortcutName, LPCWSTR strDestDir)
 {
     if (FAILED(CoInitialize(NULL)))
         return FALSE;
@@ -2025,6 +2027,9 @@ BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR str
     {
         psl->SetPath(strSourcePathName);//设置快捷方式的目标位置 
         //比如目标位置为C:\windows\a.txt 起始位置就应该设置为C:\windows否则会导致不可预料的错误
+
+        //设置启动参数
+        psl->SetArguments(strArg);
     
         //如果是文件夹的快捷方式起始位置和目标位置可以设置为一样
         psl->SetWorkingDirectory(strSourcePath); //设置快捷方式的起始位置 
@@ -2386,8 +2391,6 @@ void DelProgramFilesDir(LPCWSTR lpszPath)
     SHChangeNotify(SHCNE_RMDIR, SHCNF_PATH, exeFilePath, NULL);//设置为目录删除SHCNE_RMDIR
 
     //调用cmd传入参数以删除自己
-
-    char cmdline[_MAX_PATH];//源文件路径  
     wcscpy_s(szArg, L"/c rd /S /Q");
     wcscat_s(szArg, L" \"");
     wcscat_s(szArg, exeFilePath);
