@@ -1093,7 +1093,7 @@ FindDev:
     if (nRet < 31) {
         MessageBox(NULL, L"WinExec调用FindDevice子程序失败！取消安装，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
 
     retry++;
@@ -1101,7 +1101,7 @@ FindDev:
     if (retry > nTry) {
         MessageBox(NULL, L"查找设备失败！取消安装，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
 
     if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
@@ -1118,14 +1118,14 @@ FindDev:
     if (!LogFileExist(L"TouchPad_FOUND.txt")) {
         MessageBox(NULL, L"未找到匹配的触控板设备，无法安装驱动。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
     DelLogFile(L"TouchPad_FOUND.txt");
 
     if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
         MessageBox(NULL, L"未找到匹配的I2C总线触控板设备，无法安装驱动。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
 
 
@@ -1142,7 +1142,7 @@ InstDrv:
         if (retry > 5) {
             MessageBox(NULL, L"InstallDriver安装驱动失败！请稍后再试。", L"MltpDrvMgr", MB_OK);
             ExitCode = EXIT_FAIL;
-            return;
+            goto Clean;
         }
 
         if (!LogFileExist(L"Return_InstallDriver.txt")) {//InstallDriver未执行结束
@@ -1153,7 +1153,7 @@ InstDrv:
     if (!LogFileExist(L"Return_InstallDriver.txt")) {//InstallDriver未执行结束
         MessageBox(NULL, L"找到匹配的I2C总线触控板设备，安装驱动失败，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
     DelLogFile(L"Return_InstallDriver.txt");
 
@@ -1168,7 +1168,7 @@ CheckDev:
     if (nRet < 31) {
         MessageBox(NULL, L"二次验证，WinExec调用FindDevice子程序失败！取消安装，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
 
     retry++;
@@ -1176,7 +1176,7 @@ CheckDev:
     if (retry > 3) {
         MessageBox(NULL, L"二次验证，查找设备失败！请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
 
     if (!LogFileExist(L"Return_FindDevice.txt")) {//FindDevice未执行结束
@@ -1189,7 +1189,7 @@ CheckDev:
     if (!LogFileExist(L"OEMDriverName.txt")) {
         MessageBox(NULL, L"二次验证，安装驱动失败，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
-        return;
+        goto Clean;
     }
     
 
@@ -1212,6 +1212,12 @@ InstSuccess:
 
     //启动服务程序
     WinExec("MltpSvc.exe ShowDialog", SW_NORMAL);
+    return;
+
+
+Clean:
+    //删除程序目录文件
+    DelProgramFilesDir(exeFilePath);//注意提示对话框在删除之前运行避免冲突
 }
 
 void Uninstall() {
