@@ -46,6 +46,7 @@ HKR,,"UpperFilters",0x00010000,"mshidkmdf"
 HKR,,"EnhancedPowerManagementEnabled",0x00010001,1
 HKR,,"DeviceResetNotificationEnabled",0x00010001,1
 HKR,,"LegacyTouchScaling",0x00010001,1
+HKR,,"MouseSensitivity_Index",0x00010001,1
 
 
 ;-------------- Service installation

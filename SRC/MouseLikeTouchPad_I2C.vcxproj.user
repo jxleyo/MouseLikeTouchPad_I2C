@@ -3,8 +3,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TestCertificate>
     </TestCertificate>
-    <SignMode>ProductionSign</SignMode>
-    <ProductionCertificate>D:\pfx驱动签名工具\jxleyoCA\jxleyoCODE.pfx</ProductionCertificate>
+    <SignMode>TestSign</SignMode>
+    <ProductionCertificate>
+    </ProductionCertificate>
     <CrossCertificateFile>
     </CrossCertificateFile>
   </PropertyGroup>
