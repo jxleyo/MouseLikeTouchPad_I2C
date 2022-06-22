@@ -167,6 +167,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     else if (wcscmp(lpCmdLine, L"UninstallShortcut") == 0) {//卸载快捷方式
         UninstallShortcut();
     }
+    else if (wcscmp(lpCmdLine, L"Register") == 0) {//删除开机启动项
+        Register();
+    }
     else if (wcscmp(lpCmdLine, L"UnStartup") == 0) {//删除开机启动项
         UnStartup();
     }
@@ -2074,14 +2077,35 @@ void UnStartup()
 
 void Register()
 {
+    BOOL isRegistered = FALSE;
     TCHAR data[] = L"JXLEYO-HRP-MLTP-DRVR";//SN注册序列号字符串,实际软件注册验证不检测内容，只有注册文件存在即表示成功
-    if (NewLogFile(L"RegKey.dat")) {
-        MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
+    if (LogFileExist(L"RegKey.dat")) {
+        isRegistered = TRUE;
     }
     else {
-        MessageBox(NULL, L"软件注册失败，请重新尝试!", L"MltpDrvMgr", MB_ICONSTOP);
+        if (!NewLogFile(L"RegKey.dat")) {
+            MessageBox(NULL, L"软件注册失败，请重新尝试!", L"MltpDrvMgr", MB_ICONSTOP);
+        }
+        else {
+            isRegistered = TRUE;
+        }
     }
+    
+    if (isRegistered) {
+        MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
 
+        int result = MessageBox(NULL,L"熟练使用本触摸板驱动后可以不需要开机启动帮助服务程序，确定删除开机启动项吗？", L"MltpSvc", MB_YESNO);
+        switch (result)
+        {
+            case IDYES:
+            {
+                UnStartup();
+                break;
+            }
+            case IDNO:
+                break;
+        }
+    }
 
     //if (WriteBinReg(L"Software\\MouseLikeTouchPad", L"RegKey", (LPBYTE)data, sizeof(data))){
     //    MessageBox(NULL, L"软件注册成功!", L"MltpDrvMgr", MB_OK);
