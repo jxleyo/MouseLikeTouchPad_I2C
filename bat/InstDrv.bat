@@ -52,8 +52,8 @@ find/i "ACPI\MSFT0001" LogFIle\hid_dev.txt || (
      echo 未发现触控板设备。
      echo No TouchPad device found. 
      echo.
-     rd /S /Q MouseLikeTouchPad_I2C
-     ren MouseLikeTouchPad_I2C_Compatible MouseLikeTouchPad_I2C
+     rd /S /Q Driver
+     ren Driver_Compatible Driver
      echo NotFoundTP >LogFIle\Return_InstDrv.txt
      exit
 )
