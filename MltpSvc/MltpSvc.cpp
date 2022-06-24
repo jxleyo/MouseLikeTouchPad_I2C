@@ -46,6 +46,12 @@ BOOL CMltpSvcApp::InitInstance()
 	{
 		if (ERROR_ALREADY_EXISTS == GetLastError())
 		{
+			//通过SDK的FindWindow函数得到目标窗口的句柄，MouseLikeTouchPad_Service为目标串口的Caption的值
+			HWND hWnd = ::FindWindow(NULL, L"MouseLikeTouchPad_Service");
+			if (hWnd) {
+				PostMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);//发送给原先的实例窗口恢复显示
+			}
+
 			CloseHandle(hMutex);
 			//AfxMessageBox(_T("only running one"));
 			return -1;
