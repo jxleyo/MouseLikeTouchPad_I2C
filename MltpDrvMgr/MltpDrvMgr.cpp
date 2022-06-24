@@ -1882,7 +1882,7 @@ void InstallShortcut()
     TCHAR szDesktopPath[MAX_PATH];
     if (GetDesktopPath(szDesktopPath)) {
         //MessageBox(NULL, szDesktopPath, L"GetDesktopPath", MB_OK);
-        if (!CreateShotCut(szSourcePath, L"MltpSvc.exe", L"ShowDialog", L"仿鼠标触摸板服务指南", szDesktopPath)) {
+        if (!CreateShotCut(szSourcePath, L"MltpSvc.exe", L"ShowDialog", L"仿鼠标触摸板服务指南", szDesktopPath)) {//仿鼠标触摸板服务指南//MouseLikeTouchPad Service Information
             //MessageBox(NULL, szSourcePath, L"CreateShotCut szDesktopPath err", MB_OK);
         }
     }
@@ -1928,7 +1928,7 @@ void UninstallShortcut()
     //删除桌面快捷方式
     TCHAR szDesktopPath[MAX_PATH];
     if (GetDesktopPath(szDesktopPath)) {
-        wcscat_s(szDesktopPath, L"\\MltpSvc.lnk");
+        wcscat_s(szDesktopPath, L"\\仿鼠标触摸板服务指南.lnk");////仿鼠标触摸板服务指南//MouseLikeTouchPad Service Information
         DeleteFile(szDesktopPath);
     }
 
@@ -1945,7 +1945,7 @@ void UninstallShortcut()
     }
 
     //删除开机启动项
-    DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc");
+    DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"仿鼠标触摸板服务指南");////仿鼠标触摸板服务指南//MouseLikeTouchPad Service Information
 
     //删除注册表程序卸载项
     SHDeleteKey(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MouseLikeTouchPad"); //删除项(包含子项)
@@ -2081,7 +2081,7 @@ BOOL CreateShotCut(LPCWSTR strSourcePath, LPCWSTR strSourceFileName, LPCWSTR str
 void UnStartup()
 {
     //删除开机启动项
-    if (DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"MltpSvc")) {
+    if (DelRegkey(L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", L"仿鼠标触摸板服务指南")) {//仿鼠标触摸板服务指南//MouseLikeTouchPad Service Information
         MessageBox(NULL, L"软件开机启动项删除成功!", L"MltpDrvMgr", MB_OK);
     }
     else {
