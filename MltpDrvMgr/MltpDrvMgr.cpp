@@ -1289,65 +1289,62 @@ UninstDrv:
     else {
         Sleep(2000);
         retry++;
-        if (retry > 5) {//批处理模式卸载驱动
-            nTry = 0;
-            //char cmdLine[MAX_PATH];
-            //memset(cmdLine, 0, MAX_PATH);
-            //strcat_s(cmdLine, cmdFilePath);
-            //strcpy_s(cmdLine, "\\cmd.exe /c UninstDrv.bat");
-UninstBAT:     
-            retry = 0;
-            nTry++;
-
-            //nRet = WinExec(cmdLine, SW_HIDE);
-            nRet = WinExec("cmd.exe /c UninstDrv.bat", SW_HIDE);
-waitUninstBAT:
-                Sleep(500);
-                retry++;
-
-                if (retry > 10) {
-                    goto UninstBAT;//超时再次批处理卸载方式
-                }
-
-                if (nTry > 3) {
-                    goto NextUninstStep;//跳过批处理卸载方式
-                }
-
-                if (!LogFileExist(L"Return_UninstDrv.txt")) {//UninstDrv.bat未执行结束
-                    goto waitUninstBAT;
-                }
-
-                if (LogFileExist(L"UninstDrvSucceeded.txt")) {//UninstDrv.bat卸载驱动成功
-                    DelLogFile(L"Return_UninstDrv.txt");
-                    DelLogFile(L"UninstDrvSucceeded.txt");
-                    goto UninstDrvSuccess;//直接跳到结尾
-                }
-
-                DelLogFile(L"Return_UninstDrv.txt");
-                DelLogFile(L"UninstDrvSucceeded.txt");
-
-
-NextUninstStep:
-            MessageBox(NULL, L"UninstallDriver卸载驱动失败！请稍后再试。", L"MltpDrvMgr", MB_OK);
-            ExitCode = EXIT_FAIL;
-            return;
+        if (retry > 5) {
+            goto UninstBAT;
         }
-
+            
         if (!LogFileExist(L"Return_UninstallDriver.txt")) {//InstallDriver未执行结束
             goto UninstDrv;
         }        
     }
 
-    if (!LogFileExist(L"Return_UninstallDriver.txt")) {//InstallDriver未执行结束
-        MessageBox(NULL, L"找到匹配的I2C总线触控板设备，卸载驱动失败，请稍后再试。", L"MltpDrvMgr", MB_OK);
+    goto NextUninstStep;//InstallDriver执行结束
+    
+
+    //批处理模式卸载驱动
+    nTry = 0;
+    //char cmdLine[MAX_PATH];
+            //memset(cmdLine, 0, MAX_PATH);
+            //strcat_s(cmdLine, cmdFilePath);
+            //strcpy_s(cmdLine, "\\cmd.exe /c UninstDrv.bat");
+UninstBAT:
+    retry = 0;
+    nTry++;
+
+    //nRet = WinExec(cmdLine, SW_HIDE);
+    nRet = WinExec("cmd.exe /c UninstDrv.bat", SW_HIDE);
+waitUninstBAT:
+    Sleep(500);
+    retry++;
+
+    if (retry > 10) {
+        goto UninstBAT;//超时再次批处理卸载方式
+    }
+
+    if (nTry > 3) {
+        MessageBox(NULL, L"UninstallDriver卸载驱动失败！请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
         return;
     }
+
+    if (!LogFileExist(L"Return_UninstDrv.txt")) {//UninstDrv.bat未执行结束
+        goto waitUninstBAT;
+    }
+
+    if (LogFileExist(L"UninstDrvSucceeded.txt")) {//UninstDrv.bat卸载驱动成功
+        DelLogFile(L"Return_UninstDrv.txt");
+        DelLogFile(L"UninstDrvSucceeded.txt");
+        goto UninstDrvSuccess;//直接跳到结尾
+    }
+
+    DelLogFile(L"Return_UninstDrv.txt");
+    DelLogFile(L"UninstDrvSucceeded.txt");  
+    
+
+NextUninstStep:
     DelLogFile(L"Return_UninstallDriver.txt");
 
-
     while (Rescan())break;//重新扫描设备
-
 
 
     //再次验证
