@@ -255,6 +255,7 @@ typedef struct _DEVICE_CONTEXT
 
     // Flags
     BOOLEAN                     HostInitiatedResetActive;
+    BOOLEAN                     FirstD0Entry;
 
     // Device Reset Notification members
     WDFSPINLOCK                 DeviceResetNotificationSpinLock;

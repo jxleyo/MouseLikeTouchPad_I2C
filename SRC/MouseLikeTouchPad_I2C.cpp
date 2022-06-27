@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_I2C.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 1
+#define debug_on 0
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -1143,6 +1143,8 @@ NTSTATUS OnPrepareHardware(
     pDevContext->DeviceDescriptorFingerCount = 0;//描述符计算单个报告数据包手指数量
 
     pDevContext->HostInitiatedResetActive = FALSE;//新增
+
+    pDevContext->FirstD0Entry = TRUE;//驱动首次加电运行
 
     runtimes_hid = 0;
     runtimes_OnInterruptIsr = 0;
@@ -2992,6 +2994,19 @@ OnInterruptIsr(
                 WdfIoQueueStart(pDevContext->IoctlQueue);
             }
 
+            //新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
+            if (pDevContext->FirstD0Entry) {
+                status = HidPower(pDevContext, 0);
+                if (!NT_SUCCESS(status))
+                {
+                    RegDebug(L"OnInterruptIsr _HidPower0 failed", NULL, status);
+                }
+                else {
+                    pDevContext->FirstD0Entry = FALSE;
+                }
+            }
+           
+
             RegDebug(L"OnInterruptIsr ok", NULL, status);
         }
         else {        
@@ -3088,30 +3103,30 @@ OnInterruptIsr(
             PTP_REPORT* pCombinedPacket = &pDevContext->combinedPacket;
             RtlCopyMemory(pCurrentPartOfFrame, pBuf, sizeof(HYBRID_REPORT));
 
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
-            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
+            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
 
             if (pCurrentPartOfFrame->ScanTime == pCombinedPacket->ScanTime) {//与上个数据包同属一帧
                 //不要判断pCurrentFrame->Confidence && pCurrentFrame->TipSwitch是否有效，直接添加帧，否则有可能出现问题
                 pDevContext->contactCountIndex++;//后续帧索引号兼计数器
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
+                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
 
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
+                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
 
                 if (pDevContext->contactCountIndex == (pCombinedPacket->ContactCount - 1)) {//帧内最后一个数据包
-                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
-                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+    /*                RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);*/
                     pDevContext->CombinedPacketReady = TRUE;//合并帧结束，可以发送
                 }
             }
@@ -3120,15 +3135,15 @@ OnInterruptIsr(
                 pDevContext->contactCountIndex = 0;//帧内索引号兼计数器重置
                 pDevContext->CombinedPacketReady = FALSE;//合并帧数据状态重置
                 pCombinedPacket->ContactCount = pCurrentPartOfFrame->ContactCount;//首帧包含接触点数量
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
+                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
                 pCombinedPacket->IsButtonClicked = pCurrentPartOfFrame->IsButtonClicked;
-                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
+                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
                 pCombinedPacket->ReportID = pCurrentPartOfFrame->ReportID;
                 //pCombinedPacket->ReportID = FAKE_REPORTID_MULTITOUCH;
                 pCombinedPacket->ScanTime = pCurrentPartOfFrame->ScanTime;
 
                 if (pCombinedPacket->ContactCount == 1) {//合并帧只有一个数据包时，立即发送而不需要等待下一个分数据包
-                    RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
+                    //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
                     pDevContext->CombinedPacketReady = TRUE;//合并帧结束，可以发送了
                 }
             }
@@ -3146,19 +3161,19 @@ OnInterruptIsr(
             if (pDevContext->CombinedPacketReady) {//合并帧准备好了,发送合并帧
                 RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
                 ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-                RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
+                //RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
 
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
 
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
+                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
                 if (ptpReport.ScanTime > 0x64) {
                     ptpReport.ScanTime = 0x64;
@@ -3187,17 +3202,17 @@ OnInterruptIsr(
 
         ptpReport = *(PPTP_REPORT)pBuf;
         ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-        RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
 
-        RegDebug(L"OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
+        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
 
 
@@ -4254,8 +4269,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     tp->currentFinger = *pPtpReport;
     UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//当前触摸点数量
     UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //上次触摸点数量
-    RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
-    RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
+    //RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
+    //RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
 
     UCHAR MAX_CONTACT_FINGER = PTP_MAX_CONTACT_POINTS;
     BOOLEAN allFingerDetached = TRUE;
@@ -4336,8 +4351,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
-    RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
-    RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+    //RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
+    //RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
 
     if (tp->currentFinger.IsButtonClicked) {//触摸板下沿物理按键功能,切换触控板灵敏度/滚轮模式开关等参数设置,需要进行离开判定，因为按键报告会一直发送直到释放
         tp->bPhysicalButtonUp = FALSE;//物理键是否释放标志
