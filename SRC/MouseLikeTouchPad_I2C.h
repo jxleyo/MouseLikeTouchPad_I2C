@@ -234,6 +234,7 @@ typedef struct _DEVICE_CONTEXT
     // Queues 
     WDFQUEUE                    IoctlQueue;
     WDFQUEUE                    ReportQueue;
+    WDFQUEUE                    CompletionQueue;
     WDFQUEUE                    IdleQueue;
     WDFQUEUE	                ResetNotificationQueue;
 
@@ -254,6 +255,13 @@ typedef struct _DEVICE_CONTEXT
 
     // Flags
     BOOLEAN                     HostInitiatedResetActive;
+
+    // Device Reset Notification members
+    WDFSPINLOCK                 DeviceResetNotificationSpinLock;
+    WDFREQUEST                  DeviceResetNotificationRequest;
+
+    WDFTIMER                    timerHandle;
+
 
     // Windows PTP context
     PBYTE pReportDesciptorData;
@@ -433,7 +441,7 @@ DEFINE_GUID(ACPI_DSM_GUID_HIDI2C,
 const ULONGLONG HIDI2C_REQUEST_DEFAULT_TIMEOUT = 1000;//原先单位为秒太大改为ms
 //
 // Tag used for pool allocations.
-#define HIDI2C_POOL_TAG 'IdiH'
+#define HIDI2C_POOL_TAG 'MLTP'
 
 #define HIDI2C_ALLOCATE_POOL(Type, Size) \
     ExAllocatePoolWithTag((Type), (Size), HIDI2C_POOL_TAG)
@@ -452,6 +460,7 @@ ULONG runtimes_OnInterruptIsr = 0;
 ULONG runtimes_OnPostInterruptsEnabled = 0;
 ULONG runtimes_OnSelfManagedIoSuspend = 0;
 ULONG runtimes_ioControl = 0;
+ULONG runtimes_HidEvtResetTimerFired = 0;
 
 
 VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue);
@@ -465,7 +474,7 @@ EXTERN_C EVT_WDF_DRIVER_UNLOAD              OnDriverUnload;
 EVT_WDF_DEVICE_PREPARE_HARDWARE                     OnPrepareHardware;
 EVT_WDF_DEVICE_RELEASE_HARDWARE                     OnReleaseHardware;
 EVT_WDF_DEVICE_D0_ENTRY                             OnD0Entry;
-EVT_WDF_DEVICE_D0_EXIT                              OnD0Exit;
+EXTERN_C EVT_WDF_DEVICE_D0_EXIT                     OnD0Exit;
 EVT_WDF_DEVICE_D0_ENTRY_POST_INTERRUPTS_ENABLED     OnPostInterruptsEnabled;
 NTSTATUS OnSelfManagedIoSuspend(WDFDEVICE Device);//PFN_WDF_DEVICE_SELF_MANAGED_IO_SUSPEND              OnSelfManagedIoSuspend;
 
@@ -1419,6 +1428,12 @@ HidSendResetNotification(
     BOOLEAN* requestPendingFlag_reset
 );
 
+void HidEvtResetTimerFired(WDFTIMER timer);
+
+VOID
+OnDeviceResetNotificationRequestCancel(
+    _In_  WDFREQUEST FxRequest
+);
 
 
 

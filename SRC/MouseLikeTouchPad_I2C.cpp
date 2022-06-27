@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_I2C.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 0
+#define debug_on 1
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -14,12 +14,12 @@ extern "C" int _fltused = 0;
 #pragma alloc_text(PAGE, AcpiDsmSupported)
 #pragma alloc_text(PAGE, AcpiPrepareInputParametersForDsm)
 
-//#pragma alloc_text(PAGE, OnD0Exit)
+#pragma alloc_text(PAGE, OnD0Exit)
 
 #endif
 
 
-VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue)////RegDebug(L"Run debug here",pBuffer,pBufferSize);////RegDebug(L"Run debug here",NULL,0x12345678);
+VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue)//RegDebug(L"Run debug here",pBuffer,pBufferSize);//RegDebug(L"Run debug here",NULL,0x12345678);
 {
     if (!debug_on) {//µ÷ÊÔ¿ª¹Ø
         return;
@@ -92,10 +92,10 @@ AcpiInitialize(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"EventWrite_HIDI2C_ENUMERATION_ACPI_FAILURE", NULL, status);
+        RegDebug(L"EventWrite_HIDI2C_ENUMERATION_ACPI_FAILURE", NULL, status);
     }
 
-    //RegDebug(L"AcpiInitialize ok", NULL, status);
+    RegDebug(L"AcpiInitialize ok", NULL, status);
     return status;
 }
 
@@ -124,7 +124,7 @@ AcpiGetDeviceInformation(
     if (acpiInfo == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"Failed allocating memory for ACPI output buffer", NULL, status);
+        RegDebug(L"Failed allocating memory for ACPI output buffer", NULL, status);
         goto exit;
     }
 
@@ -145,14 +145,14 @@ AcpiGetDeviceInformation(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"Failed sending IOCTL_ACPI_GET_DEVICE_INFORMATION", NULL, status);
+        RegDebug(L"Failed sending IOCTL_ACPI_GET_DEVICE_INFORMATION", NULL, status);
         goto exit;
     }
 
     if (acpiInfo->Signature != IOCTL_ACPI_GET_DEVICE_INFORMATION_SIGNATURE)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"Incorrect signature for ACPI_GET_DEVICE_INFORMATION", NULL, status);
+        RegDebug(L"Incorrect signature for ACPI_GET_DEVICE_INFORMATION", NULL, status);
         goto exit;
     }
 
@@ -161,7 +161,7 @@ exit:
     if (acpiInfo != NULL)
         HIDI2C_FREE_POOL(acpiInfo);
 
-    //RegDebug(L"_AcpiGetDeviceInformation end", NULL, status);
+    RegDebug(L"_AcpiGetDeviceInformation end", NULL, status);
     return status;
 }
 
@@ -188,14 +188,14 @@ AcpiGetDeviceMethod(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"AcpiDsmSupported err", NULL, status);
+        RegDebug(L"AcpiDsmSupported err", NULL, status);
         goto exit;
     }
 
     if (isSupported == FALSE)
     {
         status = STATUS_NOT_SUPPORTED;
-        //RegDebug(L"Check for DSM support returned err", NULL, status);
+        RegDebug(L"Check for DSM support returned err", NULL, status);
         goto exit;
     }
 
@@ -203,14 +203,14 @@ AcpiGetDeviceMethod(
         (sizeof(ACPI_METHOD_ARGUMENT) *
             (ACPI_DSM_INPUT_ARGUMENTS_COUNT - 1)) +
         sizeof(GUID);//¼ì²éÊÇ·ñ=0x40
-    //RegDebug(L"AcpiGetDeviceMethod acpiInputSize", NULL, acpiInputSize);////¼ì²éÊÇ·ñ=0x40
+    RegDebug(L"AcpiGetDeviceMethod acpiInputSize", NULL, acpiInputSize);////¼ì²éÊÇ·ñ=0x40
 
     acpiInput = (PACPI_EVAL_INPUT_BUFFER_COMPLEX)HIDI2C_ALLOCATE_POOL(PagedPool, acpiInputSize);
 
     if (acpiInput == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"Failed allocating memory for ACPI Input buffer", NULL, status);
+        RegDebug(L"Failed allocating memory for ACPI Input buffer", NULL, status);
         goto exit;
     }
 
@@ -251,7 +251,7 @@ AcpiGetDeviceMethod(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"Failed executing DSM method IOCTL", NULL, status);
+        RegDebug(L"Failed executing DSM method IOCTL", NULL, status);
         goto exit;
     }
 
@@ -259,13 +259,13 @@ AcpiGetDeviceMethod(
         (acpiOutput.Argument[0].DataLength == 0))
     {
         status = STATUS_UNSUCCESSFUL;
-        //RegDebug(L"Incorrect parameters returned for DSM method", NULL, status);
+        RegDebug(L"Incorrect parameters returned for DSM method", NULL, status);
         goto exit;
     }
 
     FxDeviceContext->AcpiSettings.HidDescriptorAddress = (USHORT)acpiOutput.Argument[0].Data[0];
 
-    ////RegDebug(L"HID Descriptor offset retrieved from ACPI", NULL, FxDeviceContext->AcpiSettings.HidDescriptorAddress);
+    //RegDebug(L"HID Descriptor offset retrieved from ACPI", NULL, FxDeviceContext->AcpiSettings.HidDescriptorAddress);
 
 
 exit:
@@ -273,7 +273,7 @@ exit:
     if (acpiInput != NULL)
         HIDI2C_FREE_POOL(acpiInput);
 
-    ////RegDebug(L"AcpiGetDeviceMethod end", NULL, status);
+    //RegDebug(L"AcpiGetDeviceMethod end", NULL, status);
     return status;
 }
 
@@ -305,7 +305,7 @@ AcpiDsmSupported(
     if (acpiInput == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"Failed allocating memory for ACPI input buffer", NULL, status);
+        RegDebug(L"Failed allocating memory for ACPI input buffer", NULL, status);
         goto exit;
     }
 
@@ -345,7 +345,7 @@ AcpiDsmSupported(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"Failed sending DSM function query IOCTL", NULL, status);
+        RegDebug(L"Failed sending DSM function query IOCTL", NULL, status);
         goto exit;
     }
 
@@ -353,7 +353,7 @@ AcpiDsmSupported(
         (acpiOutput.Argument[0].DataLength == 0))
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"Incorrect return parameters for DSM function query IOCTL", NULL, status);
+        RegDebug(L"Incorrect return parameters for DSM function query IOCTL", NULL, status);
         goto exit;
     }
 
@@ -361,7 +361,7 @@ AcpiDsmSupported(
     if ((acpiOutput.Argument[0].Data[0] & (1 << FunctionIndex)) != 0)
     {
         support = TRUE;
-        //RegDebug(L"Found supported DSM function", NULL, FunctionIndex);
+        RegDebug(L"Found supported DSM function", NULL, FunctionIndex);
     }
 
 exit:
@@ -371,7 +371,7 @@ exit:
         HIDI2C_FREE_POOL(acpiInput);
     }
 
-    ////RegDebug(L"_AcpiDsmSupported end", NULL, status);
+    //RegDebug(L"_AcpiDsmSupported end", NULL, status);
     *Supported = support;
     return status;
 }
@@ -411,7 +411,7 @@ AcpiPrepareInputParametersForDsm(
     pArgument->DataLength = sizeof(ULONG);
     pArgument->Argument = 0;
 
-    ////RegDebug(L"AcpiPrepareInputParametersForDsm end", NULL, runtimes_hid++);
+    //RegDebug(L"AcpiPrepareInputParametersForDsm end", NULL, runtimes_hid++);
     return;
 }
 
@@ -423,7 +423,7 @@ DriverEntry(_DRIVER_OBJECT* DriverObject, PUNICODE_STRING RegistryPath)
 	WDF_DRIVER_CONFIG_INIT(&DriverConfig, OnDeviceAdd);
     
 	DriverConfig.EvtDriverUnload = OnDriverUnload;
-
+    DriverConfig.DriverPoolTag = HIDI2C_POOL_TAG;
 	NTSTATUS status = WdfDriverCreate(DriverObject,
 		RegistryPath,
 		NULL,
@@ -431,7 +431,7 @@ DriverEntry(_DRIVER_OBJECT* DriverObject, PUNICODE_STRING RegistryPath)
 		WDF_NO_HANDLE);
 
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfDriverCreate failed", NULL, status);
+		RegDebug(L"WdfDriverCreate failed", NULL, status);
 		return status;
 	}
 
@@ -444,9 +444,11 @@ void OnDriverUnload(_In_ WDFDRIVER Driver)
 {
 
 	PDRIVER_OBJECT pDriverObject= WdfDriverWdmGetDriverObject(Driver);
+
+    PAGED_CODE();
 	UNREFERENCED_PARAMETER(pDriverObject);
 
-	//RegDebug(L"OnDriverUnload", NULL, 0);
+	RegDebug(L"OnDriverUnload", NULL, 0);
 }
 
 
@@ -454,6 +456,8 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 {
     NTSTATUS status = STATUS_SUCCESS;
 	UNREFERENCED_PARAMETER(Driver);
+
+    PAGED_CODE();
 
     WdfDeviceInitSetPowerPolicyOwnership(DeviceInit, FALSE);
 
@@ -476,12 +480,40 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 	WDFDEVICE Device;
 	status = WdfDeviceCreate(&DeviceInit, &DeviceAttributes, &Device);
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfDeviceCreate failed", NULL, status);
+		RegDebug(L"WdfDeviceCreate failed", NULL, status);
 		return status;
 	}
 
 	PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
 	pDevContext->FxDevice = Device;
+
+
+    WDF_TIMER_CONFIG   timerConfig;
+    WDF_TIMER_CONFIG_INIT(&timerConfig, HidEvtResetTimerFired);//Ä¬ÈÏ ´®ÐÐÖ´ÐÐtimerFunc
+    timerConfig.AutomaticSerialization = FALSE;
+
+    WDF_OBJECT_ATTRIBUTES   timerAttributes;
+    WDF_OBJECT_ATTRIBUTES_INIT(&timerAttributes);
+    timerAttributes.ParentObject = Device;
+
+    status = WdfTimerCreate(&timerConfig, &timerAttributes, &pDevContext->timerHandle);// WDFTIMER  
+
+
+
+    WDF_OBJECT_ATTRIBUTES spinLockAttributes;
+    WDF_OBJECT_ATTRIBUTES_INIT(&spinLockAttributes);
+
+    spinLockAttributes.ParentObject = Device;
+
+    status = WdfSpinLockCreate(&spinLockAttributes, &pDevContext->DeviceResetNotificationSpinLock);
+
+    if (!NT_SUCCESS(status))
+    {
+        //printf("WdfSpinLockCreate failed");
+        return status;
+    }
+
+    pDevContext->DeviceResetNotificationRequest = NULL;
 
 
 	WDF_DEVICE_STATE deviceState;
@@ -497,36 +529,95 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->IoctlQueue);
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfIoQueueCreate IoctlQueue failed", NULL, status);
+		RegDebug(L"WdfIoQueueCreate IoctlQueue failed", NULL, status);
 		return status;
 	}
 
 	WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+    queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->ReportQueue);
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfIoQueueCreate ReportQueue failed", NULL, status);
+		RegDebug(L"WdfIoQueueCreate ReportQueue failed", NULL, status);
 		return status;
 	}
 
+    WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+    queueConfig.PowerManaged = WdfFalse;
+    status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->CompletionQueue);
+    if (!NT_SUCCESS(status)) {
+        RegDebug(L"WdfIoQueueCreate CompletionQueue failed", NULL, status);
+        return status;
+    }
+
 	WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+    queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->IdleQueue);
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfIoQueueCreate IdleQueue failed", NULL, status);
+		RegDebug(L"WdfIoQueueCreate IdleQueue failed", NULL, status);
 		return status;
 	}
 
 	WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->ResetNotificationQueue);
 	if (!NT_SUCCESS(status)) {
-		//RegDebug(L"WdfIoQueueCreate ResetNotificationQueue failed", NULL, status);
+		RegDebug(L"WdfIoQueueCreate ResetNotificationQueue failed", NULL, status);
 		return status;
 	}
 
-	////RegDebug(L"OnDeviceAdd ok", NULL, 0);
+	//RegDebug(L"OnDeviceAdd ok", NULL, 0);
 	return STATUS_SUCCESS;
 
 }
 
+
+void HidEvtResetTimerFired(WDFTIMER timer)
+{
+    runtimes_HidEvtResetTimerFired++;
+
+    WDFDEVICE Device = (WDFDEVICE)WdfTimerGetParentObject(timer);
+
+    PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"DoNotWaitForResetResponse");
+
+    WdfIoQueueStart(pDevContext->IoctlQueue);//IoctlQueue//
+
+    ////ÐÂÔö
+    //if (!pDevContext->HostInitiatedResetActive) {
+    //    WDFTIMER  timerHandle = pDevContext->timerHandle;
+    //    if (timerHandle) {
+    //        RegDebug(L"HidEvtResetTimerFired WdfTimerStop", NULL, runtimes_HidEvtResetTimerFired);
+    //        WdfTimerStop(pDevContext->timerHandle, TRUE);
+    //    }
+    //}
+
+    WDFKEY hKey = NULL;
+
+    //Î±´úÂëºÜ¿ÉÄÜÉÙÁË2¸ö²ÎÊý??
+    NTSTATUS status = WdfDeviceOpenRegistryKey(
+        Device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_WRITE,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+        //WdfDeviceOpenDevicemapKey(
+        //	device,
+        //	&ValueNameString,
+        //	KEY_WRITE,
+        //	WDF_NO_OBJECT_ATTRIBUTES,
+        //	&hKey);
+
+    if (NT_SUCCESS(status)) {
+        WdfRegistryAssignULong(hKey, &ValueNameString, 1);
+        RegDebug(L"HidEvtResetTimerFired WdfRegistryAssignULong ok", NULL, runtimes_HidEvtResetTimerFired);
+    }
+
+    if (hKey)
+        WdfObjectDelete(hKey);
+
+    RegDebug(L"HidEvtResetTimerFired end", NULL, status);
+}
 
 
 VOID OnInternalDeviceIoControl(
@@ -552,48 +643,42 @@ VOID OnInternalDeviceIoControl(
 
     runtimes_ioControl++;
     //if (runtimes_ioControl == 1) {
-    //    //RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST IoControlCode", NULL, IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST);//0xb002b
-    //    //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_DEVICE_DESCRIPTOR);//0xb0003
-    //    //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_REPORT_DESCRIPTOR);//0xb0007
-    //    //RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES IoControlCode", NULL, IOCTL_HID_GET_DEVICE_ATTRIBUTES);//0xb0027
-    //    //RegDebug(L"IOCTL_HID_READ_REPORT IoControlCode", NULL, IOCTL_HID_READ_REPORT);//0xb000b
-    //    //RegDebug(L"IOCTL_HID_WRITE_REPORT IoControlCode", NULL, IOCTL_HID_WRITE_REPORT);//0xb000f
-    //    //RegDebug(L"IOCTL_HID_GET_STRING IoControlCode", NULL, IOCTL_HID_GET_STRING);//0xb0013
-    //    //RegDebug(L"IOCTL_HID_GET_FEATURE IoControlCode", NULL, IOCTL_HID_GET_FEATURE);//0xb0192
-    //    //RegDebug(L"IOCTL_HID_SET_FEATURE IoControlCode", NULL, IOCTL_HID_SET_FEATURE);//0xb0191
-    //    //RegDebug(L"IOCTL_HID_GET_INPUT_REPORT IoControlCode", NULL, IOCTL_HID_GET_INPUT_REPORT);//0xb01a2
-    //    //RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT IoControlCode", NULL, IOCTL_HID_SET_OUTPUT_REPORT);//0xb0195
-    //    //RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION IoControlCode", NULL, IOCTL_HID_DEVICERESET_NOTIFICATION);//0xb0233
+    //    RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST IoControlCode", NULL, IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST);//0xb002b
+    //    RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_DEVICE_DESCRIPTOR);//0xb0003
+    //    RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_REPORT_DESCRIPTOR);//0xb0007
+    //    RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES IoControlCode", NULL, IOCTL_HID_GET_DEVICE_ATTRIBUTES);//0xb0027
+    //    RegDebug(L"IOCTL_HID_READ_REPORT IoControlCode", NULL, IOCTL_HID_READ_REPORT);//0xb000b
+    //    RegDebug(L"IOCTL_HID_WRITE_REPORT IoControlCode", NULL, IOCTL_HID_WRITE_REPORT);//0xb000f
+    //    RegDebug(L"IOCTL_HID_GET_STRING IoControlCode", NULL, IOCTL_HID_GET_STRING);//0xb0013
+    //    RegDebug(L"IOCTL_HID_GET_FEATURE IoControlCode", NULL, IOCTL_HID_GET_FEATURE);//0xb0192
+    //    RegDebug(L"IOCTL_HID_SET_FEATURE IoControlCode", NULL, IOCTL_HID_SET_FEATURE);//0xb0191
+    //    RegDebug(L"IOCTL_HID_GET_INPUT_REPORT IoControlCode", NULL, IOCTL_HID_GET_INPUT_REPORT);//0xb01a2
+    //    RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT IoControlCode", NULL, IOCTL_HID_SET_OUTPUT_REPORT);//0xb0195
+    //    RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION IoControlCode", NULL, IOCTL_HID_DEVICERESET_NOTIFICATION);//0xb0233
     //}
     
     switch (IoControlCode)
     {
-        case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
-        {
-            //RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST", NULL, runtimes_ioControl);
-            //status = HidSendIdleNotification(pDevContext, Request, &requestPendingFlag);
-            break;
-        }
-
+        
         case IOCTL_HID_GET_DEVICE_DESCRIPTOR:
         {
-            //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR", NULL, runtimes_ioControl);
 
             WDFMEMORY memory;
             status = WdfRequestRetrieveOutputMemory(Request, &memory);
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
+                RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
                 break;
             }
 
             //USHORT ReportDescriptorLength = pDevContext->HidSettings.ReportDescriptorLength;//ÉèÖÃÃèÊö·û³¤¶È
             //HID_DESCRIPTOR HidDescriptor = {0x09, 0x21, 0x0100, 0x00, 0x01, { 0x22, ReportDescriptorLength }  // HidReportDescriptor
             //};
-            ////RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR HidDescriptor=", &HidDescriptor, HidDescriptor.bLength);
+            //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR HidDescriptor=", &HidDescriptor, HidDescriptor.bLength);
 
             status = WdfMemoryCopyFromBuffer(memory, 0, (PVOID)&DefaultHidDescriptor, DefaultHidDescriptor.bLength);//DefaultHidDescriptor//HidDescriptor
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
+                RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
                 break;
             }
             ////
@@ -606,25 +691,25 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_GET_REPORT_DESCRIPTOR:  
         {
-            //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR", NULL, runtimes_ioControl);
 
             WDFMEMORY memory;
             status = WdfRequestRetrieveOutputMemory(Request, &memory);
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"OnInternalDeviceIoControl WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
+                RegDebug(L"OnInternalDeviceIoControl WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
                 break;
             }
     
             //PVOID outbuf = pDevContext->pReportDesciptorData;
             //LONG outlen = pDevContext->HidSettings.ReportDescriptorLength;//ÉèÖÃÃèÊö·û³¤¶È
-            ////RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
+            //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
 
             PVOID outbuf = (PVOID)ParallelMode_PtpReportDescriptor;//(PVOID)ParallelMode_PtpReportDescriptor //(PVOID)MouseReportDescriptor//(PVOID)SingleFingerHybridMode_PtpReportDescriptor
             LONG outlen = DefaultHidDescriptor.DescriptorList[0].wReportLength;
 
             status = WdfMemoryCopyFromBuffer(memory, 0, outbuf, outlen);
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
+                RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
                 break;
             }
             WdfRequestSetInformation(Request, outlen);
@@ -635,18 +720,18 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_GET_DEVICE_ATTRIBUTES:
         {
-            //RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES", NULL, runtimes_ioControl);
             status = HidGetDeviceAttributes(pDevContext, Request);
             break;
         }
         case IOCTL_HID_READ_REPORT:
         {
-            //RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
             //if (pDevContext->SetFeatureReady == TRUE) {//Ìõ¼þÅÐ¶Ï´úÂëÔÚÉèÖÃinput modeÖ®Ç°
             //            if (pDevContext->SetInputModeOK) {
             //                status = PtpSetFeature(pDevContext, PTP_FEATURE_SELECTIVE_REPORTING);//ÉèÖÃ´¥Ãþ°åSELECTIVE_REPORTING
             //                if (!NT_SUCCESS(status)) {
-            //                    //RegDebug(L"HidSetFeature PTP_SET_FEATURE_SELECTIVE_REPORTING err", NULL, status);
+            //                    RegDebug(L"HidSetFeature PTP_SET_FEATURE_SELECTIVE_REPORTING err", NULL, status);
             //                }
             //                else {
             //                    pDevContext->SetFunSwicthOK = TRUE;
@@ -655,7 +740,7 @@ VOID OnInternalDeviceIoControl(
 
             //            status = PtpSetFeature(pDevContext, PTP_FEATURE_INPUT_COLLECTION);//ÉèÖÃ´¥Ãþ°åinput mode
             //            if (!NT_SUCCESS(status)) {
-            //                //RegDebug(L"HidSetFeature PTP_SET_FEATURE_INPUT_COLLECTION err", NULL, status);
+            //                RegDebug(L"HidSetFeature PTP_SET_FEATURE_INPUT_COLLECTION err", NULL, status);
             //            }
             //            else {
             //                pDevContext->SetInputModeOK = TRUE;
@@ -666,7 +751,7 @@ VOID OnInternalDeviceIoControl(
             //                pDevContext->PtpInputModeOn = TRUE;//
             //            }
 
-            //            //RegDebug(L"IOCTL_HID_READ_REPORT SetFeatureReady", NULL, runtimes_ioControl);
+            //            RegDebug(L"IOCTL_HID_READ_REPORT SetFeatureReady", NULL, runtimes_ioControl);
             //}
 
             status = HidReadReport(pDevContext, Request, &requestPendingFlag);
@@ -678,7 +763,7 @@ VOID OnInternalDeviceIoControl(
        
         case IOCTL_HID_GET_FEATURE:
         {
-            //RegDebug(L"IOCTL_HID_GET_FEATURE", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_FEATURE", NULL, runtimes_ioControl);
 
             //status = HidGetFeature(pDevContext, Request, ReportTypeFeature);
 
@@ -693,7 +778,7 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_SET_FEATURE:
         {
-            //RegDebug(L"IOCTL_HID_SET_FEATURE", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_SET_FEATURE", NULL, runtimes_ioControl);
             
             status = HidSetFeature(pDevContext, Request, ReportTypeFeature);
 
@@ -707,7 +792,7 @@ VOID OnInternalDeviceIoControl(
         
         case IOCTL_HID_GET_STRING:
         {
-            //RegDebug(L"IOCTL_HID_GET_STRING", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_STRING", NULL, runtimes_ioControl);
             //status = STATUS_NOT_IMPLEMENTED;
             status = HidGetString(pDevContext, Request);//´úÂë»áËÀ»ú
             break;
@@ -715,88 +800,279 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_WRITE_REPORT:
         {
-            //RegDebug(L"IOCTL_HID_WRITE_REPORT", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_WRITE_REPORT", NULL, runtimes_ioControl);
             status = HidWriteReport(pDevContext, Request);
             break;
         }
      
         case IOCTL_HID_GET_INPUT_REPORT:
-            //RegDebug(L"IOCTL_HID_GET_INPUT_REPORT", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_GET_INPUT_REPORT", NULL, runtimes_ioControl);
             //status = STATUS_NOT_SUPPORTED;
             hidReportType = ReportTypeInput;//1
             status = HidGetReport(pDevContext, Request, hidReportType);
             break;
 
         case IOCTL_HID_SET_OUTPUT_REPORT:
-            //RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT", NULL, runtimes_ioControl);
             status = HidSetReport(pDevContext, Request, ReportTypeOutput);//2
             break;
 
+            // Hidclass sends this IOCTL to notify miniports that it wants
+       // them to go into idle
+        case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
+        {
+            RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST", NULL, runtimes_ioControl);
+            status = HidSendIdleNotification(pDevContext, Request, &requestPendingFlag);
+            break;
+        }
+
+        // HIDCLASS sends this IOCTL to wait for the device-initiated reset event.
+       // We only allow one Device Reset Notification request at a time.
         case IOCTL_HID_DEVICERESET_NOTIFICATION:
         {
-            //RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION", NULL, runtimes_ioControl);
+            RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION", NULL, runtimes_ioControl);
             BOOLEAN requestPendingFlag_reset = FALSE;
             status = HidSendResetNotification(pDevContext, Request, &requestPendingFlag_reset);
             if (requestPendingFlag_reset) {
                 return;
             }
 
-            /*WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
-            status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);*/
+            ///*WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
+            //status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);*/
+
+
+            ////
+            //WdfSpinLockAcquire(pDevContext->DeviceResetNotificationSpinLock);
+
+            //if (pDevContext->DeviceResetNotificationRequest != NULL)
+            //{
+            //    status = STATUS_INVALID_DEVICE_REQUEST;
+            //    requestPendingFlag = FALSE;
+            //    RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION STATUS_INVALID_DEVICE_REQUEST", NULL, runtimes_ioControl);
+            //}
+            //else
+            //{
+            //    //
+            //    // Try to make it cancelable
+            //    //
+            //    status = WdfRequestMarkCancelableEx(Request, OnDeviceResetNotificationRequestCancel);
+
+            //    if (NT_SUCCESS(status))
+            //    {
+            //        //
+            //        // Successfully marked it cancelable. Pend the request then.
+            //        //
+            //        pDevContext->DeviceResetNotificationRequest = Request;
+            //        status = STATUS_PENDING;    // just to satisfy the compilier
+            //        requestPendingFlag = TRUE;
+            //        RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestMarkCancelableEx ok", NULL, runtimes_ioControl);
+            //    }
+            //    else
+            //    {
+            //        //
+            //        // It's already cancelled. Our EvtRequestCancel won't be invoked.
+            //        // We have to complete the request with STATUS_CANCELLED here.
+            //        //
+            //        NT_ASSERT(status == STATUS_CANCELLED);
+            //        status = STATUS_CANCELLED;    // just to satisfy the compilier
+            //        requestPendingFlag = FALSE;
+            //        RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION  STATUS_CANCELLED", NULL, runtimes_ioControl);
+
+            //    }
+            //}
+
+            //WdfSpinLockRelease(pDevContext->DeviceResetNotificationSpinLock);
             break;
         }
 
         default:
         {
             status = STATUS_NOT_SUPPORTED;
-            //RegDebug(L"STATUS_NOT_SUPPORTED", NULL, IoControlCode);
-            //RegDebug(L"STATUS_NOT_SUPPORTED FUNCTION_FROM_CTL_CODE", NULL, FUNCTION_FROM_CTL_CODE(IoControlCode));
+            RegDebug(L"STATUS_NOT_SUPPORTED", NULL, IoControlCode);
+            RegDebug(L"STATUS_NOT_SUPPORTED FUNCTION_FROM_CTL_CODE", NULL, FUNCTION_FROM_CTL_CODE(IoControlCode));
         }
 
     }
 
-    WdfRequestComplete(Request, status);
+    //
+    // Complete the request if it was not forwarded
+    //
+    if (requestPendingFlag == FALSE)
+    {
+        WdfRequestComplete(Request, status);
+    }
+
+    //WdfRequestComplete(Request, status);
     return;
 }
 
+//
+//void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
+//{
+//
+//    UNREFERENCED_PARAMETER(Queue);
+//
+//    RegDebug(L"OnIoStop start", NULL, runtimes_ioControl);
+//
+//    //NTSTATUS status;
+//    //PDEVICE_CONTEXT pDevContext;
+//    //PHID_XFER_PACKET pHidPacket;
+//    WDF_REQUEST_PARAMETERS RequestParameters;
+//
+//    WDF_REQUEST_PARAMETERS_INIT(&RequestParameters);
+//    WdfRequestGetParameters(Request, &RequestParameters);
+//
+//    if (RequestParameters.Type == WdfRequestTypeDeviceControlInternal && RequestParameters.Parameters.DeviceIoControl.IoControlCode == IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST && (ActionFlags & 1) != 0)//RequestParameters.Parameters.Others.IoControlCode
+//    {
+//        RegDebug(L"OnIoStop WdfRequestStopAcknowledge", NULL, runtimes_ioControl);
+//        WdfRequestStopAcknowledge(Request, 0);
+//    }
+//    RegDebug(L"OnIoStop end", NULL, runtimes_ioControl);
+//}
 
-void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
+
+VOID
+OnIoStop(
+    _In_  WDFQUEUE      FxQueue,
+    _In_  WDFREQUEST    FxRequest,
+    _In_  ULONG         ActionFlags
+)
+/*++
+Routine Description:
+
+    OnIoStop is called by the framework when the device leaves the D0 working state
+    for every I/O request that this driver has not completed, including
+    requests that the driver owns and those that it has forwarded to an
+    I/O target.
+
+Arguments:
+
+    FxQueue - Handle to the framework queue object that is associated with the I/O request.
+
+    FxRequest - Handle to a framework request object.
+
+    ActionFlags - WDF_REQUEST_STOP_ACTION_FLAGS specifying reason that the callback function is being called
+
+Return Value:
+
+    None
+
+--*/
 {
+    WDF_REQUEST_PARAMETERS fxParams;
+    WDF_REQUEST_PARAMETERS_INIT(&fxParams);
 
-    UNREFERENCED_PARAMETER(Queue);
+    // Get the request parameters
+    WdfRequestGetParameters(FxRequest, &fxParams);
 
-    //RegDebug(L"OnIoStop start", NULL, runtimes_ioControl);
-
-    //NTSTATUS status;
-    //PDEVICE_CONTEXT pDevContext;
-    //PHID_XFER_PACKET pHidPacket;
-    WDF_REQUEST_PARAMETERS RequestParameters;
-
-    WDF_REQUEST_PARAMETERS_INIT(&RequestParameters);
-    WdfRequestGetParameters(Request, &RequestParameters);
-
-    if (RequestParameters.Type == WdfRequestTypeDeviceControlInternal && RequestParameters.Parameters.DeviceIoControl.IoControlCode == IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST && (ActionFlags & 1) != 0)//RequestParameters.Parameters.Others.IoControlCode
+    if (fxParams.Type == WdfRequestTypeDeviceControlInternal)
     {
-        //RegDebug(L"OnIoStop WdfRequestStopAcknowledge", NULL, runtimes_ioControl);
-        WdfRequestStopAcknowledge(Request, 0);
-    }
-    //RegDebug(L"OnIoStop end", NULL, runtimes_ioControl);
-}
+        switch (fxParams.Parameters.DeviceIoControl.IoControlCode)
+        {
+            //
+            // When we invoke the HID idle notification callback inside the workitem, the idle IRP is
+            // yet to be enqueued into the Idle Queued. Since hidclass will queue a Dx IRP from the callback
+            // and our default queue is power managed, the Dx IRP progression is blocked because of the in-flight
+            // idle IRP. In order to avoid blocking the Dx IRP, we acknowledge the request. Since 
+            // we anyway will queue the IRP into the Idle Queue immediately after, this is safe. 
+            //
+            case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
+                //
+                // The framework is stopping the I/O queue because the device is leaving its working (D0) state.
+                //
+                if (ActionFlags & WdfRequestStopActionSuspend)
+                {
+                    // Acknowledge the request
+                    //
+                    WdfRequestStopAcknowledge(FxRequest, FALSE);
+                }
+                break;
 
+                //
+                // Device Reset Notification is normally pended by the HIDI2C driver.
+                // We need to complete it only when the device is being removed. For
+                // device power state changes, we will keep it pended, since HID clients 
+                // are not interested in these changes.
+                //
+            case IOCTL_HID_DEVICERESET_NOTIFICATION:
+                if (ActionFlags & WdfRequestStopActionPurge)
+                {
+                    //
+                    // The framework is stopping it because the device is being removed.
+                    // So we complete it, if it's not cancelled yet.
+                    //
+                    PDEVICE_CONTEXT pDeviceContext = GetDeviceContext(WdfIoQueueGetDevice(FxQueue));
+                    BOOLEAN         completeRequest = FALSE;
+                    NTSTATUS        status;
+
+                    WdfSpinLockAcquire(pDeviceContext->DeviceResetNotificationSpinLock);
+
+                    status = WdfRequestUnmarkCancelable(FxRequest);
+                    if (NT_SUCCESS(status))
+                    {
+                        //
+                        // EvtRequestCancel won't be called. We complete it here.
+                        //
+                        completeRequest = TRUE;
+
+                        NT_ASSERT(pDeviceContext->DeviceResetNotificationRequest == FxRequest);
+                        if (pDeviceContext->DeviceResetNotificationRequest == FxRequest)
+                        {
+                            pDeviceContext->DeviceResetNotificationRequest = NULL;
+                        }
+                    }
+                    else
+                    {
+                        NT_ASSERT(status == STATUS_CANCELLED);
+                        // EvtRequestCancel will be called. Leave it as it is.
+                    }
+
+                    WdfSpinLockRelease(pDeviceContext->DeviceResetNotificationSpinLock);
+
+                    if (completeRequest)
+                    {
+                        //
+                        // Complete the pending Device Reset Notification with STATUS_CANCELLED
+                        //
+                        status = STATUS_CANCELLED;
+                        WdfRequestComplete(FxRequest, status);
+                    }
+                }
+                else
+                {
+                    //
+                    // The framework is stopping it because the device is leaving D0.
+                    // Keep it pending.
+                    //
+                    NT_ASSERT(ActionFlags & WdfRequestStopActionSuspend);
+                    WdfRequestStopAcknowledge(FxRequest, FALSE);
+                }
+                break;
+
+            default:
+                //
+                // Leave other requests as they are. 
+                //
+                NOTHING;
+        }
+    }
+}
 
 NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE PreviousState)
 {
     runtimes_OnPostInterruptsEnabled++;
-    ////RegDebug(L"OnPostInterruptsEnabled runtimes_OnPostInterruptsEnabled ", NULL, runtimes_OnPostInterruptsEnabled);
+    RegDebug(L"OnPostInterruptsEnabled runtimes_OnPostInterruptsEnabled ", NULL, runtimes_OnPostInterruptsEnabled);
 
     NTSTATUS status = STATUS_SUCCESS;
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
+    NT_ASSERT(pDevContext != NULL);
+
     if (PreviousState == WdfPowerDeviceD3Final) {
-        ////RegDebug(L"OnPostInterruptsEnabled HidReset", NULL, runtimes_OnPostInterruptsEnabled);
-        status = HidReset(pDevContext);
+        RegDebug(L"OnPostInterruptsEnabled HidReset", NULL, runtimes_OnPostInterruptsEnabled);
+        status = HidReset(pDevContext);  
     }
     UNREFERENCED_PARAMETER(pDevContext);
-    ////RegDebug(L"OnPostInterruptsEnabled end", NULL, runtimes_OnPostInterruptsEnabled);
+    RegDebug(L"OnPostInterruptsEnabled end runtimes_hid", NULL, runtimes_hid++);
     return status;
 }
 
@@ -809,7 +1085,13 @@ NTSTATUS OnSelfManagedIoSuspend(WDFDEVICE Device)
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
     UNREFERENCED_PARAMETER(pDevContext);
 
-    //RegDebug(L"OnSelfManagedIoSuspend end", NULL, runtimes_OnSelfManagedIoSuspend);
+    WDFTIMER  timerHandle = pDevContext->timerHandle;
+    if (timerHandle) {
+        RegDebug(L"OnSelfManagedIoSuspend WdfTimerStop", NULL, runtimes_OnSelfManagedIoSuspend);
+        WdfTimerStop(pDevContext->timerHandle, TRUE);
+    }
+
+    RegDebug(L"OnSelfManagedIoSuspend end runtimes_hid", NULL, runtimes_hid++);
     return status;
 }
 
@@ -823,13 +1105,13 @@ NTSTATUS OnPrepareHardware(
 
     NTSTATUS status = SpbInitialize(pDevContext, ResourceList, ResourceListTranslated);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"OnPrepareHardware SpbInitialize failed", NULL, status);
+        RegDebug(L"OnPrepareHardware SpbInitialize failed", NULL, status);
         return status;
     }
 
     status = AcpiInitialize(pDevContext);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"OnPrepareHardware AcpiInitialize failed", NULL, status);
+        RegDebug(L"OnPrepareHardware AcpiInitialize failed", NULL, status);
         return status;
     }
 
@@ -860,7 +1142,16 @@ NTSTATUS OnPrepareHardware(
     pDevContext->bHybrid_ReportingMode = FALSE;//Ä¬ÈÏ³õÊ¼ÖµÎªParallel mode²¢ÐÐ±¨¸æÄ£Ê½
     pDevContext->DeviceDescriptorFingerCount = 0;//ÃèÊö·û¼ÆËãµ¥¸ö±¨¸æÊý¾Ý°üÊÖÖ¸ÊýÁ¿
 
-    //RegDebug(L"OnPrepareHardware ok", NULL, status);
+    pDevContext->HostInitiatedResetActive = FALSE;//ÐÂÔö
+
+    runtimes_hid = 0;
+    runtimes_OnInterruptIsr = 0;
+    runtimes_OnPostInterruptsEnabled = 0;
+    runtimes_OnSelfManagedIoSuspend = 0;
+    runtimes_ioControl = 0;
+    runtimes_HidEvtResetTimerFired = 0;
+
+    RegDebug(L"OnPrepareHardware ok", NULL, status);
     return STATUS_SUCCESS;
 }
 
@@ -871,14 +1162,14 @@ NTSTATUS OnReleaseHardware(_In_  WDFDEVICE FxDevice, _In_  WDFCMRESLIST  FxResou
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(FxDevice);
 
     if (pDevContext->SpbRequest) {
-        WdfObjectDelete(pDevContext->SpbRequest);
+        WdfDeleteObjectSafe(pDevContext->SpbRequest);
     }
 
     if (pDevContext->SpbIoTarget) {
-        WdfObjectDelete(pDevContext->SpbIoTarget);
+        WdfDeleteObjectSafe(pDevContext->SpbIoTarget);
     }
 
-    //RegDebug(L"OnReleaseHardware ok", NULL, 0);
+    RegDebug(L"OnReleaseHardware ok", NULL, 0);
     return STATUS_SUCCESS;
 
 }
@@ -889,23 +1180,21 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
 
     NTSTATUS status = HidInitialize(pDevContext, FxPreviousState);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"OnD0Entry HidInitialize failed", NULL, status);
+        RegDebug(L"OnD0Entry HidInitialize failed", NULL, status);
         return status;
     }
-
-    //PowerIdleIrpCompletion(pDevContext);
 
     if (!pDevContext->HidReportDescriptorSaved) {
         status = GetReportDescriptor(pDevContext);
         if (!NT_SUCCESS(status)) {
-            //RegDebug(L"GetReportDescriptor err", NULL, runtimes_ioControl);
+            RegDebug(L"GetReportDescriptor err", NULL, runtimes_ioControl);
             return status;
         }
         pDevContext->HidReportDescriptorSaved = TRUE;
 
         status = AnalyzeHidReportDescriptor(pDevContext);
         if (!NT_SUCCESS(status)) {
-            //RegDebug(L"AnalyzeHidReportDescriptor err", NULL, runtimes_ioControl);
+            RegDebug(L"AnalyzeHidReportDescriptor err", NULL, runtimes_ioControl);
             return status;
         }
     }
@@ -940,15 +1229,15 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     {
         if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
         {
-            //RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
             status = SetRegisterMouseSensitivity(pDevContext, pDevContext->MouseSensitivity_Index);//³õÊ¼Ä¬ÈÏÉèÖÃ
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
+                RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
             }
         }
         else
         {
-            //RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity err", NULL, status);
+            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity err", NULL, status);
         }
     }
     else {
@@ -957,23 +1246,28 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
         }
         pDevContext->MouseSensitivity_Index = (UCHAR)ms_idx;
         pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
-        //RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
+        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
     }
 
 
     MouseLikeTouchPad_parse_init(pDevContext);
 
-    //RegDebug(L"OnD0Entry ok", NULL, 0);
+    PowerIdleIrpCompletion(pDevContext);//¼ÓµçÍê³É×îºóÖ´ÐÐ
+
+    RegDebug(L"OnD0Entry ok", NULL, 0);
     return STATUS_SUCCESS;
 }
 
 NTSTATUS OnD0Exit(_In_ WDFDEVICE FxDevice, _In_ WDF_POWER_DEVICE_STATE FxPreviousState)
 {
+    PAGED_CODE();
+
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(FxDevice);
+    NT_ASSERT(pDevContext != NULL);
 
     NTSTATUS status = HidDestroy(pDevContext, FxPreviousState);
 
-    //RegDebug(L"OnD0Exit ok", NULL, 0);
+    RegDebug(L"OnD0Exit ok", NULL, 0);
     return status;
 }
 
@@ -1016,7 +1310,7 @@ SpbInitialize(
                     FxDeviceContext->SpbConnectionId.HighPart = pDescriptor->u.Connection.IdHighPart;
 
                     connFound = TRUE;
-                    //RegDebug(L"I2C resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
+                    RegDebug(L"I2C resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
                 }
                 
                 if ((pDescriptor->u.Connection.Class == CM_RESOURCE_CONNECTION_CLASS_GPIO) &&
@@ -1026,7 +1320,7 @@ SpbInitialize(
                     FxDeviceContext->SpbConnectionId.LowPart = pDescriptor->u.Connection.IdLowPart;
                     FxDeviceContext->SpbConnectionId.HighPart = pDescriptor->u.Connection.IdHighPart;
                     connFound = TRUE;
-                    //RegDebug(L"I2C GPIO resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
+                    RegDebug(L"I2C GPIO resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
                 }
                 break;
 
@@ -1034,7 +1328,7 @@ SpbInitialize(
                 interruptFound = TRUE;
                 interruptIndex = i;
 
-                //RegDebug(L"Interrupt resource found at index:", NULL, interruptIndex);
+                RegDebug(L"Interrupt resource found at index:", NULL, interruptIndex);
 
                 break;
 
@@ -1047,7 +1341,7 @@ SpbInitialize(
         if ((connFound == FALSE) || (interruptFound == FALSE))
         {
             status = STATUS_INSUFFICIENT_RESOURCES;
-            //RegDebug(L"Failed finding required resources", NULL, status);
+            RegDebug(L"Failed finding required resources", NULL, status);
 
             goto exit;
         }
@@ -1066,7 +1360,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfIoTargetCreate failed creating SPB target", NULL, status);
+            RegDebug(L"WdfIoTargetCreate failed creating SPB target", NULL, status);
 
             WdfDeleteObjectSafe(FxDeviceContext->SpbIoTarget);
             goto exit;
@@ -1082,7 +1376,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"ResourceHub failed to create device path", NULL, status);
+            RegDebug(L"ResourceHub failed to create device path", NULL, status);
 
             goto exit;
         }
@@ -1104,7 +1398,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfIoTargetOpen failed to open SPB target", NULL, status);
+            RegDebug(L"WdfIoTargetOpen failed to open SPB target", NULL, status);
 
             goto exit;
         }
@@ -1125,7 +1419,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfRequestCreate failed creating SPB request", NULL, status);
+            RegDebug(L"WdfRequestCreate failed creating SPB request", NULL, status);
 
             goto exit;
         }
@@ -1153,7 +1447,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfWaitLockCreate failed creating interrupt lock", NULL, status);
+            RegDebug(L"WdfWaitLockCreate failed creating interrupt lock", NULL, status);
 
             goto exit;
         }
@@ -1181,7 +1475,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfInterruptCreate failed creating interrupt", NULL, status);
+            RegDebug(L"WdfInterruptCreate failed creating interrupt", NULL, status);
 
             goto exit;
         }
@@ -1198,22 +1492,22 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfSpinLockCreate failed creating inprogress spinlock", NULL, status);
+            RegDebug(L"WdfSpinLockCreate failed creating inprogress spinlock", NULL, status);
 
             goto exit;
         }
     }
 
-    //RegDebug(L"SpbInitialize ok", NULL, status);
+    RegDebug(L"SpbInitialize ok", NULL, status);
 
 exit:
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"EventWrite_HIDI2C_ENUMERATION_SPB_FAILURE", NULL, status);
+        RegDebug(L"EventWrite_HIDI2C_ENUMERATION_SPB_FAILURE", NULL, status);
     }
 
-    ////RegDebug(L"SpbInitialize end", NULL, status);
+    //RegDebug(L"SpbInitialize end", NULL, status);
     return status;
 }
 
@@ -1226,7 +1520,7 @@ SpbDestroy(
     WdfDeleteObjectSafe(FxDeviceContext->SpbRequest);
     WdfDeleteObjectSafe(FxDeviceContext->SpbIoTarget);
 
-    //RegDebug(L"WdfObjectDelete closed and deleted SpbIoTarget", NULL, 0);
+    RegDebug(L"WdfObjectDelete closed and deleted SpbIoTarget", NULL, 0);
 
     return;
 }
@@ -1250,7 +1544,7 @@ SpbWrite(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"SpbWrite failed parameters DataLength", NULL, status);
+        RegDebug(L"SpbWrite failed parameters DataLength", NULL, status);
 
         goto exit;
     }
@@ -1269,7 +1563,7 @@ SpbWrite(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"WdfMemoryCreate failed allocating memory buffer for SpbWrite", NULL, status);
+        RegDebug(L"WdfMemoryCreate failed allocating memory buffer for SpbWrite", NULL, status);
 
         goto exit;
     }
@@ -1299,7 +1593,7 @@ SpbWrite(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite without a timeout", NULL, status);
+            RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite without a timeout", NULL, status);
 
             goto exit;
         }
@@ -1321,7 +1615,7 @@ SpbWrite(
 
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite with timeout", NULL, status);
+            RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite with timeout", NULL, status);
 
             goto exit;
         }
@@ -1331,14 +1625,14 @@ SpbWrite(
     if (bytesWritten != expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        //RegDebug(L"WdfIoTargetSendWriteSynchronously returned with bytes expected", NULL, status);
+        RegDebug(L"WdfIoTargetSendWriteSynchronously returned with bytes expected", NULL, status);
 
         goto exit;
     }
 
 exit:
 
-    ////RegDebug(L"SpbWrite end", NULL, status);
+    //RegDebug(L"SpbWrite end", NULL, status);
     WdfDeleteObjectSafe(memoryWrite);
     return status;
 }
@@ -1359,7 +1653,7 @@ SpbWritelessRead(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"SpbWritelessRead failed parameters DataLength", NULL, status);
+        RegDebug(L"SpbWritelessRead failed parameters DataLength", NULL, status);
 
         goto exit;
     }
@@ -1374,7 +1668,7 @@ SpbWritelessRead(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"WdfMemoryAssignBuffer failed assigning input report buffer", NULL, status);
+        RegDebug(L"WdfMemoryAssignBuffer failed assigning input report buffer", NULL, status);
         goto exit;
     }
 
@@ -1405,13 +1699,13 @@ SpbWritelessRead(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"Failed sending SPB Read bytes", NULL, status);
+        RegDebug(L"Failed sending SPB Read bytes", NULL, status);
     }
 
 
 exit:
 
-    ////RegDebug(L"SpbWritelessRead end", NULL, status);
+    //RegDebug(L"SpbWritelessRead end", NULL, status);
     return status;
 }
 
@@ -1435,7 +1729,7 @@ SpbRead(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"SpbRead failed parameters DataLength", NULL, status);
+        RegDebug(L"SpbRead failed parameters DataLength", NULL, status);
 
         goto exit;
     }
@@ -1464,7 +1758,7 @@ SpbRead(
     status = ::SpbSequence(FxIoTarget, &sequence, sizeof(sequence), &bytesReturned, Timeout);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
         goto exit;
     }
 
@@ -1473,12 +1767,12 @@ SpbRead(
     if (bytesReturned < expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        //RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
+        RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
     }
 
 exit:
 
-    ////RegDebug(L"SpbRead end", NULL, status);
+    //RegDebug(L"SpbRead end", NULL, status);
     return status;
 }
 
@@ -1502,7 +1796,7 @@ SpbWriteWrite(
         DataSecond == NULL || DataLengthSecond <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        ////RegDebug(L"SpbWriteWrite failed parameters DataFirst DataLengthFirst", NULL, status);
+        //RegDebug(L"SpbWriteWrite failed parameters DataFirst DataLengthFirst", NULL, status);
 
         goto exit;
     }
@@ -1536,7 +1830,7 @@ SpbWriteWrite(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
 
         goto exit;
     }
@@ -1546,14 +1840,14 @@ SpbWriteWrite(
     if (bytesReturned != expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        //RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
+        RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
 
         goto exit;
     }
 
 exit:
 
-    ////RegDebug(L"SpbWriteWrite end", NULL, status);
+    //RegDebug(L"SpbWriteWrite end", NULL, status);
     return status;
 }
 
@@ -1579,7 +1873,7 @@ SpbWriteRead(
         DataSecond == NULL || DataLengthSecond <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"SpbWriteRead failed parameters DataFirst DataLengthFirst", NULL, status);
+        RegDebug(L"SpbWriteRead failed parameters DataFirst DataLengthFirst", NULL, status);
 
         goto exit;
     }
@@ -1619,7 +1913,7 @@ SpbWriteRead(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
 
         goto exit;
     }
@@ -1629,12 +1923,12 @@ SpbWriteRead(
     if (bytesReturned < expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        //RegDebug(L"SpbSequence returned with bytes expected", NULL, status);
+        RegDebug(L"SpbSequence returned with bytes expected", NULL, status);
     }
 
 exit:
 
-    ////RegDebug(L"SpbWriteRead end", NULL, status);
+    //RegDebug(L"SpbWriteRead end", NULL, status);
     return status;
 }
 
@@ -1667,7 +1961,7 @@ SpbSequence(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"WdfMemoryCreatePreallocated failed creating memory for sequence", NULL, status);
+        RegDebug(L"WdfMemoryCreatePreallocated failed creating memory for sequence", NULL, status);
         goto exit;
     }
 
@@ -1709,7 +2003,7 @@ SpbSequence(
   
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"Failed sending SPB Sequence IOCTL bytes", NULL, status);
+        RegDebug(L"Failed sending SPB Sequence IOCTL bytes", NULL, status);
 
         goto exit;
     }
@@ -1718,7 +2012,7 @@ SpbSequence(
 
 exit:
 
-    ////RegDebug(L"_SpbSequence end", NULL, status);
+    //RegDebug(L"_SpbSequence end", NULL, status);
     WdfDeleteObjectSafe(memorySequence);
     return status;
 }
@@ -1729,7 +2023,7 @@ exit:
 
 NTSTATUS HidPower(PDEVICE_CONTEXT pDevContext, SHORT PowerState)
 {
-    ////RegDebug(L"HidPower start", NULL, runtimes_hid++);
+    //RegDebug(L"HidPower start", NULL, runtimes_hid++);
 
     NTSTATUS status = STATUS_SUCCESS;
     USHORT RegisterAddress;
@@ -1740,10 +2034,10 @@ NTSTATUS HidPower(PDEVICE_CONTEXT pDevContext, SHORT PowerState)
     USHORT state = PowerState | 0x800;
     status = SpbWrite(IoTarget, RegisterAddress, (PUCHAR)&state, 2, 5* HIDI2C_REQUEST_DEFAULT_TIMEOUT);//Ô­ÏÈµ¥Î»ÎªÃëÌ«´ó¸ÄÎªms
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"HidPower SpbWrite failed", NULL, status);
+        RegDebug(L"HidPower SpbWrite failed", NULL, status);
     }
 
-    //RegDebug(L"HidPower end", NULL, runtimes_hid++);
+    RegDebug(L"HidPower end", NULL, runtimes_hid++);
     return status;
 }
 
@@ -1754,19 +2048,65 @@ NTSTATUS HidReset(PDEVICE_CONTEXT pDevContext)
     UCHAR data[2];
 
     USHORT RegisterAddress = pDevContext->HidSettings.CommandRegisterAddress;
-    //WDFDEVICE device = pDevContext->FxDevice;
+    WDFDEVICE device = pDevContext->FxDevice;
 
+    ULONG value = 0;
+    WDFKEY hKey = NULL;
     *(PUSHORT)data = 256;//0x0100
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"DoNotWaitForResetResponse");
+
+    //Î±´úÂëºÜ¿ÉÄÜÉÙÁË2¸ö²ÎÊý??
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_READ,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+
+        //WdfDeviceOpenDevicemapKey(
+        //	device,
+        //	&ValueNameString,
+        //	KEY_READ,
+        //	WDF_NO_OBJECT_ATTRIBUTES,
+        //	&hKey);
+
+    if (NT_SUCCESS(status)) {
+        status = WdfRegistryQueryULong(hKey, &ValueNameString, &value);
+        if (NT_SUCCESS(status))
+        {
+            RegDebug(L"HidReset WdfRegistryQueryULong ok", NULL, status);
+        }
+        else
+        {
+            if (status == STATUS_OBJECT_NAME_NOT_FOUND)// ((NTSTATUS)0xC0000034L)
+            {
+                RegDebug(L"HidReset WdfRegistryQueryULong STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            }
+        }
+    }
+
+
+    if (hKey)
+        WdfObjectDelete(hKey);
+
 
     WdfInterruptAcquireLock(pDevContext->ReadInterrupt);
 
-    WdfIoQueueStopSynchronously(pDevContext->IoctlQueue);
+    if (!value)
+    {      
+        WdfIoQueueStopSynchronously(pDevContext->IoctlQueue);
+        WdfTimerStart(pDevContext->timerHandle, WDF_REL_TIMEOUT_IN_MS(10));//400
+
+        RegDebug(L"HidReset WdfTimerStart timerHandle", NULL, status);
+    }
 
     status = SpbWrite(pDevContext->SpbIoTarget, RegisterAddress, data, 2u, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///Ô­ÏÈµ¥Î»ÎªÃëÌ«´ó¸ÄÎªms
     if (NT_SUCCESS(status))
     {
         pDevContext->HostInitiatedResetActive = TRUE;
-        //RegDebug(L"HidReset HostInitiatedResetActive TRUE", NULL, runtimes_hid++);
+        RegDebug(L"HidReset HostInitiatedResetActive TRUE", NULL, runtimes_hid++);
 
     }
 
@@ -1781,12 +2121,12 @@ NTSTATUS HidDestroy(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE FxTarget
     NTSTATUS status = HidPower(pDevContext, 1);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidDestroy _HidPower failed", NULL, status);
+        RegDebug(L"HidDestroy _HidPower failed", NULL, status);
         goto exit;
     }
 
     if (FxTargetState != WdfPowerDeviceD3Final) {
-        //RegDebug(L"HidDestroy FxTargetState err", NULL, status);
+        RegDebug(L"HidDestroy FxTargetState err", NULL, status);
         goto exit;
     }
 
@@ -1797,7 +2137,7 @@ NTSTATUS HidDestroy(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE FxTarget
     }
 
 exit:
-    //RegDebug(L"HidDestroy end", NULL, status);
+    RegDebug(L"HidDestroy end", NULL, status);
     return status;
 }
 
@@ -1809,14 +2149,14 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
 
     WDF_DEVICE_POWER_STATE state;
     state = WdfDeviceGetDevicePowerState(pDevContext->FxDevice);
-    ////RegDebug(L"HidInitialize powerstate", NULL, state);//²âÊÔÎªWdfDevStatePowerD0Starting
+    //RegDebug(L"HidInitialize powerstate", NULL, state);//²âÊÔÎªWdfDevStatePowerD0Starting
 
     if (FxPreviousState != WdfPowerDeviceD3Final)
     {
         status = HidPower(pDevContext, 0);
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"_HidPower failed", NULL, status);
+            RegDebug(L"_HidPower failed", NULL, status);
             goto exit;
         }
     }
@@ -1824,7 +2164,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
     status = HidGetHidDescriptor(pDevContext);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"_HidGetHidDescriptor failed", NULL, status);
+        RegDebug(L"_HidGetHidDescriptor failed", NULL, status);
         goto exit;
     }
 
@@ -1836,7 +2176,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
         //
         //  No memory
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"HidInitialize ExAllocatePoolWithTag failed", NULL, status);
+        RegDebug(L"HidInitialize ExAllocatePoolWithTag failed", NULL, status);
         goto exit;
     }
   
@@ -1855,7 +2195,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
         status = WdfMemoryCreatePreallocated(&attributes, Sequence, SequenceLength, pInputReportMemory);
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"HidInitialize WdfMemoryCreatePreallocated failed", NULL, status);
+            RegDebug(L"HidInitialize WdfMemoryCreatePreallocated failed", NULL, status);
             goto exit;
         }
     }
@@ -1870,14 +2210,14 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
     status = WdfSpinLockCreate(&lockAttributes, &pDevContext->InputReportListLock);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidInitialize WdfSpinLockCreate failed", NULL, status);
+        RegDebug(L"HidInitialize WdfSpinLockCreate failed", NULL, status);
         goto exit;
     }
 
-    //RegDebug(L"HidInitialize ok", NULL, status);
+    RegDebug(L"HidInitialize ok", NULL, status);
 
 exit:
-    ////RegDebug(L"HidInitialize end", NULL, status);
+    //RegDebug(L"HidInitialize end", NULL, status);
     return status;
 }
 
@@ -1921,7 +2261,7 @@ NTSTATUS HidSendIdleNotification(
     else
     {
         status = STATUS_NO_CALLBACK_ACTIVE;
-        //RegDebug(L"HidSendIdleNotification STATUS_NO_CALLBACK_ACTIVE", NULL, status);
+        RegDebug(L"HidSendIdleNotification STATUS_NO_CALLBACK_ACTIVE", NULL, status);
     }
 
     return status;
@@ -1944,25 +2284,25 @@ NTSTATUS HidGetHidDescriptor(PDEVICE_CONTEXT pDevContext)
     ULONG DelayUs = 0;
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, (PBYTE)&pDevContext->HidSettings.HidDescriptorLength, 0x1Eu, DelayUs, 0);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"HidGetHidDescriptor SpbRead failed", NULL, status);
+        RegDebug(L"HidGetHidDescriptor SpbRead failed", NULL, status);
         return status;
     }
-    ////RegDebug(L"HidGetHidDescriptor SpbRead data=", pHidDescriptorLength, 0x1e);
+    //RegDebug(L"HidGetHidDescriptor SpbRead data=", pHidDescriptorLength, 0x1e);
 
-   /* //RegDebug(L"_HidGetHidDescriptor SpbRead HidDescriptorLength=", NULL, pDevContext->HidSettings.HidDescriptorLength);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead BcdVersion=", NULL, pDevContext->HidSettings.BcdVersion);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorLength=", NULL, pDevContext->HidSettings.ReportDescriptorLength);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorAddress=", NULL, pDevContext->HidSettings.ReportDescriptorAddress);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead InputRegisterAddress=", NULL, pDevContext->HidSettings.InputRegisterAddress);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead InputReportMaxLength=", NULL, pDevContext->HidSettings.InputReportMaxLength);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead OutputRegisterAddress=", NULL, pDevContext->HidSettings.OutputRegisterAddress);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead OutputReportMaxLength=", NULL, pDevContext->HidSettings.OutputReportMaxLength);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead CommandRegisterAddress=", NULL, pDevContext->HidSettings.CommandRegisterAddress);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead DataRegisterAddress=", NULL, pDevContext->HidSettings.DataRegisterAddress);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead VendorId=", NULL, pDevContext->HidSettings.VendorId);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead ProductId=", NULL, pDevContext->HidSettings.ProductId);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead VersionId=", NULL, pDevContext->HidSettings.VersionId);
-    //RegDebug(L"_HidGetHidDescriptor SpbRead Reserved=", NULL, pDevContext->HidSettings.Reserved);*/
+   /* RegDebug(L"_HidGetHidDescriptor SpbRead HidDescriptorLength=", NULL, pDevContext->HidSettings.HidDescriptorLength);
+    RegDebug(L"_HidGetHidDescriptor SpbRead BcdVersion=", NULL, pDevContext->HidSettings.BcdVersion);
+    RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorLength=", NULL, pDevContext->HidSettings.ReportDescriptorLength);
+    RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorAddress=", NULL, pDevContext->HidSettings.ReportDescriptorAddress);
+    RegDebug(L"_HidGetHidDescriptor SpbRead InputRegisterAddress=", NULL, pDevContext->HidSettings.InputRegisterAddress);
+    RegDebug(L"_HidGetHidDescriptor SpbRead InputReportMaxLength=", NULL, pDevContext->HidSettings.InputReportMaxLength);
+    RegDebug(L"_HidGetHidDescriptor SpbRead OutputRegisterAddress=", NULL, pDevContext->HidSettings.OutputRegisterAddress);
+    RegDebug(L"_HidGetHidDescriptor SpbRead OutputReportMaxLength=", NULL, pDevContext->HidSettings.OutputReportMaxLength);
+    RegDebug(L"_HidGetHidDescriptor SpbRead CommandRegisterAddress=", NULL, pDevContext->HidSettings.CommandRegisterAddress);
+    RegDebug(L"_HidGetHidDescriptor SpbRead DataRegisterAddress=", NULL, pDevContext->HidSettings.DataRegisterAddress);
+    RegDebug(L"_HidGetHidDescriptor SpbRead VendorId=", NULL, pDevContext->HidSettings.VendorId);
+    RegDebug(L"_HidGetHidDescriptor SpbRead ProductId=", NULL, pDevContext->HidSettings.ProductId);
+    RegDebug(L"_HidGetHidDescriptor SpbRead VersionId=", NULL, pDevContext->HidSettings.VersionId);
+    RegDebug(L"_HidGetHidDescriptor SpbRead Reserved=", NULL, pDevContext->HidSettings.Reserved);*/
 
 
     if (*pHidDescriptorLength != 30//pDeviceContext->HidSettings.HidDescriptorLength!=30
@@ -1977,10 +2317,10 @@ NTSTATUS HidGetHidDescriptor(PDEVICE_CONTEXT pDevContext)
     {
 
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        //RegDebug(L"_HidGetHidDescriptor STATUS_DEVICE_PROTOCOL_ERROR", NULL, status);
+        RegDebug(L"_HidGetHidDescriptor STATUS_DEVICE_PROTOCOL_ERROR", NULL, status);
     }
 
-    ////RegDebug(L"_HidGetHidDescriptor end", NULL, status);
+    //RegDebug(L"_HidGetHidDescriptor end", NULL, status);
     return status;
 }
 
@@ -2003,7 +2343,7 @@ HidGetDeviceAttributes(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidGetDeviceAttributes WdfRequestRetrieveOutputBuffer failed", NULL, status);
+        RegDebug(L"HidGetDeviceAttributes WdfRequestRetrieveOutputBuffer failed", NULL, status);
         goto exit;
     }
 
@@ -2018,7 +2358,7 @@ HidGetDeviceAttributes(
     );
 
 exit:
-    //RegDebug(L"HidGetDeviceAttributes end", NULL, status);
+    RegDebug(L"HidGetDeviceAttributes end", NULL, status);
     return status;
 }
 
@@ -2041,7 +2381,7 @@ HidGetDeviceDescriptor(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidGetDeviceDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
+        RegDebug(L"HidGetDeviceDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
         goto exit;
     }
 
@@ -2063,7 +2403,7 @@ HidGetDeviceDescriptor(
     );
 
 exit:
-    //RegDebug(L"HidGetDeviceDescriptor end", NULL, status);
+    RegDebug(L"HidGetDeviceDescriptor end", NULL, status);
     return status;
 }
 
@@ -2074,7 +2414,7 @@ HidGetReportDescriptor(
     WDFREQUEST Request
 )
 {
-    //RegDebug(L"HidGetReportDescriptor start", NULL, runtimes_ioControl);
+    RegDebug(L"HidGetReportDescriptor start", NULL, runtimes_ioControl);
 
     NTSTATUS status = STATUS_SUCCESS;
     WDFMEMORY RequestMemory;
@@ -2082,7 +2422,7 @@ HidGetReportDescriptor(
     status = WdfRequestRetrieveOutputMemory(Request, &RequestMemory);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidGetReportDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
+        RegDebug(L"HidGetReportDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
         goto exit;
     }
 
@@ -2092,7 +2432,7 @@ HidGetReportDescriptor(
     PBYTE pReportDesciptorData = (PBYTE)WdfMemoryGetBuffer(RequestMemory, NULL);
     if (!pReportDesciptorData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"HidGetReportDescriptor WdfMemoryGetBuffer failed", NULL, status);
+        RegDebug(L"HidGetReportDescriptor WdfMemoryGetBuffer failed", NULL, status);
         goto exit;
     }
 
@@ -2100,10 +2440,10 @@ HidGetReportDescriptor(
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, pReportDesciptorData, ReportLength, DelayUs, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///Ô­ÏÈµ¥Î»ÎªÃëÌ«´ó¸ÄÎªms
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidGetReportDescriptor SpbRead failed", NULL, status);
+        RegDebug(L"HidGetReportDescriptor SpbRead failed", NULL, status);
         goto exit;
     }
-    //RegDebug(L"HidGetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
+    RegDebug(L"HidGetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
 
     WdfRequestSetInformation(
         Request,
@@ -2111,7 +2451,7 @@ HidGetReportDescriptor(
     );
 
 exit:
-    //RegDebug(L"HidGetReportDescriptor end", NULL, status);
+    RegDebug(L"HidGetReportDescriptor end", NULL, status);
     return status;
 }
 
@@ -2122,7 +2462,7 @@ HidGetString(
     WDFREQUEST Request
 )
 {
-    //RegDebug(L"HidGetString start", NULL, runtimes_ioControl);
+    RegDebug(L"HidGetString start", NULL, runtimes_ioControl);
     UNREFERENCED_PARAMETER(pDevContext);
 
     NTSTATUS status = STATUS_SUCCESS;
@@ -2137,7 +2477,7 @@ HidGetString(
 
     //LONG dw = *(PULONG)IoStack->Parameters.DeviceIoControl.Type3InputBuffer;//×¢ÒâÕâ¸öType3InputBuffer¶ÁÈ¡»áÀ¶ÆÁ£¬ËùÒÔÐèÒª²âÊÔµÃ³öÊµ¼ÊwStrIDµ÷ÓÃË³Ðò
     //USHORT wStrID = LOWORD(dw);//
-    ////RegDebug(L"HidGetString: wStrID=", NULL, wStrID);
+    //RegDebug(L"HidGetString: wStrID=", NULL, wStrID);
 
     //switch (wStrID) {
     //case HID_STRING_ID_IMANUFACTURER:
@@ -2154,7 +2494,7 @@ HidGetString(
     //    break;
     //default:
     //    status = STATUS_INVALID_PARAMETER;
-    //    //RegDebug(L"HidGetString: unkown string id", NULL, 0);
+    //    RegDebug(L"HidGetString: unkown string id", NULL, 0);
     //    goto exit;
     //}
 
@@ -2167,7 +2507,7 @@ HidGetString(
           (*step)++;
           stringSizeCb = sizeof(MANUFACTURER_ID_STRING);
           string = MANUFACTURER_ID_STRING;
-          ////RegDebug(L"HidGetString: HID_STRING_ID_IMANUFACTURER", string, stringSizeCb*2+2);
+          //RegDebug(L"HidGetString: HID_STRING_ID_IMANUFACTURER", string, stringSizeCb*2+2);
     }
     else if (*step == 2) {//case HID_STRING_ID_IPRODUCT:
         (*step)++;
@@ -2179,17 +2519,17 @@ HidGetString(
         (*step)++;
          stringSizeCb = sizeof(SERIAL_NUMBER_STRING);
          string = SERIAL_NUMBER_STRING;
-         ////RegDebug(L"HidGetString: HID_STRING_ID_ISERIALNUMBER", string, stringSizeCb * 2 + 2);
+         //RegDebug(L"HidGetString: HID_STRING_ID_ISERIALNUMBER", string, stringSizeCb * 2 + 2);
     }
     else{
          status = STATUS_INVALID_PARAMETER;
-         //RegDebug(L"HidGetString: unkown string id", NULL, 0);
+         RegDebug(L"HidGetString: unkown string id", NULL, 0);
          goto exit;
     }
     
 
     ULONG bufferlength = IoStack->Parameters.DeviceIoControl.OutputBufferLength;
-    //RegDebug(L"HidGetString: bufferlength=", NULL, bufferlength);
+    RegDebug(L"HidGetString: bufferlength=", NULL, bufferlength);
     int i = -1;
     do {
         ++i;
@@ -2200,7 +2540,7 @@ HidGetString(
     if (stringSizeCb > bufferlength)
     {
         status = STATUS_INVALID_BUFFER_SIZE;
-        //RegDebug(L"HidGetString STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        RegDebug(L"HidGetString STATUS_INVALID_BUFFER_SIZE", NULL, status);
         goto exit;
     }
 
@@ -2208,7 +2548,7 @@ HidGetString(
     pIrp->IoStatus.Information = stringSizeCb;
 
 exit:
-    //RegDebug(L"HidGetString end", NULL, status);
+    RegDebug(L"HidGetString end", NULL, status);
     return status;
 }
 
@@ -2240,7 +2580,7 @@ HidWriteReport(
                 RegisterAddress = pDevContext->HidSettings.OutputRegisterAddress;
                 if (OutputReportLength > OutputReportMaxLength) {
                     status = STATUS_INVALID_PARAMETER;
-                    //RegDebug(L"HidWriteReport OutputReportLength STATUS_INVALID_PARAMETER", NULL, status);
+                    RegDebug(L"HidWriteReport OutputReportLength STATUS_INVALID_PARAMETER", NULL, status);
                     goto exit;
                 }
 
@@ -2248,7 +2588,7 @@ HidWriteReport(
                 pReportData = pReportDesciptorData;
                 if (!pReportDesciptorData) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    //RegDebug(L"HidWriteReport ExAllocatePoolWithTag failed", NULL, status);
+                    RegDebug(L"HidWriteReport ExAllocatePoolWithTag failed", NULL, status);
                     goto exit;
                 }
 
@@ -2259,7 +2599,7 @@ HidWriteReport(
                 status = SpbWrite(pDevContext->SpbIoTarget, RegisterAddress, pReportData, OutputReportLength, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///Ô­ÏÈÎªÃëÌ«´ó¸ÄÎªms
                 if (!NT_SUCCESS(status))
                 {
-                    //RegDebug(L"HidWriteReport SpbWrite failed", NULL, status);
+                    RegDebug(L"HidWriteReport SpbWrite failed", NULL, status);
                     goto exit;
                 }
 
@@ -2267,17 +2607,17 @@ HidWriteReport(
             }
             else {
                 status = STATUS_BUFFER_TOO_SMALL;
-                //RegDebug(L"HidWriteReport STATUS_BUFFER_TOO_SMALL", NULL, status);
+                RegDebug(L"HidWriteReport STATUS_BUFFER_TOO_SMALL", NULL, status);
             }
         }
         else {
             status = STATUS_INVALID_BUFFER_SIZE;
-            //RegDebug(L"HidWriteReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+            RegDebug(L"HidWriteReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
         }
     }
     else {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"HidWriteReport STATUS_INVALID_PARAMETER", NULL, status);
+        RegDebug(L"HidWriteReport STATUS_INVALID_PARAMETER", NULL, status);
     }
 
 exit:
@@ -2285,7 +2625,7 @@ exit:
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
     }
 
-    //RegDebug(L"HidWriteReport end", NULL, status);
+    RegDebug(L"HidWriteReport end", NULL, status);
     return status;
 }
 
@@ -2302,14 +2642,14 @@ HidSendResetNotification(
     status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidSendResetNotification WdfRequestForwardToIoQueue failed", NULL, status);
+        RegDebug(L"HidSendResetNotification WdfRequestForwardToIoQueue failed", NULL, status);
         goto exit;
     }
 
     *requestPendingFlag_reset = TRUE;
 
 exit:
-    //RegDebug(L"HidSendResetNotification end", NULL, status);
+    RegDebug(L"HidSendResetNotification end", NULL, status);
     return status;
 }
 
@@ -2327,14 +2667,14 @@ HidReadReport(
     status = WdfRequestForwardToIoQueue(Request, pDevContext->ReportQueue);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"HidReadReport WdfRequestForwardToIoQueue failed", NULL, status);
+        RegDebug(L"HidReadReport WdfRequestForwardToIoQueue failed", NULL, status);
         goto exit;
     }
 
     *requestPendingFlag = TRUE;
 
 exit:
-    //RegDebug(L"HidReadReport end", NULL, status);
+    RegDebug(L"HidReadReport end", NULL, status);
     return status;
 }
 
@@ -2364,17 +2704,17 @@ HidGetReport(
     WdfRequestGetParameters(Request, &RequestParameters);
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength >= sizeof(HID_XFER_PACKET)) {
-        //RegDebug(L"HidGetReport OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
-        //RegDebug(L"HidGetReport Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
+        RegDebug(L"HidGetReport OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
+        RegDebug(L"HidGetReport Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
         pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
         if (!pHidPacket) {
             status = STATUS_INVALID_PARAMETER;
-            //RegDebug(L"HidGetReport STATUS_INVALID_PARAMETER", NULL, status);
+            RegDebug(L"HidGetReport STATUS_INVALID_PARAMETER", NULL, status);
             goto exit;
         }
-        //RegDebug(L"HidGetReport pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
-        //RegDebug(L"HidGetReport pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
-        //RegDebug(L"HidGetReport pHidPacket->reportId=", NULL, pHidPacket->reportId);
+        RegDebug(L"HidGetReport pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
+        RegDebug(L"HidGetReport pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
+        RegDebug(L"HidGetReport pHidPacket->reportId=", NULL, pHidPacket->reportId);
 
         reportBufferLen = pHidPacket->reportBufferLen;
         if (reportBufferLen) {
@@ -2384,7 +2724,7 @@ HidGetReport(
             if (Type) {
                 if (Type != 2) {
                     status = STATUS_INVALID_PARAMETER;
-                    //RegDebug(L"HidGetReport Type STATUS_INVALID_PARAMETER", NULL, status);
+                    RegDebug(L"HidGetReport Type STATUS_INVALID_PARAMETER", NULL, status);
                     goto exit;
                 }
 
@@ -2396,7 +2736,7 @@ HidGetReport(
             }
 
             UCHAR reportId = pHidPacket->reportId;
-            //RegDebug(L"HidGetReport reportId=", NULL, reportId);
+            RegDebug(L"HidGetReport reportId=", NULL, reportId);
             if (reportId >= 0xFu) {
                 HeaderLength = 3;
                 PFlag = mflag | 0xF;
@@ -2405,7 +2745,7 @@ HidGetReport(
                 pReportData = pReportDesciptorHeader;
                 if (!pReportDesciptorHeader) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    //RegDebug(L"HidGetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                    RegDebug(L"HidGetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
                     goto exit;
                 }
 
@@ -2421,13 +2761,13 @@ HidGetReport(
                 HeaderLength = 2;
                 PFlag = mflag | reportId;
             }
-            //RegDebug(L"HidGetReport pReportDataHeader=", pReportData, HeaderLength);
+            RegDebug(L"HidGetReport pReportDataHeader=", pReportData, HeaderLength);
 
             RegisterAddressSecond = pDevContext->HidSettings.DataRegisterAddress;
             pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
             if (!pReportDesciptorData) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                //RegDebug(L"HidGetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                RegDebug(L"HidGetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
                 goto exit;
             }
 
@@ -2438,18 +2778,18 @@ HidGetReport(
             if (NT_SUCCESS(status)) {
                 size_t ReportSize = *(PUSHORT)pReportDesciptorData - 2;
                 if (!ReportSize) {
-                    //RegDebug(L"HidGetReport ReportSize err", NULL, (ULONG)ReportSize);
+                    RegDebug(L"HidGetReport ReportSize err", NULL, (ULONG)ReportSize);
                 }
                 else {
                     if (reportBufferLen < ReportSize) {
                         status = STATUS_BUFFER_TOO_SMALL;
-                        //RegDebug(L"HidGetReport ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
+                        RegDebug(L"HidGetReport ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
                         goto exit;
 
                     }
 
                     memmove(pHidPacket, pReportDesciptorData + 2, ReportSize);
-                    //RegDebug(L"HidGetReport pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
+                    RegDebug(L"HidGetReport pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
                     WdfRequestSetInformation(Request, ReportSize);
 
                 }
@@ -2457,7 +2797,7 @@ HidGetReport(
         }
         else {
             status = STATUS_BUFFER_TOO_SMALL;
-            //RegDebug(L"HidGetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
+            RegDebug(L"HidGetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
             goto exit;
         }
 
@@ -2467,7 +2807,7 @@ HidGetReport(
     }
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    //RegDebug(L"HidGetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+    RegDebug(L"HidGetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
 
 exit:
     if (pReportDesciptorData)
@@ -2475,7 +2815,7 @@ exit:
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    //RegDebug(L"HidGetReport end", NULL, status);
+    RegDebug(L"HidGetReport end", NULL, status);
     return status;
 }
 
@@ -2505,14 +2845,14 @@ HidSetReport(
 
     if (RequestParameters.Parameters.DeviceIoControl.InputBufferLength < sizeof(HID_XFER_PACKET)) {
         status = STATUS_INVALID_BUFFER_SIZE;
-        //RegDebug(L"HidSetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        RegDebug(L"HidSetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
         goto exit;
     }
 
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (!pHidPacket) {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"HidSetReport STATUS_INVALID_PARAMETER", NULL, status);
+        RegDebug(L"HidSetReport STATUS_INVALID_PARAMETER", NULL, status);
         goto exit;
     }
 
@@ -2524,7 +2864,7 @@ HidSetReport(
         if (Type) {
             if (Type != 1) {
                 status = STATUS_INVALID_PARAMETER;
-                //RegDebug(L"HidSetReport Type STATUS_INVALID_PARAMETER", NULL, status);
+                RegDebug(L"HidSetReport Type STATUS_INVALID_PARAMETER", NULL, status);
                 goto exit;
             }
 
@@ -2544,7 +2884,7 @@ HidSetReport(
             pReportData = pReportDesciptorHeader;
             if (!pReportDesciptorHeader) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                //RegDebug(L"HidSetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                RegDebug(L"HidSetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
                 goto exit;
             }
 
@@ -2565,7 +2905,7 @@ HidSetReport(
         pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
         if (!pReportDesciptorData) {
             status = STATUS_INSUFFICIENT_RESOURCES;
-            //RegDebug(L"HidSetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+            RegDebug(L"HidSetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
             goto exit;
         }
 
@@ -2580,7 +2920,7 @@ HidSetReport(
     }
     else {
         status = STATUS_BUFFER_TOO_SMALL;
-        //RegDebug(L"HidSetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
+        RegDebug(L"HidSetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
         goto exit;
     }
 
@@ -2590,7 +2930,7 @@ exit:
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    //RegDebug(L"HidSetReport end", NULL, status);
+    RegDebug(L"HidSetReport end", NULL, status);
     return status;
 
 }
@@ -2607,7 +2947,8 @@ OnInterruptIsr(
     NTSTATUS status = STATUS_SUCCESS;
 
     runtimes_OnInterruptIsr++;
-    //RegDebug(L"OnInterruptIsr runtimes_OnInterruptIsr",  NULL, runtimes_OnInterruptIsr);
+    RegDebug(L"OnInterruptIsr runtimes_OnInterruptIsr",  NULL, runtimes_OnInterruptIsr);
+    RegDebug(L"OnInterruptIsr runtimes_hid", NULL, runtimes_hid++);
 
 
     PUSHORT   pInputReportBuffer = NULL;
@@ -2635,19 +2976,91 @@ OnInterruptIsr(
 
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"SpbWritelessRead failed inputRegister", NULL, status);
+        RegDebug(L"SpbWritelessRead failed inputRegister", NULL, status);
         goto exit;
     }
 
     USHORT Actual_HidDescriptorLength = pInputReportBuffer[0];
+
+    // Check if this is a zero length report, which indicates a reset.// Are we expecting a Host Initated Reset?
+    if (*((PUSHORT)pInputReportBuffer) == 0) {
+        if (pDevContext->HostInitiatedResetActive == TRUE) {
+
+            pDevContext->HostInitiatedResetActive = FALSE;
+
+            if (WdfTimerStop(pDevContext->timerHandle, FALSE)) {
+                WdfIoQueueStart(pDevContext->IoctlQueue);
+            }
+
+            RegDebug(L"OnInterruptIsr ok", NULL, status);
+        }
+        else {        
+           // //
+           //// This is a Device Initiated Reset. Then we need to complete
+           //// the Device Reset Notification request if it exists and is 
+           //// still cancelable.
+           ////
+           // BOOLEAN completeRequest = FALSE;
+
+           // WdfSpinLockAcquire(pDevContext->DeviceResetNotificationSpinLock);
+
+           // if (NULL != pDevContext->DeviceResetNotificationRequest)
+           // {
+           //     deviceResetNotificationRequest = pDevContext->DeviceResetNotificationRequest;
+           //     pDevContext->DeviceResetNotificationRequest = NULL;
+
+           //     status = WdfRequestUnmarkCancelable(deviceResetNotificationRequest);
+           //     if (NT_SUCCESS(status))
+           //     {
+           //         completeRequest = TRUE;
+           //     }
+           //     else
+           //     {
+           //         NT_ASSERT(STATUS_CANCELLED == status);
+           //     }
+           // }
+
+           // WdfSpinLockRelease(pDevContext->DeviceResetNotificationSpinLock);
+
+           // if (completeRequest)
+           // {
+           //     status = STATUS_SUCCESS;
+           //     WdfRequestComplete(deviceResetNotificationRequest, status);
+           // }
+           // //---------------------------------------------
+
+
+            //
+            status = WdfIoQueueRetrieveNextRequest(pDevContext->ResetNotificationQueue, &deviceResetNotificationRequest);
+            if (!NT_SUCCESS(status)) {
+                if (status == STATUS_NO_MORE_ENTRIES) {
+                    RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest STATUS_NO_MORE_ENTRIES ", NULL, status);
+                    goto exit;
+                }
+                else {
+                    RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest failed ", NULL, status);
+                }
+            }
+            else {
+                WdfRequestComplete(deviceResetNotificationRequest, status);
+                RegDebug(L"OnInterruptIsr  WdfRequestComplete", NULL, runtimes_OnInterruptIsr);
+            }
+        }
+
+        goto exit;
+    }
+
+    //
     if (*pInputReportBuffer)
     {
-        //RegDebug(L"OnInterruptIsr pInputReportBuffer ", pInputReportBuffer, Actual_HidDescriptorLength);
+ 
+        RegDebug(L"OnInterruptIsr pInputReportBuffer ", pInputReportBuffer, Actual_HidDescriptorLength);
         
         if (pDevContext->HostInitiatedResetActive == TRUE)
         {
             status = STATUS_DEVICE_PROTOCOL_ERROR;
-            //RegDebug(L"Invalid input report returned for Reset command", NULL, status);
+            RegDebug(L"Invalid input report returned for Reset command", NULL, status);
+
             goto exit;
         }
 
@@ -2656,7 +3069,7 @@ OnInterruptIsr(
         if (Actual_inputReportLength <= 0 || (ULONG)Actual_inputReportLength > inputReportMaxLength)
         {
             status = STATUS_DEVICE_PROTOCOL_ERROR;
-            //RegDebug(L"Invalid input report returned inputReportActualLength", NULL, status);
+            RegDebug(L"Invalid input report returned inputReportActualLength", NULL, status);
             goto exit;
         }
 
@@ -2675,30 +3088,30 @@ OnInterruptIsr(
             PTP_REPORT* pCombinedPacket = &pDevContext->combinedPacket;
             RtlCopyMemory(pCurrentPartOfFrame, pBuf, sizeof(HYBRID_REPORT));
 
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
+            RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
 
             if (pCurrentPartOfFrame->ScanTime == pCombinedPacket->ScanTime) {//ÓëÉÏ¸öÊý¾Ý°üÍ¬ÊôÒ»Ö¡
                 //²»ÒªÅÐ¶ÏpCurrentFrame->Confidence && pCurrentFrame->TipSwitchÊÇ·ñÓÐÐ§£¬Ö±½ÓÌí¼ÓÖ¡£¬·ñÔòÓÐ¿ÉÄÜ³öÏÖÎÊÌâ
                 pDevContext->contactCountIndex++;//ºóÐøÖ¡Ë÷ÒýºÅ¼æ¼ÆÊýÆ÷
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
 
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
 
                 if (pDevContext->contactCountIndex == (pCombinedPacket->ContactCount - 1)) {//Ö¡ÄÚ×îºóÒ»¸öÊý¾Ý°ü
-                    //RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
-                    //RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
                     pDevContext->CombinedPacketReady = TRUE;//ºÏ²¢Ö¡½áÊø£¬¿ÉÒÔ·¢ËÍ
                 }
             }
@@ -2707,15 +3120,15 @@ OnInterruptIsr(
                 pDevContext->contactCountIndex = 0;//Ö¡ÄÚË÷ÒýºÅ¼æ¼ÆÊýÆ÷ÖØÖÃ
                 pDevContext->CombinedPacketReady = FALSE;//ºÏ²¢Ö¡Êý¾Ý×´Ì¬ÖØÖÃ
                 pCombinedPacket->ContactCount = pCurrentPartOfFrame->ContactCount;//Ê×Ö¡°üº¬½Ó´¥µãÊýÁ¿
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
                 pCombinedPacket->IsButtonClicked = pCurrentPartOfFrame->IsButtonClicked;
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
+                RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
                 pCombinedPacket->ReportID = pCurrentPartOfFrame->ReportID;
                 //pCombinedPacket->ReportID = FAKE_REPORTID_MULTITOUCH;
                 pCombinedPacket->ScanTime = pCurrentPartOfFrame->ScanTime;
 
                 if (pCombinedPacket->ContactCount == 1) {//ºÏ²¢Ö¡Ö»ÓÐÒ»¸öÊý¾Ý°üÊ±£¬Á¢¼´·¢ËÍ¶ø²»ÐèÒªµÈ´ýÏÂÒ»¸ö·ÖÊý¾Ý°ü
-                    //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
+                    RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
                     pDevContext->CombinedPacketReady = TRUE;//ºÏ²¢Ö¡½áÊø£¬¿ÉÒÔ·¢ËÍÁË
                 }
             }
@@ -2733,19 +3146,19 @@ OnInterruptIsr(
             if (pDevContext->CombinedPacketReady) {//ºÏ²¢Ö¡×¼±¸ºÃÁË,·¢ËÍºÏ²¢Ö¡
                 RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
                 ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-                //RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
+                RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
 
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
 
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
+                RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
                 if (ptpReport.ScanTime > 0x64) {
                     ptpReport.ScanTime = 0x64;
@@ -2765,26 +3178,26 @@ OnInterruptIsr(
             ////·¢ËÍÔ­Ê¼±¨¸æ
             //status = SendOriginalReport(pDevContext, pBuf, Actual_inputReportLength);
             //if (!NT_SUCCESS(status)) {
-            //    //RegDebug(L"OnInterruptIsr SendOriginalReport failed", NULL, runtimes_ioControl);
+            //    RegDebug(L"OnInterruptIsr SendOriginalReport failed", NULL, runtimes_ioControl);
             //}
-            //RegDebug(L"OnInterruptIsr PtpInputModeOn not ready", NULL, runtimes_ioControl);
+            RegDebug(L"OnInterruptIsr PtpInputModeOn not ready", NULL, runtimes_ioControl);
             goto exit;
         }
 
 
         ptpReport = *(PPTP_REPORT)pBuf;
         ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
 
-        //RegDebug(L"OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+        RegDebug(L"OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
+        RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
 
 
@@ -2794,22 +3207,22 @@ parse:
             if (ptpReport.IsButtonClicked) {
                 //ÐèÒª½øÐÐÀë¿ªÅÐ¶¨£¬·ñÔò±¾´Î»òÏÂ´Î½øÈëMouseLikeTouchPad½âÎöÆ÷ºó¹ØÏµbPhysicalButtonUp»¹»á±»ÄÚ²¿µÄ´úÂë¶ÎÖ´ÐÐÔì³ÉÎ´ÖªÎÊÌâ
                 tps->bPhysicalButtonUp = FALSE;
-                //RegDebug(L"OnInterruptIsr bPhysicalButtonUp FALSE", NULL, FALSE);
+                RegDebug(L"OnInterruptIsr bPhysicalButtonUp FALSE", NULL, FALSE);
             }
             else {
                 if (!tps->bPhysicalButtonUp) {
                     tps->bPhysicalButtonUp = TRUE;
-                    //RegDebug(L"OnInterruptIsr bPhysicalButtonUp TRUE", NULL, TRUE);
+                    RegDebug(L"OnInterruptIsr bPhysicalButtonUp TRUE", NULL, TRUE);
 
                     if (ptpReport.ContactCount == 4 && !pDevContext->bMouseLikeTouchPad_Mode) {//ËÄÖ¸°´Ñ¹´¥¿Ø°åÎïÀí°´¼üÊ±£¬ÇÐ»»»Ø·ÂÊó±êÊ½´¥Ãþ°åÄ£Ê½£¬
                         pDevContext->bMouseLikeTouchPad_Mode = TRUE;
-                        //RegDebug(L"OnInterruptIsr bMouseLikeTouchPad_Mode TRUE", NULL, status);
+                        RegDebug(L"OnInterruptIsr bMouseLikeTouchPad_Mode TRUE", NULL, status);
 
                         //ÇÐ»»»Ø·ÂÊó±êÊ½´¥Ãþ°åÄ£Ê½µÄÍ¬Ê±Ò²»Ö¸´¹öÂÖ¹¦ÄÜºÍÊµÏÖ·½Ê½
                         pDevContext->bWheelDisabled = FALSE;
-                        //RegDebug(L"OnInterruptIsr bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                        RegDebug(L"OnInterruptIsr bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
                         pDevContext->bWheelScrollMode = FALSE;
-                        //RegDebug(L"OnInterruptIsr bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                        RegDebug(L"OnInterruptIsr bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
                     }
                 }
             }
@@ -2817,7 +3230,7 @@ parse:
             //windowsÔ­°æµÄPTP¾«È·Ê½´¥Ãþ°å²Ù×÷·½Ê½£¬Ö±½Ó·¢ËÍPTP±¨¸æ
             status = SendPtpMultiTouchReport(pDevContext, &ptpReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
+                RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
             }
            
         }
@@ -2826,39 +3239,18 @@ parse:
             MouseLikeTouchPad_parse(pDevContext, &ptpReport);
         }
 
-        //RegDebug(L"OnInterruptIsr SendReport end", NULL, runtimes_ioControl);
+        RegDebug(L"OnInterruptIsr SendReport end", NULL, runtimes_ioControl);
         goto exit;
 
     }
 
-    if (pDevContext->HostInitiatedResetActive == TRUE) {
+    
+    
 
-        pDevContext->HostInitiatedResetActive = FALSE;
-        WdfIoQueueStart(pDevContext->IoctlQueue);
-
-        //RegDebug(L"OnInterruptIsr ok", NULL, status);
-    }
-    else {
-
-        status = WdfIoQueueRetrieveNextRequest(pDevContext->ResetNotificationQueue, &deviceResetNotificationRequest);
-        if (!NT_SUCCESS(status)) {
-            if (status == STATUS_NO_MORE_ENTRIES) {
-                //RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest STATUS_NO_MORE_ENTRIES ", NULL, status);
-                goto exit;
-            }
-            else {
-                //RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest failed ", NULL, status);
-            }
-        }
-        else {
-            WdfRequestComplete(deviceResetNotificationRequest, status);
-            //RegDebug(L"OnInterruptIsr  WdfRequestComplete", NULL, runtimes_OnInterruptIsr);
-        }
-    }
    
 
 exit:
-    ////RegDebug(L"OnInterruptIsr end", NULL, status);
+    //RegDebug(L"OnInterruptIsr end", NULL, status);
     return TRUE;
 }
 
@@ -2897,19 +3289,19 @@ PowerIdleIrpWorkitem(
     {
         //
         NT_ASSERTMSG("WdfRequestForwardToIoQueue to IdleQueue failed!", FALSE);
-        //RegDebug(L"PowerIdleIrpWorkitem WdfRequestForwardToIoQueue IdleQueue failed", NULL, status);
+        RegDebug(L"PowerIdleIrpWorkitem WdfRequestForwardToIoQueue IdleQueue failed", NULL, status);
 
         WdfRequestComplete(pWorkItemContext->FxRequest, status);
     }
     else
     {
-        //RegDebug(L"Forwarded idle notification Request to IdleQueue", NULL, status);
+        RegDebug(L"Forwarded idle notification Request to IdleQueue", NULL, status);
     }
 
 
     WdfObjectDelete(IdleWorkItem);
 
-    //RegDebug(L"PowerIdleIrpWorkitem end", NULL, status);
+    RegDebug(L"PowerIdleIrpWorkitem end", NULL, status);
     return;
 }
 
@@ -2929,16 +3321,16 @@ PowerIdleIrpCompletion(
 
         if (!NT_SUCCESS(status) || (request == NULL))
         {
-            //RegDebug(L"WdfIoQueueRetrieveNextRequest failed to find idle notification request in IdleQueue", NULL, status);
+            RegDebug(L"WdfIoQueueRetrieveNextRequest failed to find idle notification request in IdleQueue", NULL, status);//STATUS_NO_MORE_ENTRIES
         }
         else
         {
             WdfRequestComplete(request, status);
-            //RegDebug(L"Completed idle notification Request from IdleQueue", NULL, status);
+            RegDebug(L"Completed idle notification Request from IdleQueue", NULL, status);
         }
     }
 
-    //RegDebug(L"PowerIdleIrpCompletion end", NULL, status);
+    RegDebug(L"PowerIdleIrpCompletion end", NULL, status);//
     return;
 }
 
@@ -2966,7 +3358,7 @@ PtpReportFeatures(
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength < sizeof(HID_XFER_PACKET))
     {
-        //RegDebug(L"STATUS_BUFFER_TOO_SMALL", NULL, 0x12345678);
+        RegDebug(L"STATUS_BUFFER_TOO_SMALL", NULL, 0x12345678);
         Status = STATUS_BUFFER_TOO_SMALL;
         goto exit;
     }
@@ -2974,7 +3366,7 @@ PtpReportFeatures(
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (pHidPacket == NULL)
     {
-        //RegDebug(L"STATUS_INVALID_DEVICE_REQUEST", NULL, 0x12345678);
+        RegDebug(L"STATUS_INVALID_DEVICE_REQUEST", NULL, 0x12345678);
         Status = STATUS_INVALID_DEVICE_REQUEST;
         goto exit;
     }
@@ -2984,7 +3376,7 @@ PtpReportFeatures(
             ReportSize = sizeof(PTP_DEVICE_CAPS_FEATURE_REPORT);
             if (pHidPacket->reportBufferLen < ReportSize) {
                 Status = STATUS_INVALID_BUFFER_SIZE;
-                //RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
+                RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
                 goto exit;
             }
 
@@ -2993,9 +3385,9 @@ PtpReportFeatures(
             capsReport->MaximumContactPoints = PTP_MAX_CONTACT_POINTS;// pDevContext->CONTACT_COUNT_MAXIMUM;// PTP_MAX_CONTACT_POINTS;
             capsReport->ButtonType = PTP_BUTTON_TYPE_CLICK_PAD;// pDevContext->PAD_TYPE;// PTP_BUTTON_TYPE_CLICK_PAD;
             capsReport->ReportID = FAKE_REPORTID_DEVICE_CAPS;// pDevContext->REPORTID_DEVICE_CAPS;//FAKE_REPORTID_DEVICE_CAPS
-            //RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_DEVICE_CAPS", NULL, pHidPacket->reportId);
-            //RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS MaximumContactPoints", NULL, capsReport->MaximumContactPoints);
-            //RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS REPORTID_DEVICE_CAPS ButtonType", NULL, capsReport->ButtonType);
+            RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_DEVICE_CAPS", NULL, pHidPacket->reportId);
+            RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS MaximumContactPoints", NULL, capsReport->MaximumContactPoints);
+            RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS REPORTID_DEVICE_CAPS ButtonType", NULL, capsReport->ButtonType);
     }
     else if (reportId == FAKE_REPORTID_PTPHQA) {//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             // Size sanity check
@@ -3003,7 +3395,7 @@ PtpReportFeatures(
             if (pHidPacket->reportBufferLen < ReportSize)
             {
                 Status = STATUS_INVALID_BUFFER_SIZE;
-                //RegDebug(L"PtpGetFeatures REPORTID_PTPHQA STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
+                RegDebug(L"PtpGetFeatures REPORTID_PTPHQA STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
                 goto exit;
             }
 
@@ -3013,18 +3405,18 @@ PtpReportFeatures(
             certReport->ReportID = FAKE_REPORTID_PTPHQA;//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             pDevContext->PtpInputModeOn = TRUE;//²âÊÔ
 
-            //RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_PTPHQA", NULL, pHidPacket->reportId);
+            RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_PTPHQA", NULL, pHidPacket->reportId);
 
     }
     else{
 
             Status = STATUS_NOT_SUPPORTED;
-            //RegDebug(L"PtpGetFeatures pHidPacket->reportId STATUS_NOT_SUPPORTED", NULL, pHidPacket->reportId);
+            RegDebug(L"PtpGetFeatures pHidPacket->reportId STATUS_NOT_SUPPORTED", NULL, pHidPacket->reportId);
             goto exit;
     }
     
     WdfRequestSetInformation(Request, ReportSize);
-    //RegDebug(L"PtpGetFeatures STATUS_SUCCESS pDeviceContext->PtpInputOn", NULL, pDevContext->PtpInputModeOn);
+    RegDebug(L"PtpGetFeatures STATUS_SUCCESS pDeviceContext->PtpInputOn", NULL, pDevContext->PtpInputModeOn);
 
 
 exit:
@@ -3059,17 +3451,17 @@ HidGetFeature(
     WdfRequestGetParameters(Request, &RequestParameters);
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength >= sizeof(HID_XFER_PACKET)) {
-        //RegDebug(L"HidGetFeature OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
-        //RegDebug(L"HidGetFeature Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
+        RegDebug(L"HidGetFeature OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
+        RegDebug(L"HidGetFeature Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
         pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
         if (!pHidPacket) {
             status = STATUS_INVALID_PARAMETER;
-            //RegDebug(L"HidGetFeature STATUS_INVALID_PARAMETER", NULL, status);
+            RegDebug(L"HidGetFeature STATUS_INVALID_PARAMETER", NULL, status);
             goto exit;
         }
-        //RegDebug(L"HidGetFeature pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
-        //RegDebug(L"HidGetFeature pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
-        //RegDebug(L"HidGetFeature pHidPacket->reportId=", NULL, pHidPacket->reportId);
+        RegDebug(L"HidGetFeature pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
+        RegDebug(L"HidGetFeature pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
+        RegDebug(L"HidGetFeature pHidPacket->reportId=", NULL, pHidPacket->reportId);
 
         reportBufferLen = pHidPacket->reportBufferLen;
         if (reportBufferLen) {
@@ -3079,7 +3471,7 @@ HidGetFeature(
             if (Type) {
                 if (Type != 2) {
                     status = STATUS_INVALID_PARAMETER;
-                    //RegDebug(L"HidGetFeature Type STATUS_INVALID_PARAMETER", NULL, status);
+                    RegDebug(L"HidGetFeature Type STATUS_INVALID_PARAMETER", NULL, status);
                     goto exit;
                 }
 
@@ -3092,13 +3484,13 @@ HidGetFeature(
 
             UCHAR reportId = pHidPacket->reportId;
             if (reportId == pDevContext->REPORTID_DEVICE_CAPS) {
-                //RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS reportId=", NULL, reportId);
+                RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS reportId=", NULL, reportId);
             }
             else if (reportId == pDevContext->REPORTID_PTPHQA) {
-                //RegDebug(L"HidGetFeature REPORTID_PTPHQA reportId=", NULL, reportId);
+                RegDebug(L"HidGetFeature REPORTID_PTPHQA reportId=", NULL, reportId);
             }
             else {
-                //RegDebug(L"HidGetFeature Not Support reportId=", NULL, reportId);
+                RegDebug(L"HidGetFeature Not Support reportId=", NULL, reportId);
             }
             if (reportId >= 0xFu) {
                 HeaderLength = 3;
@@ -3108,7 +3500,7 @@ HidGetFeature(
                 pReportData = pReportDesciptorHeader;
                 if (!pReportDesciptorHeader) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    //RegDebug(L"HidGetFeature pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                    RegDebug(L"HidGetFeature pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
                     goto exit;
                 }
 
@@ -3124,13 +3516,13 @@ HidGetFeature(
                 HeaderLength = 2;
                 PFlag = mflag | reportId;
             }
-            //RegDebug(L"HidGetFeature pReportDataHeader=", pReportData, HeaderLength);
+            RegDebug(L"HidGetFeature pReportDataHeader=", pReportData, HeaderLength);
 
             RegisterAddressSecond = pDevContext->HidSettings.DataRegisterAddress;
             pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
             if (!pReportDesciptorData) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                //RegDebug(L"HidGetFeature pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                RegDebug(L"HidGetFeature pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
                 goto exit;
             }
 
@@ -3141,26 +3533,26 @@ HidGetFeature(
             if (NT_SUCCESS(status)) {
                 size_t ReportSize = *(PUSHORT)pReportDesciptorData - 2;
                 if (!ReportSize) {
-                    //RegDebug(L"HidGetFeature ReportSize err", NULL, (ULONG)ReportSize);
+                    RegDebug(L"HidGetFeature ReportSize err", NULL, (ULONG)ReportSize);
                 }
                 else {
                     if (reportBufferLen < ReportSize) {
                         status = STATUS_BUFFER_TOO_SMALL;
-                        //RegDebug(L"HidGetFeature ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
+                        RegDebug(L"HidGetFeature ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
                         goto exit;
 
                     }
 
                     memmove(pHidPacket, pReportDesciptorData + 2, ReportSize);
-                    //RegDebug(L"HidGetFeature pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
+                    RegDebug(L"HidGetFeature pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
                     if (reportId == pDevContext->REPORTID_DEVICE_CAPS) {
-                        //RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
                     }
                     else if (reportId == pDevContext->REPORTID_PTPHQA) {
-                        //RegDebug(L"HidGetFeature REPORTID_PTPHQA pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        RegDebug(L"HidGetFeature REPORTID_PTPHQA pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
                     }
                     else {
-                        //RegDebug(L"HidGetFeature Not Support pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        RegDebug(L"HidGetFeature Not Support pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
                     }
                     WdfRequestSetInformation(Request, ReportSize);
 
@@ -3169,7 +3561,7 @@ HidGetFeature(
         }
         else {
             status = STATUS_BUFFER_TOO_SMALL;
-            //RegDebug(L"HidGetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
+            RegDebug(L"HidGetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
             goto exit;
         }
 
@@ -3179,7 +3571,7 @@ HidGetFeature(
     }
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    //RegDebug(L"HidGetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
+    RegDebug(L"HidGetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
 
 exit:
     if (pReportDesciptorData)
@@ -3187,7 +3579,7 @@ exit:
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    //RegDebug(L"HidGetFeature end", NULL, status);
+    RegDebug(L"HidGetFeature end", NULL, status);
     return status;
 
 }
@@ -3223,21 +3615,21 @@ HidSetFeature(
 
     if (RequestParameters.Parameters.DeviceIoControl.InputBufferLength < sizeof(HID_XFER_PACKET)) {
         status = STATUS_INVALID_BUFFER_SIZE;
-        //RegDebug(L"HidSetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        RegDebug(L"HidSetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
         goto exit;
     }
 
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (!pHidPacket) {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"HidSetFeature STATUS_INVALID_PARAMETER", NULL, status);
+        RegDebug(L"HidSetFeature STATUS_INVALID_PARAMETER", NULL, status);
         goto exit;
     }
 
     ULONG reportBufferLen = pHidPacket->reportBufferLen;
     if (!reportBufferLen) {
         status = STATUS_BUFFER_TOO_SMALL;
-        //RegDebug(L"HidSetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
+        RegDebug(L"HidSetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
         goto exit;
     }
 
@@ -3246,17 +3638,17 @@ HidSetFeature(
         reportID = pDevContext->REPORTID_INPUT_MODE;//Ìæ»»ÎªÕæÊµÖµ
         reportDataSize = pDevContext->REPORTSIZE_INPUT_MODE;
         reportData = PTP_COLLECTION_WINDOWS;
-        ////RegDebug(L"HidSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
+        //RegDebug(L"HidSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
     }
     else if (reportId == FAKE_REPORTID_FUNCTION_SWITCH) {//FAKE_REPORTID_FUNCTION_SWITCH
         reportID = pDevContext->REPORTID_FUNCTION_SWITCH;//Ìæ»»ÎªÕæÊµÖµ
         reportDataSize = pDevContext->REPORTSIZE_FUNCTION_SWITCH;
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
-        ////RegDebug(L"HidSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
+        //RegDebug(L"HidSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
     }
     else {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"HidSetFeature reportId err", NULL, status);
+        RegDebug(L"HidSetFeature reportId err", NULL, status);
         goto exit;
     }
 
@@ -3266,20 +3658,20 @@ HidSetFeature(
         pReportHeaderData = HeaderData3;
         *(PUSHORT)pReportHeaderData = 0x033F;//0x0330 | 0xF
         pReportHeaderData[2] = reportID;
-        //RegDebug(L"HidSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        RegDebug(L"HidSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
     }
     else {
         HeaderLength = 2;
         pReportHeaderData = HeaderData2;
         *(PUSHORT)pReportHeaderData = 0x0330 | reportID;   //USHORT×ó±ß×Ö½ÚÎªµÍÎ»LowByteÓÒ±ß×Ö½ÚÎª¸ßÎ»HighByte,
-        //RegDebug(L"HidSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        RegDebug(L"HidSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
     }
 
     reportLength = 3 + reportDataSize;
     pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     if (!pFeatureReportData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"HidSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+        RegDebug(L"HidSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
         goto exit;
     }
 
@@ -3289,10 +3681,10 @@ HidSetFeature(
     pFeatureReportData[3] = reportData;//PTP_COLLECTION_WINDOWS»òÕßPTP_SELECTIVE_REPORT_Button_Surface_ON
 
     if (reportID == pDevContext->REPORTID_INPUT_MODE) {//SetType== PTP_FEATURE_INPUT_COLLECTION
-        //RegDebug(L"HidSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
+        RegDebug(L"HidSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
     }
     else if (reportID == pDevContext->REPORTID_FUNCTION_SWITCH){//SetType== PTP_FEATURE_SELECTIVE_REPORTING
-        //RegDebug(L"HidSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
+        RegDebug(L"HidSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
     }
 
     RegisterAddressFirst = pDevContext->HidSettings.CommandRegisterAddress;
@@ -3300,7 +3692,7 @@ HidSetFeature(
 
     status = SpbWriteWrite(pDevContext->SpbIoTarget, RegisterAddressFirst, pReportHeaderData, HeaderLength, RegisterAddressSecond, pFeatureReportData, reportLength);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"HidSetFeature SpbWriteWrite err", NULL, status);
+        RegDebug(L"HidSetFeature SpbWriteWrite err", NULL, status);
     }
     WdfRequestSetInformation(Request, reportDataSize);
     if (reportID == pDevContext->REPORTID_INPUT_MODE) {//SetType== PTP_FEATURE_INPUT_COLLECTION
@@ -3312,7 +3704,7 @@ HidSetFeature(
     
     if (pDevContext->SetInputModeOK && pDevContext->SetFunSwicthOK) {
         pDevContext->PtpInputModeOn = TRUE;
-        //RegDebug(L"HidSetFeature PtpInputModeOn=", NULL, pDevContext->PtpInputModeOn);
+        RegDebug(L"HidSetFeature PtpInputModeOn=", NULL, pDevContext->PtpInputModeOn);
     }
 
 exit:
@@ -3320,7 +3712,7 @@ exit:
         ExFreePoolWithTag(pFeatureReportData, HIDI2C_POOL_TAG);
     }
 
-    //RegDebug(L"HidSetFeature end", NULL, status);
+    RegDebug(L"HidSetFeature end", NULL, status);
     return status;
 }
 
@@ -3349,13 +3741,13 @@ PtpSetFeature(
         reportID = pDevContext->REPORTID_INPUT_MODE;////reportID//yoga14sÎª0x04,matebookÎª0x03
         reportDataSize = pDevContext->REPORTSIZE_INPUT_MODE;
         reportData = PTP_COLLECTION_WINDOWS;
-        //RegDebug(L"PtpSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
+        RegDebug(L"PtpSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
     }
     else {//SetType== PTP_FEATURE_SELECTIVE_REPORTING
         reportID = pDevContext->REPORTID_FUNCTION_SWITCH;////reportID//yoga14sÎª0x06,matebookÎª0x05
         reportDataSize = pDevContext->REPORTSIZE_FUNCTION_SWITCH;
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
-        //RegDebug(L"PtpSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
+        RegDebug(L"PtpSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
     }
     
     if (reportID >= 0xFu) {
@@ -3363,26 +3755,26 @@ PtpSetFeature(
         pReportHeaderData = HeaderData3;
         *(PUSHORT)pReportHeaderData = 0x033F;//0x0330 | 0xF
         pReportHeaderData[2] = reportID;
-        //RegDebug(L"PtpSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        RegDebug(L"PtpSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
     }
     else {
         HeaderLength = 2;
         pReportHeaderData = HeaderData2;
         *(PUSHORT)pReportHeaderData = 0x0330 | reportID;   //USHORT×ó±ß×Ö½ÚÎªµÍÎ»LowByteÓÒ±ß×Ö½ÚÎª¸ßÎ»HighByte,
-        //RegDebug(L"PtpSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        RegDebug(L"PtpSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
     }
 
 
     //USHORT hxp_size = sizeof(HID_XFER_PACKET);
-    ////RegDebug(L"PtpSetFeature hxp_size=", NULL, hxp_size);
+    //RegDebug(L"PtpSetFeature hxp_size=", NULL, hxp_size);
 
     //reportLength = (USHORT)(hxp_size + reportDataSize + 2);
-    ////RegDebug(L"PtpSetFeature reportLength=", NULL, reportLength);
+    //RegDebug(L"PtpSetFeature reportLength=", NULL, reportLength);
 
     //pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     //if (!pFeatureReportData) {
     //    status = STATUS_INSUFFICIENT_RESOURCES;
-    //    //RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+    //    RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
     //    goto exit;
     //}
     //
@@ -3393,12 +3785,12 @@ PtpSetFeature(
     //hxp->reportBufferLen = reportDataSize;
     //hxp->reportId = reportID;
     //hxp->reportBuffer[0] = reportData; // 
-    ////RegDebug(L"PtpSetFeature hxp->reportId=", NULL, hxp->reportId);
+    //RegDebug(L"PtpSetFeature hxp->reportId=", NULL, hxp->reportId);
 
     //RtlZeroMemory(pFeatureReportData, reportLength);
     //*(PUSHORT)pFeatureReportData = reportLength;
     //RtlCopyMemory(pFeatureReportData + 2, hxp, reportLength - 2);
-    ////RegDebug(L"PtpSetFeature pFeatureReportData=", pFeatureReportData, reportLength);
+    //RegDebug(L"PtpSetFeature pFeatureReportData=", pFeatureReportData, reportLength);
 
 
 
@@ -3406,7 +3798,7 @@ PtpSetFeature(
     pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     if (!pFeatureReportData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+        RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
         goto exit;
     }
 
@@ -3416,10 +3808,10 @@ PtpSetFeature(
     pFeatureReportData[3] = reportData;//PTP_COLLECTION_WINDOWS»òÕßPTP_SELECTIVE_REPORT_Button_Surface_ON
 
     if (SetType == PTP_FEATURE_INPUT_COLLECTION) {
-        //RegDebug(L"PtpSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
+        RegDebug(L"PtpSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
     }
     else {//SetType== PTP_FEATURE_SELECTIVE_REPORTING
-        //RegDebug(L"PtpSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
+        RegDebug(L"PtpSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
     }
 
     RegisterAddressFirst = pDevContext->HidSettings.CommandRegisterAddress;
@@ -3427,7 +3819,7 @@ PtpSetFeature(
 
     status = SpbWriteWrite(pDevContext->SpbIoTarget, RegisterAddressFirst, pReportHeaderData, HeaderLength, RegisterAddressSecond, pFeatureReportData, reportLength);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"PtpSetFeature SpbWriteWrite err", NULL, status);
+        RegDebug(L"PtpSetFeature SpbWriteWrite err", NULL, status);
     }
 
 exit:
@@ -3435,7 +3827,7 @@ exit:
         ExFreePoolWithTag(pFeatureReportData, HIDI2C_POOL_TAG);
     }
 
-    //RegDebug(L"PtpSetFeature end", NULL, status);
+    RegDebug(L"PtpSetFeature end", NULL, status);
     return status;
 
 }
@@ -3446,7 +3838,7 @@ GetReportDescriptor(
     PDEVICE_CONTEXT pDevContext
 )
 {
-    //RegDebug(L"GetReportDescriptor start", NULL, runtimes_ioControl);
+    RegDebug(L"GetReportDescriptor start", NULL, runtimes_ioControl);
 
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -3456,7 +3848,7 @@ GetReportDescriptor(
     PBYTE pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, ReportLength, HIDI2C_POOL_TAG);
     if (!pReportDesciptorData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        //RegDebug(L"GetReportDescriptor ExAllocatePoolWithTag failed", NULL, status);
+        RegDebug(L"GetReportDescriptor ExAllocatePoolWithTag failed", NULL, status);
         return status;
     }
 
@@ -3464,12 +3856,12 @@ GetReportDescriptor(
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, pReportDesciptorData, ReportLength, DelayUs, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///Ô­ÏÈµ¥Î»ÎªÃëÌ«´ó¸ÄÎªms
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"GetReportDescriptor SpbRead failed", NULL, status);
+        RegDebug(L"GetReportDescriptor SpbRead failed", NULL, status);
         return status;
     }
 
     pDevContext->pReportDesciptorData = pReportDesciptorData;
-    //RegDebug(L"GetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
+    RegDebug(L"GetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
 
     return status;
 }
@@ -3483,7 +3875,7 @@ AnalyzeHidReportDescriptor(
     NTSTATUS status = STATUS_SUCCESS;
     PBYTE descriptor = pDevContext->pReportDesciptorData;
     if (!descriptor) {
-        //RegDebug(L"AnalyzeHidReportDescriptor pReportDesciptorData err", NULL, status);
+        RegDebug(L"AnalyzeHidReportDescriptor pReportDesciptorData err", NULL, status);
         return STATUS_UNSUCCESSFUL;
     }
 
@@ -3519,17 +3911,17 @@ AnalyzeHidReportDescriptor(
             if (depth == 1 && usagePage == HID_USAGE_PAGE_DIGITIZER && lastUsage == HID_USAGE_CONFIGURATION) {
                 inConfigTlc = true;
                 lastCollection = HID_USAGE_CONFIGURATION;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc", NULL, 0);
             }
             else if (depth == 1 && usagePage == HID_USAGE_PAGE_DIGITIZER && lastUsage == HID_USAGE_DIGITIZER_TOUCH_PAD) {
                 inTouchTlc = true;
                 lastCollection = HID_USAGE_DIGITIZER_TOUCH_PAD;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc", NULL, 0);
             }
             else if (depth == 1 && usagePage == HID_USAGE_PAGE_GENERIC && lastUsage == HID_USAGE_GENERIC_MOUSE) {
                 inMouseTlc = true;
                 lastCollection = HID_USAGE_GENERIC_MOUSE;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc", NULL, 0);
             }
         }
         else if (type == HID_TYPE_END_COLLECTION) {
@@ -3538,15 +3930,15 @@ AnalyzeHidReportDescriptor(
             //ÏÂÃæ3¸öTlc×´Ì¬¸üÐÂÊÇÓÐ±ØÒªµÄ£¬¿ÉÒÔ·ÀÖ¹ºóÐøÏà¹Ø¼¯ºÏTlc´íÎóÅÐ¶¨·¢Éú
             if (depth == 0 && inConfigTlc) {
                 inConfigTlc = false;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc end", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc end", NULL, 0);
             }
             else if (depth == 0 && inTouchTlc) {
                 inTouchTlc = false;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc end", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc end", NULL, 0);
             }
             else if (depth == 0 && inMouseTlc) {
                 inMouseTlc = false;
-                ////RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc end", NULL, 0);
+                //RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc end", NULL, 0);
             }
 
         }
@@ -3592,44 +3984,44 @@ AnalyzeHidReportDescriptor(
 
         else if (inTouchTlc && depth == 2 && lastCollection == HID_USAGE_DIGITIZER_TOUCH_PAD  && lastUsage == HID_USAGE_DIGITIZER_FINGER) {//
             pDevContext->REPORTID_MULTITOUCH_COLLECTION = reportId;
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MULTITOUCH_COLLECTION=", NULL, pDevContext->REPORTID_MULTITOUCH_COLLECTION);
+            RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MULTITOUCH_COLLECTION=", NULL, pDevContext->REPORTID_MULTITOUCH_COLLECTION);
 
             //ÕâÀï¼ÆËãµ¥¸ö±¨¸æÊý¾Ý°üµÄÊÖÖ¸ÊýÁ¿ÓÃÀ´ºóÐøÅÐ¶Ï±¨¸æÄ£Ê½¼°bHybrid_ReportingModeµÄ¸³Öµ
             pDevContext->DeviceDescriptorFingerCount++;
-            //RegDebug(L"AnalyzeHidReportDescriptor DeviceDescriptorFingerCount=", NULL, pDevContext->DeviceDescriptorFingerCount);
+            RegDebug(L"AnalyzeHidReportDescriptor DeviceDescriptorFingerCount=", NULL, pDevContext->DeviceDescriptorFingerCount);
         }
         else if (inMouseTlc && depth == 2 && lastCollection == HID_USAGE_GENERIC_MOUSE  && lastUsage == HID_USAGE_GENERIC_POINTER) {
             //ÏÂ²ãµÄMouse¼¯ºÏreport±¾Çý¶¯²¢²»»á¶ÁÈ¡£¬Ö»ÊÇ×÷ÎªÊä³öµ½ÉÏ²ãÀàÇý¶¯µÄReportÊ¹ÓÃ
             pDevContext->REPORTID_MOUSE_COLLECTION = reportId;
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MOUSE_COLLECTION=", NULL, pDevContext->REPORTID_MOUSE_COLLECTION);
+            RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MOUSE_COLLECTION=", NULL, pDevContext->REPORTID_MOUSE_COLLECTION);
         }
         else if (inConfigTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_INPUT_MODE) {
             pDevContext->REPORTSIZE_INPUT_MODE = (reportSize + 7) / 8;//±¨¸æÊý¾Ý×Ü³¤¶È
             pDevContext->REPORTID_INPUT_MODE = reportId;
-           // //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_INPUT_MODE=", NULL, pDevContext->REPORTID_INPUT_MODE);
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_INPUT_MODE=", NULL, pDevContext->REPORTSIZE_INPUT_MODE);
+           // RegDebug(L"AnalyzeHidReportDescriptor REPORTID_INPUT_MODE=", NULL, pDevContext->REPORTID_INPUT_MODE);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_INPUT_MODE=", NULL, pDevContext->REPORTSIZE_INPUT_MODE);
             continue;
         }
         else if (inConfigTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_SURFACE_SWITCH || lastUsage == HID_USAGE_BUTTON_SWITCH) {
             //Ä¬ÈÏ±ê×¼¹æ·¶ÎªHID_USAGE_SURFACE_SWITCHÓëHID_USAGE_BUTTON_SWITCH¸÷1bit×éºÏµÍÎ»³É1¸ö×Ö½ÚHID_USAGE_FUNCTION_SWITCH±¨¸æ
             pDevContext->REPORTSIZE_FUNCTION_SWITCH = (reportSize + 7) / 8;//±¨¸æÊý¾Ý×Ü³¤¶È
             pDevContext->REPORTID_FUNCTION_SWITCH = reportId;
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTID_FUNCTION_SWITCH=", NULL, pDevContext->REPORTID_FUNCTION_SWITCH);
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_FUNCTION_SWITCH=", NULL, pDevContext->REPORTSIZE_FUNCTION_SWITCH);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_FUNCTION_SWITCH=", NULL, pDevContext->REPORTID_FUNCTION_SWITCH);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_FUNCTION_SWITCH=", NULL, pDevContext->REPORTSIZE_FUNCTION_SWITCH);
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_CONTACT_COUNT_MAXIMUM || lastUsage == HID_USAGE_PAD_TYPE) {
             //Ä¬ÈÏ±ê×¼¹æ·¶ÎªHID_USAGE_CONTACT_COUNT_MAXIMUMÓëHID_USAGE_PAD_TYPE¸÷4bit×éºÏµÍÎ»³É1¸ö×Ö½ÚHID_USAGE_DEVICE_CAPS±¨¸æ
             pDevContext->REPORTSIZE_DEVICE_CAPS = (reportSize + 7) / 8;//±¨¸æÊý¾Ý×Ü³¤¶È
             pDevContext->REPORTID_DEVICE_CAPS = reportId;
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_DEVICE_CAPS=", NULL, pDevContext->REPORTSIZE_DEVICE_CAPS);
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTID_DEVICE_CAPS=", NULL, pDevContext->REPORTID_DEVICE_CAPS);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_DEVICE_CAPS=", NULL, pDevContext->REPORTSIZE_DEVICE_CAPS);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_DEVICE_CAPS=", NULL, pDevContext->REPORTID_DEVICE_CAPS);
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_PAGE_VENDOR_DEFINED_DEVICE_CERTIFICATION) {
             pDevContext->REPORTSIZE_PTPHQA = 256;
             pDevContext->REPORTID_PTPHQA = reportId;
-            ////RegDebug(L"AnalyzeHidReportDescriptor REPORTID_PTPHQA=", NULL, pDevContext->REPORTID_PTPHQA);
+            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_PTPHQA=", NULL, pDevContext->REPORTID_PTPHQA);
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_INPUT && lastUsage == HID_USAGE_X) {
@@ -3637,10 +4029,10 @@ AnalyzeHidReportDescriptor(
             tp->logicalMax_X = logicalMax;
             tp->unitExp = UnitExponent_Table[unitExp];
             tp->unit = unit;
-            ////RegDebug(L"AnalyzeHidReportDescriptor physicalMax_X=", NULL, tp->physicalMax_X);
-            ////RegDebug(L"AnalyzeHidReportDescriptor logicalMax_X=", NULL, tp->logicalMax_X);
-            ////RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
-            ////RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
+            //RegDebug(L"AnalyzeHidReportDescriptor physicalMax_X=", NULL, tp->physicalMax_X);
+            //RegDebug(L"AnalyzeHidReportDescriptor logicalMax_X=", NULL, tp->logicalMax_X);
+            //RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
+            //RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_INPUT && lastUsage == HID_USAGE_Y) {
@@ -3648,10 +4040,10 @@ AnalyzeHidReportDescriptor(
             tp->logicalMax_Y = logicalMax;
             tp->unitExp = UnitExponent_Table[unitExp];
             tp->unit = unit;
-            ////RegDebug(L"AnalyzeHidReportDescriptor physicalMax_Y=", NULL, tp->physicalMax_Y);
-            ////RegDebug(L"AnalyzeHidReportDescriptor logicalMax_Y=", NULL, tp->logicalMax_Y);
-            ////RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
-           // //RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
+            //RegDebug(L"AnalyzeHidReportDescriptor physicalMax_Y=", NULL, tp->physicalMax_Y);
+            //RegDebug(L"AnalyzeHidReportDescriptor logicalMax_Y=", NULL, tp->logicalMax_Y);
+            //RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
+           // RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
             continue;
         }
     }
@@ -3659,7 +4051,7 @@ AnalyzeHidReportDescriptor(
     //ÅÐ¶Ï´¥Ãþ°å±¨¸æÄ£Ê½
     if (pDevContext->DeviceDescriptorFingerCount < 5) {//5¸öÊÖÖ¸Êý¾ÝÒÔÏÂ
         pDevContext->bHybrid_ReportingMode = TRUE;//»ìºÏ±¨¸æÄ£Ê½È·ÈÏ
-        //RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+        RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
     }
 
 
@@ -3675,18 +4067,18 @@ AnalyzeHidReportDescriptor(
     }
     
     if (!tp->physical_Width_mm) {
-        ////RegDebug(L"AnalyzeHidReportDescriptor physical_Width_mm err", NULL, 0);
+        //RegDebug(L"AnalyzeHidReportDescriptor physical_Width_mm err", NULL, 0);
         return STATUS_UNSUCCESSFUL;
     }
     if (!tp->physical_Height_mm) {
-        ////RegDebug(L"AnalyzeHidReportDescriptor physical_Height_mm err", NULL, 0);
+        //RegDebug(L"AnalyzeHidReportDescriptor physical_Height_mm err", NULL, 0);
         return STATUS_UNSUCCESSFUL;
     }
 
     tp->TouchPad_DPMM_x = float(tp->logicalMax_X / tp->physical_Width_mm);//µ¥Î»Îªdot/mm
     tp->TouchPad_DPMM_y = float(tp->logicalMax_Y / tp->physical_Height_mm);//µ¥Î»Îªdot/mm
-    ////RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_x=", NULL, (ULONG)tp->TouchPad_DPMM_x);
-    ////RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_y=", NULL, (ULONG)tp->TouchPad_DPMM_y);
+    //RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_x=", NULL, (ULONG)tp->TouchPad_DPMM_x);
+    //RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_y=", NULL, (ULONG)tp->TouchPad_DPMM_y);
 
     //¶¯Ì¬µ÷ÕûÊÖÖ¸Í·´óÐ¡³£Á¿
     tp->thumb_Width = 18;//ÊÖÖ¸Í·¿í¶È,Ä¬ÈÏÒÔÖÐÖ¸18mm¿íÎª»ù×¼
@@ -3710,11 +4102,11 @@ AnalyzeHidReportDescriptor(
         tp->StartX_RIGHT = tp->logicalMax_X;
     }
     
-    ////RegDebug(L"AnalyzeHidReportDescriptor tp->StartTop_Y =", NULL, tp->StartY_TOP);
-    ////RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_LEFT =", NULL, tp->StartX_LEFT);
-    ////RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_RIGHT =", NULL, tp->StartX_RIGHT);
+    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartTop_Y =", NULL, tp->StartY_TOP);
+    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_LEFT =", NULL, tp->StartX_LEFT);
+    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_RIGHT =", NULL, tp->StartX_RIGHT);
 
-    //RegDebug(L"AnalyzeHidReportDescriptor end", NULL, status);
+    RegDebug(L"AnalyzeHidReportDescriptor end", NULL, status);
     return status;
 }
 
@@ -3729,24 +4121,24 @@ SendOriginalReport(PDEVICE_CONTEXT pDevContext, PVOID OriginalReport, size_t out
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendOriginalReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendOriginalReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendOriginalReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendOriginalReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, OriginalReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendOriginalReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendOriginalReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    //RegDebug(L"SendOriginalReport ok", NULL, status);
+    RegDebug(L"SendOriginalReport ok", NULL, status);
 
 exit:
     WdfRequestComplete(
@@ -3755,7 +4147,7 @@ exit:
     );
 
 cleanup:
-    //RegDebug(L"SendOriginalReport end", NULL, status);
+    RegDebug(L"SendOriginalReport end", NULL, status);
     return status;
 
 }
@@ -3770,24 +4162,24 @@ SendPtpMultiTouchReport(PDEVICE_CONTEXT pDevContext, PVOID MultiTouchReport, siz
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMultiTouchReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMultiTouchReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMultiTouchReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMultiTouchReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, MultiTouchReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMultiTouchReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMultiTouchReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    //RegDebug(L"SendPtpMultiTouchReport ok", NULL, status);
+    RegDebug(L"SendPtpMultiTouchReport ok", NULL, status);
 
 exit:
     WdfRequestComplete(
@@ -3796,7 +4188,7 @@ exit:
     );
 
 cleanup:
-    //RegDebug(L"SendPtpMultiTouchReport end", NULL, status);
+    RegDebug(L"SendPtpMultiTouchReport end", NULL, status);
     return status;
 
 }
@@ -3809,28 +4201,28 @@ SendPtpMouseReport(PDEVICE_CONTEXT pDevContext, mouse_report_t* pMouseReport)
     WDFREQUEST PtpRequest;
     WDFMEMORY  memory;
     size_t     outputBufferLength = sizeof(mouse_report_t);
-    ////RegDebug(L"SendPtpMouseReport pMouseReport=", pMouseReport, (ULONG)outputBufferLength);
+    //RegDebug(L"SendPtpMouseReport pMouseReport=", pMouseReport, (ULONG)outputBufferLength);
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMouseReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMouseReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMouseReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMouseReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, pMouseReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"SendPtpMouseReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        RegDebug(L"SendPtpMouseReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    //RegDebug(L"SendPtpMouseReport ok", NULL, status);
+    RegDebug(L"SendPtpMouseReport ok", NULL, status);
 
 exit:
     WdfRequestComplete(
@@ -3839,7 +4231,7 @@ exit:
     );
 
 cleanup:
-    //RegDebug(L"SendPtpMouseReport end", NULL, status);
+    RegDebug(L"SendPtpMouseReport end", NULL, status);
     return status;
 
 }
@@ -3862,8 +4254,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     tp->currentFinger = *pPtpReport;
     UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//µ±Ç°´¥ÃþµãÊýÁ¿
     UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //ÉÏ´Î´¥ÃþµãÊýÁ¿
-    //RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
-    //RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
+    RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
+    RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
 
     UCHAR MAX_CONTACT_FINGER = PTP_MAX_CONTACT_POINTS;
     BOOLEAN allFingerDetached = TRUE;
@@ -3944,12 +4336,12 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
-    //RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
-    //RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+    RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
+    RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
 
     if (tp->currentFinger.IsButtonClicked) {//´¥Ãþ°åÏÂÑØÎïÀí°´¼ü¹¦ÄÜ,ÇÐ»»´¥¿Ø°åÁéÃô¶È/¹öÂÖÄ£Ê½¿ª¹ØµÈ²ÎÊýÉèÖÃ,ÐèÒª½øÐÐÀë¿ªÅÐ¶¨£¬ÒòÎª°´¼ü±¨¸æ»áÒ»Ö±·¢ËÍÖ±µ½ÊÍ·Å
         tp->bPhysicalButtonUp = FALSE;//ÎïÀí¼üÊÇ·ñÊÍ·Å±êÖ¾
-        //RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp FALSE", NULL, FALSE);
+        RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp FALSE", NULL, FALSE);
         //×¼±¸ÉèÖÃ´¥Ãþ°åÏÂÑØÎïÀí°´¼üÏà¹Ø²ÎÊý
         if (currentFinger_Count == 1) {//µ¥Ö¸ÖØ°´´¥¿Ø°å×óÏÂ½ÇÎïÀí¼üÎªÊó±êµÄºóÍË¹¦ÄÜ¼ü£¬µ¥Ö¸ÖØ°´´¥¿Ø°åÓÒÏÂ½ÇÎïÀí¼üÎªÊó±êµÄÇ°½ø¹¦ÄÜ¼ü£¬µ¥Ö¸ÖØ°´´¥¿Ø°åÏÂÑØÖÐ¼äÎïÀí¼üÎªµ÷½ÚÊó±êÁéÃô¶È£¨Âý/ÖÐµÈ/¿ì3¶ÎÁéÃô¶È£©£¬
             if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
@@ -3969,7 +4361,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     else {
         if (!tp->bPhysicalButtonUp) {
             tp->bPhysicalButtonUp = TRUE;
-            //RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp TRUE", NULL, TRUE);
+            RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp TRUE", NULL, TRUE);
             if (currentFinger_Count == 1) {//µ¥Ö¸ÖØ°´´¥¿Ø°åÏÂÑØÖÐ¼äÎïÀí¼üÎªµ÷½ÚÊó±êÁéÃô¶È£¨Âý/ÖÐµÈ/¿ì3¶ÎÁéÃô¶È£©£¬Êó±êµÄºóÍË/Ç°½ø¹¦ÄÜ¼ü²»ÐèÒªÅÐ¶Ï»á×Ô¶¯ÊÍ·Å)£¬
                 if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
                     && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y/2) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//Ê×¸ö´¥Ãþµã×ø±êÔÚ´¥Ãþ°åÏÂÑØÖÐ¼ä
@@ -3981,7 +4373,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 //²»²ÉÓÃ3Ö¸¹öÂÖ·½Ê½ÒòÎªÅÐ¶ÏÇø·ÖË«Ö¸ÏÈ½Ó´¥µÄ²Ù×÷±ØÐë¼Ó´óÊ±¼äãÐÖµÊ¹µÃÑÓ³ÙÌ«¸ß²»ºÏÊÊ,ÍæÓÎÏ·½ÏÉÙÊ¹ÓÃµ½¹öÂÖ¹¦ÄÜ¿ÉÑ¡Ôñ¹Ø±ÕÇÐ»»¿ÉÒÔ¼«´ó½µµÍÍæÓÎÏ·Ê±µÄÎó²Ù×÷ÂÊ£¬ËùÒÔ²ÉÈ¡¿ªÆô¹Ø±Õ¹öÂÖ·½°¸¼æ¹ËÈÕ³£²Ù×÷ºÍÓÎÏ·
 
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
-                //RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
                 if (!pDevContext->bWheelDisabled) {//¿ªÆô¹öÂÖ¹¦ÄÜÊ±Í¬Ê±Ò²»Ö¸´¹öÂÖÊµÏÖ·½Ê½Îª´¥Ãþ°åË«Ö¸»¬¶¯ÊÖÊÆ
                     if (pDevContext->bHybrid_ReportingMode) {//»ìºÏ±¨¸æÄ£Ê½Ä¬ÈÏ¹öÂÖ·½Ê½ÎªÄ£·ÂÊó±ê(Ë«Ö¸»¬¶¯ÊÖÊÆ»¹´æÔÚÒ»Ð©¿¨¶ÙÎÊÌâÌåÑé²»ºÃ)
                         pDevContext->bWheelScrollMode = TRUE;
@@ -3989,32 +4381,32 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                     else {
                         pDevContext->bWheelScrollMode = FALSE;//Ä¬ÈÏ³õÊ¼ÖµÎª´¥Ãþ°åË«Ö¸»¬¶¯ÊÖÊÆ
                     }
-                    //RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                    RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
                 }
 
-                //RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             else if (currentFinger_Count == 3) {//ÈýÖ¸ÖØ°´´¥¿Ø°åÏÂÑØÎïÀí¼üÊ±ÉèÖÃÎªÇÐ»»¹öÂÖÄ£Ê½bWheelScrollMode£¬¶¨ÒåÊó±ê¹öÂÖÊµÏÖ·½Ê½£¬TRUEÎªÄ£·ÂÊó±ê¹öÂÖ£¬FALSEÎª´¥Ãþ°åË«Ö¸»¬¶¯ÊÖÊÆ
                 //ÒòÎªÈÕ³£²Ù×÷¹öÂÖ¸ü³£ÓÃ£¬ËùÒÔ¹Ø±Õ¹öÂÖ¹¦ÄÜµÄ×´Ì¬²»±£´æµ½×¢²á±í£¬µçÄÔÖØÆô»òÐÝÃß»½ÐÑºó»Ö¸´¹öÂÖ¹¦ÄÜ
                 //ÒòÎª´¥Ãþ°åË«Ö¸»¬¶¯ÊÖÊÆµÄ¹öÂÖÄ£Ê½¸ü³£ÓÃ£¬ËùÒÔÄ£·ÂÊó±êµÄ¹öÂÖÄ£Ê½×´Ì¬²»±£´æµ½×¢²á±í£¬µçÄÔÖØÆô»òÐÝÃß»½ÐÑºó»Ö¸´µ½Ë«Ö¸»¬¶¯ÊÖÊÆµÄ¹öÂÖÄ£Ê½
                 pDevContext->bWheelScrollMode = !pDevContext->bWheelScrollMode;
-                //RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
 
                 //ÇÐ»»¹öÂÖÊµÏÖ·½Ê½µÄÍ¬Ê±Ò²¿ªÆô¹öÂÖ¹¦ÄÜ·½±ãÓÃ»§
                 pDevContext->bWheelDisabled = FALSE;
-                //RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
 
 
-                //RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             else if (currentFinger_Count == 4 && !pDevContext->bHybrid_ReportingMode) {//ËÄÖ¸°´Ñ¹´¥¿Ø°åÎïÀí°´¼üÊ±ÇÐ»»·ÂÊó±êÊ½´¥Ãþ°åÓëwindowsÔ­°æµÄPTP¾«È·Ê½´¥Ãþ°å²Ù×÷·½Ê½
                 //»ìºÏ±¨¸æÄ£Ê½µÄ´¥¿Ø°å´æÔÚÖî¶àÎÊÌâÎ´½â¾öËùÒÔÃ»ÓÐ´Ë¹¦ÄÜ
                 //ÒòÎªÔ­°æ´¥¿Ø°å²Ù×÷·½Ê½Ö»ÊÇÁÙÊ±Ê¹ÓÃËùÒÔ²»±£´æµ½×¢²á±í£¬µçÄÔÖØÆô»òÐÝÃß»½ÐÑºó»Ö¸´µ½·ÂÊó±êÊ½´¥Ãþ°åÄ£Ê½
                 // Ô­°æµÄPTP¾«È·Ê½´¥Ãþ°å²Ù×÷·½Ê½Ê±·¢ËÍ±¨¸æÔÚ±¾º¯ÊýÍâ²¿Ö´ÐÐ²»ÐèÒªÀË·Ñ×ÊÔ´½âÎö£¬ÇÐ»»»Ø·ÂÊó±êÊ½´¥Ãþ°åÄ£Ê½Ò²ÔÚ±¾º¯ÊýÍâ²¿ÅÐ¶Ï
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
-                //RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
+                RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
   
-                //RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
             
         }
@@ -4221,7 +4613,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         if (!tp->bMouse_Wheel_Mode) {//ÒÔÖ¸ÕëÊÖÖ¸ÊÍ·ÅÎª¹öÂÖÄ£Ê½½áÊø±êÖ¾£¬ÏÂÒ»Ö¡bPtpReportCollection»áÉèÖÃFALSEËùÒÔÖ»»á·¢ËÍÒ»´Î¹¹ÔìµÄÊÖÊÆ½áÊø±¨¸æ
             tp->bPtpReportCollection = FALSE;//PTP´¥Ãþ°å¼¯ºÏ±¨¸æÄ£Ê½½áÊø
             tp->bGestureCompleted = TRUE;//½áÊøÊÖÊÆ²Ù×÷£¬¸ÃÊý¾ÝºÍbMouse_Wheel_ModeÇø·Ö¿ªÁË£¬ÒòÎªbGestureCompleted¿ÉÄÜ»á±ÈbMouse_Wheel_ModeÌáÇ°½áÊø
-            //RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0", NULL, status);
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0", NULL, status);
 
             //¹¹ÔìÈ«²¿ÊÖÖ¸ÊÍ·ÅµÄÁÙÊ±Êý¾Ý°ü,TipSwitchÓò¹éÁã£¬windowsÊÖÊÆ²Ù×÷½áÊøÊ±ÐèÒªÊÖÖ¸Àë¿ªµÄµãxy×ø±êÊý¾Ý
             PTP_REPORT CompletedGestureReport;
@@ -4233,14 +4625,14 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             //·¢ËÍptp±¨¸æ
             status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport failed", NULL, status);
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport failed", NULL, status);
             }
 
         }
         else if(tp->bMouse_Wheel_Mode && currentFinger_Count == 1 && !tp->bGestureCompleted) {//¹öÂÖÄ£Ê½Î´½áÊø²¢ÇÒÊ£ÏÂÖ¸ÕëÊÖÖ¸ÁôÔÚ´¥Ãþ°åÉÏ,ÐèÒªÅäºÏbGestureCompleted±êÖ¾ÅÐ¶ÏÊ¹µÃ¹¹ÔìµÄÊÖÊÆ½áÊø±¨¸æÖ»·¢ËÍÒ»´Î
             tp->bPtpReportCollection = FALSE;//PTP´¥Ãþ°å¼¯ºÏ±¨¸æÄ£Ê½½áÊø
             tp->bGestureCompleted = TRUE;//ÌáÇ°½áÊøÊÖÊÆ²Ù×÷£¬¸ÃÊý¾ÝºÍbMouse_Wheel_ModeÇø·Ö¿ªÁË£¬ÒòÎªbGestureCompleted¿ÉÄÜ»á±ÈbMouse_Wheel_ModeÌáÇ°½áÊø
-            //RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1", NULL, status);
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1", NULL, status);
 
             //¹¹ÔìÖ¸ÕëÊÖÖ¸ÊÍ·ÅµÄÁÙÊ±Êý¾Ý°ü,TipSwitchÓò¹éÁã£¬windowsÊÖÊÆ²Ù×÷½áÊøÊ±ÐèÒªÊÖÖ¸Àë¿ªµÄµãxy×ø±êÊý¾Ý
             PTP_REPORT CompletedGestureReport2;
@@ -4250,16 +4642,16 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             //·¢ËÍptp±¨¸æ
             status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport2, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport2 failed", NULL, status);
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport2 failed", NULL, status);
             }
         }
 
         if (!tp->bGestureCompleted) {//ÊÖÊÆÎ´½áÊø£¬Õý³£·¢ËÍ±¨¸æ
-            //RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted2", NULL, status);
+            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted2", NULL, status);
             //·¢ËÍptp±¨¸æ
             status = SendPtpMultiTouchReport(pDevContext, pPtpReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                //RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport failed", NULL, status);
+                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport failed", NULL, status);
             }
         }
     }
@@ -4268,7 +4660,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //·¢ËÍÊó±ê±¨¸æ
         status = SendPtpMouseReport(pDevContext, &mReport);
         if (!NT_SUCCESS(status)) {
-            //RegDebug(L"MouseLikeTouchPad_parse SendPtpMouseReport failed", NULL, status);
+            RegDebug(L"MouseLikeTouchPad_parse SendPtpMouseReport failed", NULL, status);
         }
     }
     
@@ -4350,15 +4742,15 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
     NTSTATUS status = SetRegisterMouseSensitivity(pDevContext, ms_idx);//MouseSensitivityTable´æ´¢±íµÄÐòºÅÖµ
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"SetNextSensitivity SetRegisterMouseSensitivity err", NULL, status);
+        RegDebug(L"SetNextSensitivity SetRegisterMouseSensitivity err", NULL, status);
         return;
     }
 
     pDevContext->MouseSensitivity_Index = ms_idx;
     pDevContext->MouseSensitivity_Value = MouseSensitivityTable[ms_idx];
-    //RegDebug(L"SetNextSensitivity pDevContext->MouseSensitivity_Index", NULL, pDevContext->MouseSensitivity_Index);
+    RegDebug(L"SetNextSensitivity pDevContext->MouseSensitivity_Index", NULL, pDevContext->MouseSensitivity_Index);
 
-    //RegDebug(L"SetNextSensitivity ok", NULL, status);
+    RegDebug(L"SetNextSensitivity ok", NULL, status);
 }
 
 
@@ -4381,7 +4773,7 @@ NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)/
     if (NT_SUCCESS(status)) {
         status = WdfRegistryAssignULong(hKey, &ValueNameString, ms_idx);
         if (!NT_SUCCESS(status)) {
-            //RegDebug(L"SetRegisterMouseSensitivity WdfRegistryAssignULong err", NULL, status);
+            RegDebug(L"SetRegisterMouseSensitivity WdfRegistryAssignULong err", NULL, status);
             return status;
         }    
     }
@@ -4390,7 +4782,7 @@ NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)/
         WdfObjectDelete(hKey);
     }
 
-    //RegDebug(L"SetRegisterMouseSensitivity ok", NULL, status);
+    RegDebug(L"SetRegisterMouseSensitivity ok", NULL, status);
     return status;
 }
 
@@ -4419,14 +4811,14 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
         status = WdfRegistryQueryULong(hKey, &ValueNameString, ms_idx);
     }
     else {
-        //RegDebug(L"GetRegisterMouseSensitivity err", NULL, status);
+        RegDebug(L"GetRegisterMouseSensitivity err", NULL, status);
     }
 
     if (hKey) {
         WdfObjectDelete(hKey);
     }
 
-    //RegDebug(L"GetRegisterMouseSensitivity end", NULL, status);
+    RegDebug(L"GetRegisterMouseSensitivity end", NULL, status);
     return status;
 }
 
@@ -4444,12 +4836,12 @@ void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext)
     UNICODE_STRING SidUserName;
     status = GetCurrentUserSID(pDevContext, &SidUserName);//»ñÈ¡µ±Ç°ÓÃ»§SID
     if (!NT_SUCCESS(status)) {
-        //RegDebug(L"OnD0Entry GetCurrentUserSID SidUserName err", NULL, status);
+        RegDebug(L"OnD0Entry GetCurrentUserSID SidUserName err", NULL, status);
     }
     else {
         status = SetRegisterAAPThreshold(&SidUserName);//ÉèÖÃTouchpad sensitivity´¥Ãþ°åÃô¸Ð¶ÈAAPThresholdÎª×î¸ßMaximum sensitivity
         if (!NT_SUCCESS(status)) {
-            //RegDebug(L"OnD0Entry SetRegisterAAPThreshold SidUserName err", NULL, status);
+            RegDebug(L"OnD0Entry SetRegisterAAPThreshold SidUserName err", NULL, status);
         }
 
         //±£´æSID
@@ -4457,7 +4849,7 @@ void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext)
         if (pDevContext->strCurrentUserSID.Buffer == NULL)
         {
             status = STATUS_UNSUCCESSFUL;
-            //RegDebug(L"GetCurrentUserSID pDevContext->strCurrentUserSID.Buffer err", NULL, status);
+            RegDebug(L"GetCurrentUserSID pDevContext->strCurrentUserSID.Buffer err", NULL, status);
         }
         pDevContext->strCurrentUserSID.Length = SidUserName.Length;//±ØÐëÉèÖÃ³¤¶È£¬·ñÔòÊý¾Ý»á´íÎó
         pDevContext->strCurrentUserSID.MaximumLength = SidUserName.Length;
@@ -4476,7 +4868,7 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//´¥¿Ø°åAAPÒâÍâ¼¤»î·À»
     NTSTATUS status = STATUS_UNSUCCESSFUL;
     if (pSidReg->Buffer == NULL || pSidReg->Length <= 20)
     {
-        //RegDebug(L"SetRegisterAAPThreshold pSidReg err", NULL, status);
+        RegDebug(L"SetRegisterAAPThreshold pSidReg err", NULL, status);
         return status;
     }
 
@@ -4493,11 +4885,11 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//´¥¿Ø°åAAPÒâÍâ¼¤»î·À»
 
     RtlCopyUnicodeString(&RegCurrentUserLocation, &RegUserLocation);
     RtlAppendUnicodeStringToString(&RegCurrentUserLocation, pSidReg);//µÃµ½HKET_CURRENT_USERÎ»ÖÃ
-    //RegDebug(L"SetRegisterAAPThreshold HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
+    RegDebug(L"SetRegisterAAPThreshold HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
 
     RtlAppendUnicodeStringToString(&RegCurrentUserLocation, &strAAPThreshold);//µÃµ½ÍêÕûAAPThreshold¼üÎ»ÖÃ
     RtlInitUnicodeString(&stringKey, RegCurrentUserLocation.Buffer);
-    //RegDebug(L"SetRegisterAAPThreshold AAPThreshold Key=", stringKey.Buffer, stringKey.Length);
+    RegDebug(L"SetRegisterAAPThreshold AAPThreshold Key=", stringKey.Buffer, stringKey.Length);
 
     //RtlInitUnicodeString(&stringKey, L"\\Registry\\Machine\\Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad");//AAPDisabled¼üÎ»ÖÃ
 
@@ -4521,7 +4913,7 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//´¥¿Ø°åAAPÒâÍâ¼¤»î·À»
         }
     }
     else {
-        //RegDebug(L"SetRegisterAAPThreshold ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
+        RegDebug(L"SetRegisterAAPThreshold ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
         return status;
     }
 
@@ -4536,7 +4928,7 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//´¥¿Ø°åAAPÒâÍâ¼¤»î·À»
     if (!NT_SUCCESS(status))
     {
         KdPrint(("ÉèÖÃREG_DWORD¼üÖµÊ§°Ü£¡\n"));
-        //RegDebug(L"SetRegisterAAPThreshold err", NULL, status);
+        RegDebug(L"SetRegisterAAPThreshold err", NULL, status);
     }
 
     ////³õÊ¼»¯valueName2
@@ -4555,14 +4947,14 @@ NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//´¥¿Ø°åAAPÒâÍâ¼¤»î·À»
     //¹Ø±Õ×¢²á±í¾ä±ú
     ZwClose(hKey);
 
-    //RegDebug(L"SetRegisterAAPThreshold end", NULL, status);
+    RegDebug(L"SetRegisterAAPThreshold end", NULL, status);
     return status;
 }
 
 
 NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg)
 {
-    ////RegDebug(L"GetCurrentUserSID start", NULL, 0);
+    //RegDebug(L"GetCurrentUserSID start", NULL, 0);
 
     NTSTATUS status = STATUS_UNSUCCESSFUL;
     HANDLE hRegHandle = NULL;
@@ -4601,7 +4993,7 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     status = ZwOpenKey(&hRegHandle, KEY_ALL_ACCESS, &objSid);//KEY_ALL_ACCESS//KEY_READ
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"GetCurrentUserSID ZwOpenKey err", NULL, status);
+        RegDebug(L"GetCurrentUserSID ZwOpenKey err", NULL, status);
         goto END;
     }
 
@@ -4609,14 +5001,14 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     status = ZwQueryKey(hRegHandle, KeyFullInformation, NULL, 0, &uRetLength);
     if (status != STATUS_BUFFER_TOO_SMALL)//±ØÐëÊÇ¸Ã´íÎó
     {
-        //RegDebug(L"GetCurrentUserSID ZwQueryKey err", NULL, status);
+        RegDebug(L"GetCurrentUserSID ZwQueryKey err", NULL, status);
         goto END;
     }
 
     pkfiQuery = (PKEY_FULL_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
     if (pkfiQuery == NULL)
     {
-        //RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pkfiQuery err", NULL, status);
+        RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pkfiQuery err", NULL, status);
         goto END;
     }
 
@@ -4624,24 +5016,24 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     status = ZwQueryKey(hRegHandle, KeyFullInformation, pkfiQuery, uRetLength, &uRetLength);
     if (!NT_SUCCESS(status))
     {
-        //RegDebug(L"GetCurrentUserSID ZwQueryKey pkfiQuery err", NULL, status);
+        RegDebug(L"GetCurrentUserSID ZwQueryKey pkfiQuery err", NULL, status);
         goto END;
     }
 
-    //RegDebug(L"GetCurrentUser ZwQueryKey pkfiQuery ok", NULL, status);
+    RegDebug(L"GetCurrentUser ZwQueryKey pkfiQuery ok", NULL, status);
     for (uIndex = 0; uIndex < pkfiQuery->SubKeys; uIndex++)
     {
         status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, NULL, 0, &uRetLength);
         if (status != STATUS_BUFFER_TOO_SMALL)//±ØÐëÊÇ¸Ã´íÎó
         {
-            //RegDebug(L"GetCurrentUserSID ZwEnumerateKey err", NULL, status);
+            RegDebug(L"GetCurrentUserSID ZwEnumerateKey err", NULL, status);
             goto END;
         }
 
         pbiEnumKey = (PKEY_BASIC_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
         if (pbiEnumKey == NULL)
         {
-            //RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pbiEnumKey err", NULL, status);
+            RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pbiEnumKey err", NULL, status);
             goto END;
         }
 
@@ -4649,15 +5041,15 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
         status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, pbiEnumKey, uRetLength, &uRetLength);
         if (!NT_SUCCESS(status))
         {
-            //RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey err", NULL, status);
+            RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey err", NULL, status);
             goto END;
         }
 
-        //RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey ok", NULL, status);
+        RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey ok", NULL, status);
         uniKeyName.Length = (USHORT)pbiEnumKey->NameLength;
         uniKeyName.MaximumLength = (USHORT)pbiEnumKey->NameLength;
         uniKeyName.Buffer = pbiEnumKey->Name;
-        ////RegDebug(L"GetCurrentUser pbiEnumKey->Name=", pbiEnumKey->Name, pbiEnumKey->NameLength);
+        //RegDebug(L"GetCurrentUser pbiEnumKey->Name=", pbiEnumKey->Name, pbiEnumKey->NameLength);
 
         if (pbiEnumKey->NameLength > 20)
         {
@@ -4665,7 +5057,7 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
             if (!(*pFoundSID)) {//µÚÒ»¸öÕÒµ½µÄSIDÏÈ±£´æ£¬Èç¹ûºóÃæÓÐ¶àÓÃ»§SID»á±»Ìæ»»
                 *pFoundSID = TRUE;//ÕÒµ½µ±Ç°ÓÃ»§SID
                 RtlCopyUnicodeString(&RegSid, &uniKeyName);//SIDÄÚÈÝ»á±ä»¯ËùÒÔÓÃ¶¨³¤ÊýÖµbufµÄRegSid
-                //RegDebug(L"GetCurrentUserSID RegSid =", RegSid.Buffer, RegSid.Length);
+                RegDebug(L"GetCurrentUserSID RegSid =", RegSid.Buffer, RegSid.Length);
             }
 
             //ÅÐ¶Ï¶àÓÃ»§ÏÂµÇÂ¼µÄµ±Ç°ÓÃ»§SID
@@ -4674,7 +5066,7 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
             if (uQueryValue > 0)//µ±Ç°µÇÂ¼ÓÃ»§
             {
                 RtlCopyUnicodeString(&RegSid, &uniKeyName);//SIDÄÚÈÝ»á±ä»¯ËùÒÔÓÃ¶¨³¤ÊýÖµbufµÄRegSid//Ìæ»»³õÊ¼ÓÃ»§SID
-                //RegDebug(L"GetCurrentUserSID new RegSid =", RegSid.Buffer, RegSid.Length);
+                RegDebug(L"GetCurrentUserSID new RegSid =", RegSid.Buffer, RegSid.Length);
             }
         }
 
@@ -4685,7 +5077,7 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     if (RegSid.Length <=20)
     {
         status = STATUS_UNSUCCESSFUL;
-        //RegDebug(L"GetCurrentUserSID RegSid.Length err", NULL, status);
+        RegDebug(L"GetCurrentUserSID RegSid.Length err", NULL, status);
         goto END;
     }
 
@@ -4694,7 +5086,7 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     if (pSidReg->Buffer == NULL)
     {
         status = STATUS_UNSUCCESSFUL;
-        //RegDebug(L"GetCurrentUserSID pSidReg->Buffer err", NULL, status);
+        RegDebug(L"GetCurrentUserSID pSidReg->Buffer err", NULL, status);
         goto END;
     }
 
@@ -4702,8 +5094,8 @@ NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg
     pSidReg->MaximumLength = RegSid.Length;
     RtlCopyUnicodeString(pSidReg, &RegSid);//×¢ÒâË³ÐòÔÚÉèÖÃ³¤¶ÈÖ®ºó£¬·ñÔòpSidRegÊý¾Ý»á´íÎó
 
-    ////RegDebug(L"GetCurrentUserSID RegSid2 =", RegSid.Buffer, RegSid.Length);
-    //RegDebug(L"GetCurrentUserSID pSidReg =", pSidReg->Buffer, pSidReg->Length);
+    //RegDebug(L"GetCurrentUserSID RegSid2 =", RegSid.Buffer, RegSid.Length);
+    RegDebug(L"GetCurrentUserSID pSidReg =", pSidReg->Buffer, pSidReg->Length);
 
 
 END:
@@ -4722,4 +5114,57 @@ END:
     }
 
     return status;
+}
+
+//
+VOID
+OnDeviceResetNotificationRequestCancel(
+    _In_  WDFREQUEST FxRequest
+)
+/*++
+Routine Description:
+
+    OnDeviceResetNotificationRequestCancel is the EvtRequestCancel routine for
+    Device Reset Notification requests. It's called by the framework when HIDCLASS
+    is cancelling the Device Reset Notification request that is pending in HIDI2C
+    driver. It basically completes the pending request with STATUS_CANCELLED.
+
+Arguments:
+
+    FxRequest - Handle to a framework request object being cancelled.
+
+Return Value:
+
+    None
+
+--*/
+{
+    PDEVICE_CONTEXT pDeviceContext = GetDeviceContext(WdfIoQueueGetDevice(WdfRequestGetIoQueue(FxRequest)));
+    NTSTATUS        status = STATUS_CANCELLED;
+
+    //
+    // Hold the spinlock to sync up with other threads who
+    // reads and then writes to DeviceResetNotificationRequest won't run
+    // into a problem while holding the same spinlock.
+    //
+    WdfSpinLockAcquire(pDeviceContext->DeviceResetNotificationSpinLock);
+
+    //
+    // It may have been cleared by either of the following. So we just clear
+    // the matched pDeviceContext->DeviceResetNotificationRequest.
+    //
+    // - ISR (when Device Initiated Reset occurs)
+    // - OnIoStop (when device is being removed or leaving D0)
+    // 
+    if (pDeviceContext->DeviceResetNotificationRequest == FxRequest)
+    {
+        pDeviceContext->DeviceResetNotificationRequest = NULL;
+    }
+
+    WdfSpinLockRelease(pDeviceContext->DeviceResetNotificationSpinLock);
+
+    //
+    // Simply complete the request here.
+    //
+    WdfRequestComplete(FxRequest, status);
 }
