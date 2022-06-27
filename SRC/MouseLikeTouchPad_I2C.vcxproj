@@ -160,7 +160,7 @@
       <DateStamp>*</DateStamp>
       <SpecifyDriverVerDirectiveVersion>true</SpecifyDriverVerDirectiveVersion>
       <SpecifyDriverVerDirectiveDate>true</SpecifyDriverVerDirectiveDate>
-      <TimeStamp>1.0.0.1</TimeStamp>
+      <TimeStamp>*</TimeStamp>
     </Inf>
   </ItemDefinitionGroup>
   <ItemGroup>

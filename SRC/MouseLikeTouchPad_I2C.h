@@ -462,6 +462,7 @@ ULONG runtimes_OnPostInterruptsEnabled = 0;
 ULONG runtimes_OnSelfManagedIoSuspend = 0;
 ULONG runtimes_ioControl = 0;
 ULONG runtimes_HidEvtResetTimerFired = 0;
+ULONG runtimes_IOCTL_HID_READ_REPORT = 0;
 
 
 VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue);

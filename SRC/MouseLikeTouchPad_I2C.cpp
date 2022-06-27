@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_I2C.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 0
+#define debug_on 1
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -497,29 +497,30 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     timerAttributes.ParentObject = Device;
 
     status = WdfTimerCreate(&timerConfig, &timerAttributes, &pDevContext->timerHandle);// WDFTIMER  
-
-
-
-    WDF_OBJECT_ATTRIBUTES spinLockAttributes;
-    WDF_OBJECT_ATTRIBUTES_INIT(&spinLockAttributes);
-
-    spinLockAttributes.ParentObject = Device;
-
-    status = WdfSpinLockCreate(&spinLockAttributes, &pDevContext->DeviceResetNotificationSpinLock);
-
-    if (!NT_SUCCESS(status))
-    {
-        //printf("WdfSpinLockCreate failed");
+    if (!NT_SUCCESS(status)) {
+        RegDebug(L"WdfTimerCreate failed", NULL, status);
         return status;
     }
 
-    pDevContext->DeviceResetNotificationRequest = NULL;
+    //WDF_OBJECT_ATTRIBUTES spinLockAttributes;
+    //WDF_OBJECT_ATTRIBUTES_INIT(&spinLockAttributes);
 
+    //spinLockAttributes.ParentObject = Device;
 
-	WDF_DEVICE_STATE deviceState;
-	WDF_DEVICE_STATE_INIT(&deviceState);
+    //status = WdfSpinLockCreate(&spinLockAttributes, &pDevContext->DeviceResetNotificationSpinLock);
+
+    //if (!NT_SUCCESS(status))
+    //{
+    //    //printf("WdfSpinLockCreate failed");
+    //    return status;
+    //}
+    //pDevContext->DeviceResetNotificationRequest = NULL;
+
+    WDF_DEVICE_STATE deviceState;
+    WDF_DEVICE_STATE_INIT(&deviceState);
     deviceState.NotDisableable = WdfFalse;//增加禁用驱动功能
-	WdfDeviceSetDeviceState(Device, &deviceState);
+    WdfDeviceSetDeviceState(Device, &deviceState);
+   
 
 	WDF_IO_QUEUE_CONFIG  queueConfig;
 
@@ -558,6 +559,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 	}
 
 	WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
+    queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->ResetNotificationQueue);
 	if (!NT_SUCCESS(status)) {
 		RegDebug(L"WdfIoQueueCreate ResetNotificationQueue failed", NULL, status);
@@ -726,7 +728,9 @@ VOID OnInternalDeviceIoControl(
         }
         case IOCTL_HID_READ_REPORT:
         {
-            RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
+            //RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
+            //RegDebug(L"IOCTL_HID_READ_REPORT runtimes_IOCTL_HID_READ_REPORT", NULL, runtimes_IOCTL_HID_READ_REPORT++);
+            
             //if (pDevContext->SetFeatureReady == TRUE) {//条件判断代码在设置input mode之前
             //            if (pDevContext->SetInputModeOK) {
             //                status = PtpSetFeature(pDevContext, PTP_FEATURE_SELECTIVE_REPORTING);//设置触摸板SELECTIVE_REPORTING
@@ -831,15 +835,18 @@ VOID OnInternalDeviceIoControl(
         case IOCTL_HID_DEVICERESET_NOTIFICATION:
         {
             RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION", NULL, runtimes_ioControl);
-            BOOLEAN requestPendingFlag_reset = FALSE;
-            status = HidSendResetNotification(pDevContext, Request, &requestPendingFlag_reset);
-            if (requestPendingFlag_reset) {
+            //BOOLEAN requestPendingFlag_reset = FALSE;
+            //status = HidSendResetNotification(pDevContext, Request, &requestPendingFlag_reset);
+            //if (requestPendingFlag_reset) {
+            //    return;
+            //}
+
+            //WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
+            status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);
+            if (NT_SUCCESS(status)){
                 return;
             }
-
-            ///*WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
-            //status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);*/
-
+                
 
             ////
             //WdfSpinLockAcquire(pDevContext->DeviceResetNotificationSpinLock);
@@ -906,157 +913,158 @@ VOID OnInternalDeviceIoControl(
     return;
 }
 
+
+void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
+{
+
+    UNREFERENCED_PARAMETER(Queue);
+
+    RegDebug(L"OnIoStop start", NULL, runtimes_ioControl);
+
+    //NTSTATUS status;
+    //PDEVICE_CONTEXT pDevContext;
+    //PHID_XFER_PACKET pHidPacket;
+    WDF_REQUEST_PARAMETERS RequestParameters;
+
+    WDF_REQUEST_PARAMETERS_INIT(&RequestParameters);
+    WdfRequestGetParameters(Request, &RequestParameters);
+
+    if (RequestParameters.Type == WdfRequestTypeDeviceControlInternal && RequestParameters.Parameters.DeviceIoControl.IoControlCode == IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST && (ActionFlags & 1) != 0)//RequestParameters.Parameters.Others.IoControlCode
+    {
+        RegDebug(L"OnIoStop WdfRequestStopAcknowledge", NULL, runtimes_ioControl);
+        WdfRequestStopAcknowledge(Request, 0);
+    }
+    RegDebug(L"OnIoStop end", NULL, runtimes_ioControl);
+}
+
 //
-//void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
+//VOID
+//OnIoStop(
+//    _In_  WDFQUEUE      FxQueue,
+//    _In_  WDFREQUEST    FxRequest,
+//    _In_  ULONG         ActionFlags
+//)
+///*++
+//Routine Description:
+//
+//    OnIoStop is called by the framework when the device leaves the D0 working state
+//    for every I/O request that this driver has not completed, including
+//    requests that the driver owns and those that it has forwarded to an
+//    I/O target.
+//
+//Arguments:
+//
+//    FxQueue - Handle to the framework queue object that is associated with the I/O request.
+//
+//    FxRequest - Handle to a framework request object.
+//
+//    ActionFlags - WDF_REQUEST_STOP_ACTION_FLAGS specifying reason that the callback function is being called
+//
+//Return Value:
+//
+//    None
+//
+//--*/
 //{
+//    WDF_REQUEST_PARAMETERS fxParams;
+//    WDF_REQUEST_PARAMETERS_INIT(&fxParams);
 //
-//    UNREFERENCED_PARAMETER(Queue);
+//    // Get the request parameters
+//    WdfRequestGetParameters(FxRequest, &fxParams);
 //
-//    RegDebug(L"OnIoStop start", NULL, runtimes_ioControl);
-//
-//    //NTSTATUS status;
-//    //PDEVICE_CONTEXT pDevContext;
-//    //PHID_XFER_PACKET pHidPacket;
-//    WDF_REQUEST_PARAMETERS RequestParameters;
-//
-//    WDF_REQUEST_PARAMETERS_INIT(&RequestParameters);
-//    WdfRequestGetParameters(Request, &RequestParameters);
-//
-//    if (RequestParameters.Type == WdfRequestTypeDeviceControlInternal && RequestParameters.Parameters.DeviceIoControl.IoControlCode == IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST && (ActionFlags & 1) != 0)//RequestParameters.Parameters.Others.IoControlCode
+//    if (fxParams.Type == WdfRequestTypeDeviceControlInternal)
 //    {
-//        RegDebug(L"OnIoStop WdfRequestStopAcknowledge", NULL, runtimes_ioControl);
-//        WdfRequestStopAcknowledge(Request, 0);
+//        switch (fxParams.Parameters.DeviceIoControl.IoControlCode)
+//        {
+//            //
+//            // When we invoke the HID idle notification callback inside the workitem, the idle IRP is
+//            // yet to be enqueued into the Idle Queued. Since hidclass will queue a Dx IRP from the callback
+//            // and our default queue is power managed, the Dx IRP progression is blocked because of the in-flight
+//            // idle IRP. In order to avoid blocking the Dx IRP, we acknowledge the request. Since 
+//            // we anyway will queue the IRP into the Idle Queue immediately after, this is safe. 
+//            //
+//            case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
+//                //
+//                // The framework is stopping the I/O queue because the device is leaving its working (D0) state.
+//                //
+//                if (ActionFlags & WdfRequestStopActionSuspend)
+//                {
+//                    // Acknowledge the request
+//                    //
+//                    WdfRequestStopAcknowledge(FxRequest, FALSE);
+//                }
+//                break;
+//
+//                //
+//                // Device Reset Notification is normally pended by the HIDI2C driver.
+//                // We need to complete it only when the device is being removed. For
+//                // device power state changes, we will keep it pended, since HID clients 
+//                // are not interested in these changes.
+//                //
+//            case IOCTL_HID_DEVICERESET_NOTIFICATION:
+//                if (ActionFlags & WdfRequestStopActionPurge)
+//                {
+//                    //
+//                    // The framework is stopping it because the device is being removed.
+//                    // So we complete it, if it's not cancelled yet.
+//                    //
+//                    PDEVICE_CONTEXT pDeviceContext = GetDeviceContext(WdfIoQueueGetDevice(FxQueue));
+//                    BOOLEAN         completeRequest = FALSE;
+//                    NTSTATUS        status;
+//
+//                    WdfSpinLockAcquire(pDeviceContext->DeviceResetNotificationSpinLock);
+//
+//                    status = WdfRequestUnmarkCancelable(FxRequest);
+//                    if (NT_SUCCESS(status))
+//                    {
+//                        //
+//                        // EvtRequestCancel won't be called. We complete it here.
+//                        //
+//                        completeRequest = TRUE;
+//
+//                        NT_ASSERT(pDeviceContext->DeviceResetNotificationRequest == FxRequest);
+//                        if (pDeviceContext->DeviceResetNotificationRequest == FxRequest)
+//                        {
+//                            pDeviceContext->DeviceResetNotificationRequest = NULL;
+//                        }
+//                    }
+//                    else
+//                    {
+//                        NT_ASSERT(status == STATUS_CANCELLED);
+//                        // EvtRequestCancel will be called. Leave it as it is.
+//                    }
+//
+//                    WdfSpinLockRelease(pDeviceContext->DeviceResetNotificationSpinLock);
+//
+//                    if (completeRequest)
+//                    {
+//                        //
+//                        // Complete the pending Device Reset Notification with STATUS_CANCELLED
+//                        //
+//                        status = STATUS_CANCELLED;
+//                        WdfRequestComplete(FxRequest, status);
+//                    }
+//                }
+//                else
+//                {
+//                    //
+//                    // The framework is stopping it because the device is leaving D0.
+//                    // Keep it pending.
+//                    //
+//                    NT_ASSERT(ActionFlags & WdfRequestStopActionSuspend);
+//                    WdfRequestStopAcknowledge(FxRequest, FALSE);
+//                }
+//                break;
+//
+//            default:
+//                //
+//                // Leave other requests as they are. 
+//                //
+//                NOTHING;
+//        }
 //    }
-//    RegDebug(L"OnIoStop end", NULL, runtimes_ioControl);
 //}
 
-
-VOID
-OnIoStop(
-    _In_  WDFQUEUE      FxQueue,
-    _In_  WDFREQUEST    FxRequest,
-    _In_  ULONG         ActionFlags
-)
-/*++
-Routine Description:
-
-    OnIoStop is called by the framework when the device leaves the D0 working state
-    for every I/O request that this driver has not completed, including
-    requests that the driver owns and those that it has forwarded to an
-    I/O target.
-
-Arguments:
-
-    FxQueue - Handle to the framework queue object that is associated with the I/O request.
-
-    FxRequest - Handle to a framework request object.
-
-    ActionFlags - WDF_REQUEST_STOP_ACTION_FLAGS specifying reason that the callback function is being called
-
-Return Value:
-
-    None
-
---*/
-{
-    WDF_REQUEST_PARAMETERS fxParams;
-    WDF_REQUEST_PARAMETERS_INIT(&fxParams);
-
-    // Get the request parameters
-    WdfRequestGetParameters(FxRequest, &fxParams);
-
-    if (fxParams.Type == WdfRequestTypeDeviceControlInternal)
-    {
-        switch (fxParams.Parameters.DeviceIoControl.IoControlCode)
-        {
-            //
-            // When we invoke the HID idle notification callback inside the workitem, the idle IRP is
-            // yet to be enqueued into the Idle Queued. Since hidclass will queue a Dx IRP from the callback
-            // and our default queue is power managed, the Dx IRP progression is blocked because of the in-flight
-            // idle IRP. In order to avoid blocking the Dx IRP, we acknowledge the request. Since 
-            // we anyway will queue the IRP into the Idle Queue immediately after, this is safe. 
-            //
-            case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
-                //
-                // The framework is stopping the I/O queue because the device is leaving its working (D0) state.
-                //
-                if (ActionFlags & WdfRequestStopActionSuspend)
-                {
-                    // Acknowledge the request
-                    //
-                    WdfRequestStopAcknowledge(FxRequest, FALSE);
-                }
-                break;
-
-                //
-                // Device Reset Notification is normally pended by the HIDI2C driver.
-                // We need to complete it only when the device is being removed. For
-                // device power state changes, we will keep it pended, since HID clients 
-                // are not interested in these changes.
-                //
-            case IOCTL_HID_DEVICERESET_NOTIFICATION:
-                if (ActionFlags & WdfRequestStopActionPurge)
-                {
-                    //
-                    // The framework is stopping it because the device is being removed.
-                    // So we complete it, if it's not cancelled yet.
-                    //
-                    PDEVICE_CONTEXT pDeviceContext = GetDeviceContext(WdfIoQueueGetDevice(FxQueue));
-                    BOOLEAN         completeRequest = FALSE;
-                    NTSTATUS        status;
-
-                    WdfSpinLockAcquire(pDeviceContext->DeviceResetNotificationSpinLock);
-
-                    status = WdfRequestUnmarkCancelable(FxRequest);
-                    if (NT_SUCCESS(status))
-                    {
-                        //
-                        // EvtRequestCancel won't be called. We complete it here.
-                        //
-                        completeRequest = TRUE;
-
-                        NT_ASSERT(pDeviceContext->DeviceResetNotificationRequest == FxRequest);
-                        if (pDeviceContext->DeviceResetNotificationRequest == FxRequest)
-                        {
-                            pDeviceContext->DeviceResetNotificationRequest = NULL;
-                        }
-                    }
-                    else
-                    {
-                        NT_ASSERT(status == STATUS_CANCELLED);
-                        // EvtRequestCancel will be called. Leave it as it is.
-                    }
-
-                    WdfSpinLockRelease(pDeviceContext->DeviceResetNotificationSpinLock);
-
-                    if (completeRequest)
-                    {
-                        //
-                        // Complete the pending Device Reset Notification with STATUS_CANCELLED
-                        //
-                        status = STATUS_CANCELLED;
-                        WdfRequestComplete(FxRequest, status);
-                    }
-                }
-                else
-                {
-                    //
-                    // The framework is stopping it because the device is leaving D0.
-                    // Keep it pending.
-                    //
-                    NT_ASSERT(ActionFlags & WdfRequestStopActionSuspend);
-                    WdfRequestStopAcknowledge(FxRequest, FALSE);
-                }
-                break;
-
-            default:
-                //
-                // Leave other requests as they are. 
-                //
-                NOTHING;
-        }
-    }
-}
 
 NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE PreviousState)
 {
@@ -1069,8 +1077,25 @@ NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE Previo
 
     if (PreviousState == WdfPowerDeviceD3Final) {
         RegDebug(L"OnPostInterruptsEnabled HidReset", NULL, runtimes_OnPostInterruptsEnabled);
+
+        ////新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
+        //if (pDevContext->FirstD0Entry) {
+
+        //    status = HidPower(pDevContext, WdfPowerDeviceD0);
+        //    if (!NT_SUCCESS(status))
+        //    {
+        //        RegDebug(L"OnSelfManagedIoSuspend _HidPower WdfPowerDeviceD0 failed", NULL, status);
+        //    }
+        //    else {
+        //        pDevContext->FirstD0Entry = FALSE;
+        //    }
+        //}
+
         status = HidReset(pDevContext);  
     }
+
+    
+
     UNREFERENCED_PARAMETER(pDevContext);
     RegDebug(L"OnPostInterruptsEnabled end runtimes_hid", NULL, runtimes_hid++);
     return status;
@@ -1085,11 +1110,13 @@ NTSTATUS OnSelfManagedIoSuspend(WDFDEVICE Device)
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
     UNREFERENCED_PARAMETER(pDevContext);
 
-    WDFTIMER  timerHandle = pDevContext->timerHandle;
-    if (timerHandle) {
-        RegDebug(L"OnSelfManagedIoSuspend WdfTimerStop", NULL, runtimes_OnSelfManagedIoSuspend);
-        WdfTimerStop(pDevContext->timerHandle, TRUE);
-    }
+
+        WDFTIMER  timerHandle = pDevContext->timerHandle;
+        if (timerHandle) {
+            RegDebug(L"OnSelfManagedIoSuspend WdfTimerStop", NULL, runtimes_OnSelfManagedIoSuspend);
+            WdfTimerStop(pDevContext->timerHandle, TRUE);
+        }
+
 
     RegDebug(L"OnSelfManagedIoSuspend end runtimes_hid", NULL, runtimes_hid++);
     return status;
@@ -1152,6 +1179,7 @@ NTSTATUS OnPrepareHardware(
     runtimes_OnSelfManagedIoSuspend = 0;
     runtimes_ioControl = 0;
     runtimes_HidEvtResetTimerFired = 0;
+    runtimes_IOCTL_HID_READ_REPORT = 0;
 
     RegDebug(L"OnPrepareHardware ok", NULL, status);
     return STATUS_SUCCESS;
@@ -1185,6 +1213,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
         RegDebug(L"OnD0Entry HidInitialize failed", NULL, status);
         return status;
     }
+
 
     if (!pDevContext->HidReportDescriptorSaved) {
         status = GetReportDescriptor(pDevContext);
@@ -1254,7 +1283,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
 
     MouseLikeTouchPad_parse_init(pDevContext);
 
-    PowerIdleIrpCompletion(pDevContext);//加电完成最后执行
+    PowerIdleIrpCompletion(pDevContext);//
 
     RegDebug(L"OnD0Entry ok", NULL, 0);
     return STATUS_SUCCESS;
@@ -2100,7 +2129,6 @@ NTSTATUS HidReset(PDEVICE_CONTEXT pDevContext)
     {      
         WdfIoQueueStopSynchronously(pDevContext->IoctlQueue);
         WdfTimerStart(pDevContext->timerHandle, WDF_REL_TIMEOUT_IN_MS(10));//400
-
         RegDebug(L"HidReset WdfTimerStart timerHandle", NULL, status);
     }
 
@@ -2656,8 +2684,7 @@ exit:
 }
 
 
-NTSTATUS
-HidReadReport(
+NTSTATUS HidReadReport(
     PDEVICE_CONTEXT pDevContext,
     WDFREQUEST Request,
     BOOLEAN* requestPendingFlag
@@ -2993,19 +3020,6 @@ OnInterruptIsr(
             if (WdfTimerStop(pDevContext->timerHandle, FALSE)) {
                 WdfIoQueueStart(pDevContext->IoctlQueue);
             }
-
-            //新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
-            if (pDevContext->FirstD0Entry) {
-                status = HidPower(pDevContext, 0);
-                if (!NT_SUCCESS(status))
-                {
-                    RegDebug(L"OnInterruptIsr _HidPower0 failed", NULL, status);
-                }
-                else {
-                    pDevContext->FirstD0Entry = FALSE;
-                }
-            }
-           
 
             RegDebug(L"OnInterruptIsr ok", NULL, status);
         }

@@ -24,8 +24,8 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 
 [MouseLikeTouchPad_I2C.NTamd64...1]
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
-%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
 
 
 [MouseLikeTouchPad_I2C_Device.NT]
@@ -45,7 +45,7 @@ HKR,,"UpperFilters",0x00010000,"mshidkmdf"
 [MouseLikeTouchPad_I2C_Device.Configuration.AddReg]
 HKR,,"EnhancedPowerManagementEnabled",0x00010001,1
 HKR,,"DeviceResetNotificationEnabled",0x00010001,1
-HKR,,"LegacyTouchScaling",0x00010001,1
+HKR,,"LegacyTouchScaling",0x00010001,0
 HKR,,"DoNotWaitForResetResponse",0x00010001,0
 HKR,,"MouseSensitivity_Index",0x00010001,1
 
