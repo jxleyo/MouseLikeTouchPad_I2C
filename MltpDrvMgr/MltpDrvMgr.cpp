@@ -1200,7 +1200,7 @@ InstSuccess:
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
 
     //存在驱动
-    MessageBox(NULL, L"安装驱动成功！请重新启动电脑生效！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
+    MessageBox(NULL, L"安装驱动成功！请检查触摸板是否正常工作，若无反应请重新启动电脑使驱动程序生效！", L"MltpDrvMgr", MB_OK | MB_DEFBUTTON1);
     ExitCode = EXIT_OK;
 
     //创建快捷方式
