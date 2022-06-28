@@ -70,6 +70,7 @@ BOOL GetTouchPad_I2C_hwID();
 BOOL GetOEMDriverName();
 BOOL SaveOEMDriverName();
 BOOL SaveTouchPad_I2C_hwID();
+BOOL SaveTouchPad_I2C_devInstanceID();
 
 
 wchar_t* mystrcat(const wchar_t* str1, const wchar_t* str2, const wchar_t* str3);//str1是原来的字符串，str2是str1中的某段需要替换字符串，str3是替换str2的字符串
