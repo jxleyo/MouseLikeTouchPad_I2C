@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_I2C.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 1
+#define debug_on 0
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -460,7 +460,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     PAGED_CODE();
 
     WdfDeviceInitSetPowerPolicyOwnership(DeviceInit, FALSE);
-
+   
 	WDF_PNPPOWER_EVENT_CALLBACKS pnpPowerCallbacks;
 	WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&pnpPowerCallbacks);
 
@@ -487,10 +487,9 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 	PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
 	pDevContext->FxDevice = Device;
 
-
     WDF_TIMER_CONFIG   timerConfig;
     WDF_TIMER_CONFIG_INIT(&timerConfig, HidEvtResetTimerFired);//默认 串行执行timerFunc
-    timerConfig.AutomaticSerialization = FALSE;
+    //timerConfig.AutomaticSerialization = FALSE;
 
     WDF_OBJECT_ATTRIBUTES   timerAttributes;
     WDF_OBJECT_ATTRIBUTES_INIT(&timerAttributes);
@@ -844,6 +843,7 @@ VOID OnInternalDeviceIoControl(
             //WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
             status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);
             if (NT_SUCCESS(status)){
+                RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestForwardToIoQueue ok", NULL, runtimes_ioControl);
                 return;
             }
                 
@@ -1077,21 +1077,28 @@ NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE Previo
 
     if (PreviousState == WdfPowerDeviceD3Final) {
         RegDebug(L"OnPostInterruptsEnabled HidReset", NULL, runtimes_OnPostInterruptsEnabled);
-
-        ////新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
-        //if (pDevContext->FirstD0Entry) {
-
-        //    status = HidPower(pDevContext, WdfPowerDeviceD0);
-        //    if (!NT_SUCCESS(status))
-        //    {
-        //        RegDebug(L"OnSelfManagedIoSuspend _HidPower WdfPowerDeviceD0 failed", NULL, status);
-        //    }
-        //    else {
-        //        pDevContext->FirstD0Entry = FALSE;
-        //    }
-        //}
-
         status = HidReset(pDevContext);  
+
+       // //新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
+       //if (pDevContext->FirstD0Entry) {
+
+       //    status = HidPower(pDevContext, WdfPowerDeviceD3);
+       //    if (!NT_SUCCESS(status))
+       //    {
+       //        RegDebug(L"OnPostInterruptsEnabled _HidPower WdfPowerDeviceD3 failed", NULL, status);
+       //    }
+       //    else {
+       //        status = HidPower(pDevContext, WdfPowerDeviceD0);
+       //        if (!NT_SUCCESS(status))
+       //        {
+       //            RegDebug(L"OnPostInterruptsEnabled _HidPower WdfPowerDeviceD0 failed", NULL, status);
+       //        }
+       //        else {
+       //            pDevContext->FirstD0Entry = FALSE;
+       //        }
+       //    }
+       //}
+
     }
 
     
@@ -1495,7 +1502,6 @@ SpbInitialize(
         interruptConfig.WaitLock = interruptLock;
         interruptConfig.InterruptTranslated = WdfCmResourceListGetDescriptor(FxResourcesTranslated, interruptIndex);
         interruptConfig.InterruptRaw = WdfCmResourceListGetDescriptor(FxResourcesRaw, interruptIndex);
-
         //interruptConfig.EvtInterruptDpc = OnInterruptDpc;
 
         status = WdfInterruptCreate(
@@ -2128,7 +2134,7 @@ NTSTATUS HidReset(PDEVICE_CONTEXT pDevContext)
     if (!value)
     {      
         WdfIoQueueStopSynchronously(pDevContext->IoctlQueue);
-        WdfTimerStart(pDevContext->timerHandle, WDF_REL_TIMEOUT_IN_MS(10));//400
+        WdfTimerStart(pDevContext->timerHandle, WDF_REL_TIMEOUT_IN_MS(400));//400,不支持20ms以下
         RegDebug(L"HidReset WdfTimerStart timerHandle", NULL, status);
     }
 
@@ -3101,8 +3107,6 @@ OnInterruptIsr(
             RegDebug(L"Invalid input report returned inputReportActualLength", NULL, status);
             goto exit;
         }
-
-        SetAAPThreshold(pDevContext);//当前时间表明已经用户登录了系统，可以进行获取SID操作了
 
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
 
@@ -4851,299 +4855,6 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
     return status;
 }
 
-
-void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext)
-{
-    if (pDevContext->bSetAAPThresholdOK) {
-        return;
-    }
-
-    pDevContext->bSetAAPThresholdOK = TRUE;
-
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    pDevContext->bFoundRegCurrentUserSID = FALSE;//当前用户SID是否找到
-    UNICODE_STRING SidUserName;
-    status = GetCurrentUserSID(pDevContext, &SidUserName);//获取当前用户SID
-    if (!NT_SUCCESS(status)) {
-        RegDebug(L"OnD0Entry GetCurrentUserSID SidUserName err", NULL, status);
-    }
-    else {
-        status = SetRegisterAAPThreshold(&SidUserName);//设置Touchpad sensitivity触摸板敏感度AAPThreshold为最高Maximum sensitivity
-        if (!NT_SUCCESS(status)) {
-            RegDebug(L"OnD0Entry SetRegisterAAPThreshold SidUserName err", NULL, status);
-        }
-
-        //保存SID
-        pDevContext->strCurrentUserSID.Buffer = (PWCHAR)ExAllocatePoolWithTag(NonPagedPool, SidUserName.Length, HIDI2C_POOL_TAG);
-        if (pDevContext->strCurrentUserSID.Buffer == NULL)
-        {
-            status = STATUS_UNSUCCESSFUL;
-            RegDebug(L"GetCurrentUserSID pDevContext->strCurrentUserSID.Buffer err", NULL, status);
-        }
-        pDevContext->strCurrentUserSID.Length = SidUserName.Length;//必须设置长度，否则数据会错误
-        pDevContext->strCurrentUserSID.MaximumLength = SidUserName.Length;
-        RtlCopyUnicodeString(&pDevContext->strCurrentUserSID, &SidUserName);//注意顺序在设置长度之后，否则数据会错误
-    }
-    if (SidUserName.Buffer != NULL)
-    {
-        RtlFreeUnicodeString(&SidUserName);
-    }
-
-    return;
-}
-
-NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg)//触控板AAP意外激活防护Accidental Activation Prevention功能，设置Touchpad sensitivity触摸板敏感度AAPThreshold为最高Maximum sensitivity
-{
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    if (pSidReg->Buffer == NULL || pSidReg->Length <= 20)
-    {
-        RegDebug(L"SetRegisterAAPThreshold pSidReg err", NULL, status);
-        return status;
-    }
-
-    //初始化注册表项
-    UNICODE_STRING stringKey;
-    UNICODE_STRING strAAPThreshold;
-
-    WCHAR CurrentUserbuf[256];
-    UNICODE_STRING RegCurrentUserLocation, RegUserLocation;
-    RtlInitUnicodeString(&RegUserLocation, L"\\Registry\\User\\");//HKET__USERS位置
-    RtlInitUnicodeString(&strAAPThreshold, L"\\Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad");//AAPThreshold键位置后段
-
-    RtlInitEmptyUnicodeString(&RegCurrentUserLocation, CurrentUserbuf, 256 * sizeof(WCHAR));
-
-    RtlCopyUnicodeString(&RegCurrentUserLocation, &RegUserLocation);
-    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, pSidReg);//得到HKET_CURRENT_USER位置
-    RegDebug(L"SetRegisterAAPThreshold HKET_CURRENT_USER =", RegCurrentUserLocation.Buffer, RegCurrentUserLocation.Length);
-
-    RtlAppendUnicodeStringToString(&RegCurrentUserLocation, &strAAPThreshold);//得到完整AAPThreshold键位置
-    RtlInitUnicodeString(&stringKey, RegCurrentUserLocation.Buffer);
-    RegDebug(L"SetRegisterAAPThreshold AAPThreshold Key=", stringKey.Buffer, stringKey.Length);
-
-    //RtlInitUnicodeString(&stringKey, L"\\Registry\\Machine\\Software\\Microsoft\\Windows\\CurrentVersion\\PrecisionTouchPad");//AAPDisabled键位置
-
-    //初始化OBJECT_ATTRIBUTES结构
-    OBJECT_ATTRIBUTES  ObjectAttributes;
-    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE对大小写敏感
-
-    //创建注册表项
-    HANDLE hKey;
-    ULONG Des;
-    status = ZwCreateKey(&hKey, KEY_ALL_ACCESS, &ObjectAttributes, 0, NULL, REG_OPTION_NON_VOLATILE, &Des);//KEY_ALL_ACCESS//KEY_READ| KEY_WRITE
-    if (NT_SUCCESS(status))
-    {
-        if (Des == REG_CREATED_NEW_KEY)
-        {
-            KdPrint(("新建注册表项！\n"));
-        }
-        else
-        {
-            KdPrint(("要创建的注册表项已经存在！\n"));
-        }
-    }
-    else {
-        RegDebug(L"SetRegisterAAPThreshold ZwCreateKey err", NULL, status);//STATUS_OBJECT_NAME_NOT_FOUND
-        return status;
-    }
-
-
-    //初始化valueName
-    UNICODE_STRING valueName;
-    RtlInitUnicodeString(&valueName, L"AAPThreshold");
-
-    //设置REG_DWORD键值
-    ULONG AAPThreshold = 0;//设置触摸板敏感度为最高，仿鼠标式触摸板驱动的防止误触功能依赖此参数设置，0 == Most sensitive,1 == High sensitivity,2 == Medium sensitivity(default),3 == Low sensitivity
-    status = ZwSetValueKey(hKey, &valueName, 0, REG_DWORD, &AAPThreshold, 4);
-    if (!NT_SUCCESS(status))
-    {
-        KdPrint(("设置REG_DWORD键值失败！\n"));
-        RegDebug(L"SetRegisterAAPThreshold err", NULL, status);
-    }
-
-    ////初始化valueName2
-    //UNICODE_STRING valueName2;
-    //RtlInitUnicodeString(&valueName2, L"AAPDisabled");
-
-    ////设置REG_DWORD键值
-    //ULONG AAPDisabled = 1;//关闭触摸板敏感度功能
-    //status = ZwSetValueKey(hKey, &valueName2, 0, REG_DWORD, &AAPDisabled, 4);
-    //if (!NT_SUCCESS(status))
-    //{
-    //    KdPrint(("设置REG_DWORD键值失败！\n"));
-    //}
-
-    ZwFlushKey(hKey);
-    //关闭注册表句柄
-    ZwClose(hKey);
-
-    RegDebug(L"SetRegisterAAPThreshold end", NULL, status);
-    return status;
-}
-
-
-NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg)
-{
-    //RegDebug(L"GetCurrentUserSID start", NULL, 0);
-
-    NTSTATUS status = STATUS_UNSUCCESSFUL;
-    HANDLE hRegHandle = NULL;
-    OBJECT_ATTRIBUTES objSid;
-    ULONG uRetLength = 0;
-    PKEY_FULL_INFORMATION pkfiQuery = NULL;
-    PKEY_BASIC_INFORMATION pbiEnumKey = NULL;
-    ULONG uIndex = 0;
-    UNICODE_STRING uniKeyName;
-    WCHAR ProfileListBuf[256];
-    WCHAR RegSidBuf[256];
-    UNICODE_STRING RegProfileList, strSaveSidRegLocation, RegSid;
-    RTL_QUERY_REGISTRY_TABLE paramTable[2];
-    ULONG udefaultData = 0;
-    ULONG uQueryValue;
-
-    
-    RtlZeroMemory(paramTable, sizeof(paramTable));
-
-    paramTable[0].Flags = RTL_QUERY_REGISTRY_DIRECT;
-    paramTable[0].Name = L"RefCount";
-    paramTable[0].EntryContext = &uQueryValue;
-    paramTable[0].DefaultType = REG_DWORD;
-    paramTable[0].DefaultData = &udefaultData;
-    paramTable[0].DefaultLength = sizeof(ULONG);
-
-    RtlInitUnicodeString(&strSaveSidRegLocation, L"\\Registry\\Machine\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\");
- 
-    RtlInitEmptyUnicodeString(&RegProfileList, ProfileListBuf, 256 * sizeof(WCHAR));
-    RtlCopyUnicodeString(&RegProfileList, &strSaveSidRegLocation);
-
-    RtlInitEmptyUnicodeString(&RegSid, RegSidBuf, 256 * sizeof(WCHAR));
-
-    InitializeObjectAttributes(&objSid, &strSaveSidRegLocation, OBJ_KERNEL_HANDLE, NULL, NULL);//OBJ_KERNEL_HANDLE//OBJ_CASE_INSENSITIVE
-
-    status = ZwOpenKey(&hRegHandle, KEY_ALL_ACCESS, &objSid);//KEY_ALL_ACCESS//KEY_READ
-    if (!NT_SUCCESS(status))
-    {
-        RegDebug(L"GetCurrentUserSID ZwOpenKey err", NULL, status);
-        goto END;
-    }
-
-    //ZwQueryKey ZwEnumKey Get Sid
-    status = ZwQueryKey(hRegHandle, KeyFullInformation, NULL, 0, &uRetLength);
-    if (status != STATUS_BUFFER_TOO_SMALL)//必须是该错误
-    {
-        RegDebug(L"GetCurrentUserSID ZwQueryKey err", NULL, status);
-        goto END;
-    }
-
-    pkfiQuery = (PKEY_FULL_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
-    if (pkfiQuery == NULL)
-    {
-        RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pkfiQuery err", NULL, status);
-        goto END;
-    }
-
-    RtlZeroMemory(pkfiQuery, uRetLength);
-    status = ZwQueryKey(hRegHandle, KeyFullInformation, pkfiQuery, uRetLength, &uRetLength);
-    if (!NT_SUCCESS(status))
-    {
-        RegDebug(L"GetCurrentUserSID ZwQueryKey pkfiQuery err", NULL, status);
-        goto END;
-    }
-
-    RegDebug(L"GetCurrentUser ZwQueryKey pkfiQuery ok", NULL, status);
-    for (uIndex = 0; uIndex < pkfiQuery->SubKeys; uIndex++)
-    {
-        status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, NULL, 0, &uRetLength);
-        if (status != STATUS_BUFFER_TOO_SMALL)//必须是该错误
-        {
-            RegDebug(L"GetCurrentUserSID ZwEnumerateKey err", NULL, status);
-            goto END;
-        }
-
-        pbiEnumKey = (PKEY_BASIC_INFORMATION)ExAllocatePoolWithTag(NonPagedPool, uRetLength, HIDI2C_POOL_TAG);
-        if (pbiEnumKey == NULL)
-        {
-            RegDebug(L"GetCurrentUserSID ExAllocatePoolWithTag pbiEnumKey err", NULL, status);
-            goto END;
-        }
-
-        RtlZeroMemory(pbiEnumKey, uRetLength);
-        status = ZwEnumerateKey(hRegHandle, uIndex, KeyBasicInformation, pbiEnumKey, uRetLength, &uRetLength);
-        if (!NT_SUCCESS(status))
-        {
-            RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey err", NULL, status);
-            goto END;
-        }
-
-        RegDebug(L"GetCurrentUserSID ZwEnumerateKey pbiEnumKey ok", NULL, status);
-        uniKeyName.Length = (USHORT)pbiEnumKey->NameLength;
-        uniKeyName.MaximumLength = (USHORT)pbiEnumKey->NameLength;
-        uniKeyName.Buffer = pbiEnumKey->Name;
-        //RegDebug(L"GetCurrentUser pbiEnumKey->Name=", pbiEnumKey->Name, pbiEnumKey->NameLength);
-
-        if (pbiEnumKey->NameLength > 20)
-        {
-            BOOLEAN* pFoundSID = &pDevContext->bFoundRegCurrentUserSID;
-            if (!(*pFoundSID)) {//第一个找到的SID先保存，如果后面有多用户SID会被替换
-                *pFoundSID = TRUE;//找到当前用户SID
-                RtlCopyUnicodeString(&RegSid, &uniKeyName);//SID内容会变化所以用定长数值buf的RegSid
-                RegDebug(L"GetCurrentUserSID RegSid =", RegSid.Buffer, RegSid.Length);
-            }
-
-            //判断多用户下登录的当前用户SID
-            RtlAppendUnicodeStringToString(&RegProfileList, &uniKeyName);
-            RtlQueryRegistryValues(RTL_REGISTRY_ABSOLUTE, RegProfileList.Buffer, paramTable, NULL, NULL);
-            if (uQueryValue > 0)//当前登录用户
-            {
-                RtlCopyUnicodeString(&RegSid, &uniKeyName);//SID内容会变化所以用定长数值buf的RegSid//替换初始用户SID
-                RegDebug(L"GetCurrentUserSID new RegSid =", RegSid.Buffer, RegSid.Length);
-            }
-        }
-
-        RtlCopyUnicodeString(&RegProfileList, &strSaveSidRegLocation);
-
-    }  
-
-    if (RegSid.Length <=20)
-    {
-        status = STATUS_UNSUCCESSFUL;
-        RegDebug(L"GetCurrentUserSID RegSid.Length err", NULL, status);
-        goto END;
-    }
-
-    //赋值最终SID常量
-    pSidReg->Buffer = (PWCHAR)ExAllocatePoolWithTag(NonPagedPool, RegSid.Length, HIDI2C_POOL_TAG);
-    if (pSidReg->Buffer == NULL)
-    {
-        status = STATUS_UNSUCCESSFUL;
-        RegDebug(L"GetCurrentUserSID pSidReg->Buffer err", NULL, status);
-        goto END;
-    }
-
-    pSidReg->Length = RegSid.Length;//必须设置长度，否则pSidReg数据会错误
-    pSidReg->MaximumLength = RegSid.Length;
-    RtlCopyUnicodeString(pSidReg, &RegSid);//注意顺序在设置长度之后，否则pSidReg数据会错误
-
-    //RegDebug(L"GetCurrentUserSID RegSid2 =", RegSid.Buffer, RegSid.Length);
-    RegDebug(L"GetCurrentUserSID pSidReg =", pSidReg->Buffer, pSidReg->Length);
-
-
-END:
-    if (pbiEnumKey != NULL) {
-        ExFreePoolWithTag(pbiEnumKey, HIDI2C_POOL_TAG);
-        pbiEnumKey = NULL;
-    }
-    if (pkfiQuery != NULL) {
-        ExFreePoolWithTag(pkfiQuery, HIDI2C_POOL_TAG);
-        pkfiQuery = NULL;
-    }
-    if (hRegHandle != NULL)
-    {
-        ZwClose(hRegHandle);
-        hRegHandle = NULL;
-    }
-
-    return status;
-}
 
 //
 VOID

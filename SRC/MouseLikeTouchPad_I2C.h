@@ -1418,9 +1418,6 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx);
 NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx);
 
-NTSTATUS  GetCurrentUserSID(PDEVICE_CONTEXT pDevContext, PUNICODE_STRING pSidReg);
-NTSTATUS  SetRegisterAAPThreshold(PUNICODE_STRING pSidReg); 
-void  SetAAPThreshold(PDEVICE_CONTEXT pDevContext);
 
 
 NTSTATUS
