@@ -1415,7 +1415,7 @@ NextUninstStep:
 CheckDev:
     nRet = WinExec("MltpDrvMgr.exe FindDevice", SW_HIDE);
     if (nRet < 31) {
-        MessageBox(NULL, L"二次验证，WinExec调用FindDevice子程序失败！取消安装，请稍后再试。", L"MltpDrvMgr", MB_OK);
+        MessageBox(NULL, L"二次验证，WinExec调用FindDevice子程序失败！取消卸载，请稍后再试。", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
         return;
     }
