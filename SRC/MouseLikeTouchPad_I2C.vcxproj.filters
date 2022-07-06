@@ -19,11 +19,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="MouseLikeTouchPad_I2C.res">
-      <Filter>Resource Files</Filter>
-    </Resource>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="MouseLikeTouchPad_i2c.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -37,5 +32,10 @@
     <ClInclude Include="MouseLikeTouchPad_I2C.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="MouseLikeTouchPad_I2C.res">
+      <Filter>Resource Files</Filter>
+    </Resource>
   </ItemGroup>
 </Project>

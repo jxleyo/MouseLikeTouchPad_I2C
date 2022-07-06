@@ -134,7 +134,9 @@
     <OutDir>$(SolutionDir)$(Platform)\$(ConfigurationName)\</OutDir>
     <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
     <IntDir>$(SolutionDir)$(Platform)\$(ConfigurationName)\</IntDir>
-    <TimeStampServer>http://timestamp.verisign.com/scripts/timstamp.dll</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <IncludePath>$(IncludePath);$(KMDF_INC_PATH)$(KMDF_VER_PATH);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -176,9 +178,7 @@
     <Inf Include="MouseLikeTouchPad_I2C.inf" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="MouseLikeTouchPad_I2C.res">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </Resource>
+    <Resource Include="MouseLikeTouchPad_I2C.res" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

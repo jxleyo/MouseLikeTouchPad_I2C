@@ -24,8 +24,8 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 
 [MouseLikeTouchPad_I2C.NTamd64...1]
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
-%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
 
 
 [MouseLikeTouchPad_I2C_Device.NT]
