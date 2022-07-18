@@ -8,7 +8,7 @@ MouseLikeTouchPad_I2C Hid Driver for windows10仿鼠标式触摸板驱动
 多点电容式触摸板根据触摸点接触面形状很容易解决手掌的误触（打字时触摸板支撑手掌的椭圆接触面的长宽比特征比正常手指大所以很容易排除过滤掉）。
 因为仿鼠标式触摸板驱动的指针移动功能采用鼠标数据报告集合所以windows触摸板设置的更改光标速度选项无效而是通过调节鼠标设置里的光标速度以及单指重按触摸板下沿调节DPI灵敏度方式。
 本驱动只适合部分匹配的笔记本电脑型号，硬件兼容标准以安装成功并运行正常来判别，另外只有采用Parallel Report Mode并行报告模式硬件的触控板有切换回windows原版触摸板操作方式的功能，Hybrid ReportingMode混合报告模式硬件的原版触摸板手势操作存在问题未解决所以不实现其切换回原版触摸板操作方式功能并且双指滑动滚轮操作有卡顿所以默认设置为模仿鼠标滚轮方式。
- 免费体验的测试版驱动因为采用非正式发行的第三方数字签名证书所以windows安全中心会弹出警告威胁选择“允许在设备上”即可不弹出窗口，正式发行的共享收费版本采用微软认证的数字签名证书无警告弹窗安装更安全简便。
+sys驱动程序文件采用微软认证的数字签名证书安全可靠，但因为exe安装文件采用价格较低的OV代码签名证书所以windows安全中心会弹出警告威胁，选择"更多信息"后再点击“仍要运行”即可安装，无需担心安全问题。
 
 
 驱动下载：
@@ -33,7 +33,7 @@ Because the pointer movement function driven by the MouseLikeTouchPad adopts the
 
 In addition, only the touch panel with Parallel Report Mode hardware has the function of switching back to the original windows touch panel operation mode. The problem with the original touch panel gesture operation of Hybrid ReportingMode hardware has not been solved, so the function of switching back to the original touch panel operation mode is not realized. The double finger sliding wheel operation has a jam, so the default setting is to imitate the mouse wheel mode.
 
-The free experience beta driver uses an unofficially issued third-party digital signature certificate, so the windows security center will pop up a warning threat. Select "allow on the device" and no window will pop up. The officially issued shared charging version uses a Microsoft Certified Digital signature certificate. It is safer and easier to install without a warning pop-up window.
+The sys driver file adopts the Microsoft Certified Digital signature certificate, which is safe and reliable. However, because the EXE installation file adopts the low-cost ov code signature certificate, the windows security center will pop up a warning threat, select "More info" and then click "Run anyway" to install,, without worrying about security issues.
 
 Description of project folder classification:
 
