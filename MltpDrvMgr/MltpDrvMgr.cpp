@@ -127,11 +127,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return EXIT_FAIL;
     }
     if (!DrvFileExist(L"MouseLikeTouchPad_I2C.cat")) {
-        MessageBox(NULL, L"MouseLikeTouchPad_I2C.inf文件丢失，请重新下载驱动包", L"MltpDrvMgr", MB_OK);
+        MessageBox(NULL, L"MouseLikeTouchPad_I2C.cat文件丢失，请重新下载驱动包", L"MltpDrvMgr", MB_OK);
         return EXIT_FAIL;
     }
     if (!DrvFileExist(L"MouseLikeTouchPad_I2C.sys")) {
-        MessageBox(NULL, L"MouseLikeTouchPad_I2C.inf文件丢失，请重新下载驱动包", L"MltpDrvMgr", MB_OK);
+        MessageBox(NULL, L"MouseLikeTouchPad_I2C.sys文件丢失，请重新下载驱动包", L"MltpDrvMgr", MB_OK);
         return EXIT_FAIL;
     }
 
