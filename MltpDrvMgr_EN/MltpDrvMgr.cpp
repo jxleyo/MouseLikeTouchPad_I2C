@@ -113,8 +113,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     
     //检测文件
-    if (!MainFileExist(L"InstDrv.bat")) {
-        MessageBox(NULL, L"The file InstDrv.bat is missing. Please download the installation package again", L"MltpDrvMgr", MB_OK);
+    if (!MainFileExist(L"InstallDriver.bat")) {
+        MessageBox(NULL, L"The file InstallDriver.bat is missing. Please download the installation package again", L"MltpDrvMgr", MB_OK);
+        return EXIT_FAIL;
+    }
+    if (!MainFileExist(L"UninstallDriver.bat")) {
+        MessageBox(NULL, L"The file UninstallDriver.bat is missing. Please download the installation package again", L"MltpDrvMgr", MB_OK);
         return EXIT_FAIL;
     }
     if (!MainFileExist(L"Uninst.bat")) {
@@ -1072,43 +1076,39 @@ BOOL SaveOEMDriverName()
 void Install() {
     INT nRet = 0;////-0 系统内存或资源不足//--ERROR_BAD_FORMAT.EXE文件格式无效（比如不是32位应用程序）//--ERROR_FILE_NOT_FOUND 指定的文件设有找到//--ERROR_PATH_NOT_FOUND
     INT retry = 0;
-    INT nTry = 0;
 
     while (Rescan())break;//重新扫描设备
 
-    //批处理模式安装微软ACPI\MSFT0001标准硬件ID驱动
+//批处理模式安装驱动
+InstallBat:
 
     //清理历史记录文件
-    DelLogFile(L"Return_InstDrv.txt");
-    DelLogFile(L"InstDrvSucceeded.txt");
+    while (LogFileExist(L"Return_InstDrv.txt"))DelLogFile(L"Return_InstDrv.txt");
+    while (LogFileExist(L"InstDrvSucceeded.txt"))DelLogFile(L"InstDrvSucceeded.txt");
+
 
     retry = 0;
-    nTry = 5;
     //char cmdLine[MAX_PATH];
     //memset(cmdLine, 0, MAX_PATH);
     //strcat_s(cmdLine, cmdFilePath);
-    //strcpy_s(cmdLine, "\\cmd.exe /c InstDrv.bat");
+    //strcpy_s(cmdLine, "\\cmd.exe /c InstallDriver.bat");
     //nRet = WinExec(cmdLine, SW_HIDE);
 
-    nRet = WinExec("cmd.exe /c InstDrv.bat", SW_HIDE);
+    nRet = WinExec("cmd.exe /c InstallDriver.bat", SW_HIDE);
     if (nRet > 30) {
-waitInstBAT:
+    LoopWaitBat:
         Sleep(500);
         retry++;
 
-        if (retry > nTry) {
-            goto NextInstStep;//跳过批处理安装方式
+        if (retry > 30) {
+            goto SearchDev;//跳过批处理安装方式
         }
 
-        if (LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
-            nTry=20;
+        if (!LogFileExist(L"Return_InstDrv.txt")) {//InstallDriver.bat未执行结束
+            goto LoopWaitBat;
         }
 
-        if (!LogFileExist(L"Return_InstDrv.txt")) {//InstDrv.bat未执行结束
-            goto waitInstBAT;
-        }
-
-        if (LogFileExist(L"InstDrvSucceeded.txt")) {//InstDrv.bat安装驱动成功
+        if (LogFileExist(L"InstDrvSucceeded.txt")) {//InstallDriver.bat安装驱动成功
             DelLogFile(L"Return_InstDrv.txt");
             DelLogFile(L"InstDrvSucceeded.txt");
             goto InstSuccess;//直接跳到结尾
@@ -1119,15 +1119,14 @@ waitInstBAT:
     }
 
 
-NextInstStep:
+SearchDev:
     //清理历史记录文件
     while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
-    while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
+    while (LogFileExist(L"Return_InstallDriver.txt"))DelLogFile(L"Return_InstallDriver.txt");
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
 
     retry = 0;
-    nTry = 3;
-FindDev:
+LoopFindDev:
     nRet = WinExec("MltpDrvMgr.exe FindDevice", SW_HIDE);
     if (nRet < 31) {
         MessageBox(NULL, L"Winexec failed to call finddevice subroutine! Cancel the installation. Please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1137,18 +1136,14 @@ FindDev:
 
     retry++;
     Sleep(1500);
-    if (retry > nTry) {
+    if (retry > 3) {
         MessageBox(NULL, L"Failed to find the device! Cancel the installation. Please try again later.", L"MltpDrvMgr", MB_OK);
         ExitCode = EXIT_FAIL;
         goto Clean;
     }
 
-    if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
-        nTry= 5;
-    }
-
     if (!LogFileExist(L"Return_FindDevice.txt")) {//FindDevice未执行结束
-        goto FindDev;
+        goto LoopFindDev;
     }
 
     //FindDevice执行完毕
@@ -1167,10 +1162,11 @@ FindDev:
         goto Clean;
     }
 
-
+InstallDrv:
+    //安装驱动文件
 
     retry = 0;
-InstDrv:
+LoopInstDrv:
     nRet = WinExec("MltpDrvMgr.exe InstallDriver", SW_HIDE);
     if (nRet < 31) {
         MessageBox(NULL, L"Winexec failed to call InstallDriver subroutine! Please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1179,47 +1175,19 @@ InstDrv:
         Sleep(3000);
         retry++;
         if (retry > 3) {
-            goto InstallBatStep;
-        }
-
-        if (!LogFileExist(L"Return_InstallDriver.txt")) {//InstallDriver未执行结束
-            goto InstDrv;
-        }     
-    }
-
-    if (LogFileExist(L"Return_InstallDriver.txt")) {//InstallDriver执行完成
-        goto CheckStep;
-    }
-    DelLogFile(L"Return_InstallDriver.txt");
-
-
-InstallBatStep:
-    nRet = WinExec("cmd.exe /c InstallDriver.bat", SW_HIDE);
-    if (nRet > 30) {
-    waitInstallBAT:
-        Sleep(500);
-        retry++;
-
-        if (retry > 10) {
             MessageBox(NULL, L"A matching I2C bus touchpad device was found, but the driver installation failed. Please try again later.", L"MltpDrvMgr", MB_OK);
             ExitCode = EXIT_FAIL;
             goto Clean;
         }
 
-        if (!LogFileExist(L"Return_InstallDriver.txt")) {//InstDrv.bat未执行结束
-            goto waitInstallBAT;
+        if (!LogFileExist(L"Return_InstallDriver.txt")) {//InstallDriver未执行结束
+            goto LoopInstDrv;
         }
-
-        if (LogFileExist(L"InstallDriverSucceeded.txt")) {//InstDrv.bat安装驱动成功
-            DelLogFile(L"Return_InstallDriver.txt");
-            DelLogFile(L"InstallDriverSucceeded.txt");
-            goto InstSuccess;
-        }
-
-        DelLogFile(L"Return_InstallDriver.txt");
-        DelLogFile(L"InstallDriverSucceeded.txt");
-        goto Clean;
     }
+
+    //InstallDriver执行完成
+    DelLogFile(L"Return_InstallDriver.txt");
+
 
 
 CheckStep:
@@ -1227,7 +1195,7 @@ CheckStep:
 
 
     //再次验证
-CheckDev:
+LoopCheckDev:
     nRet = WinExec("MltpDrvMgr.exe FindDevice", SW_HIDE);
     if (nRet < 31) {
         MessageBox(NULL, L"Winexec failed to call finddevice subroutine after secondary verification! Cancel the installation. Please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1244,7 +1212,7 @@ CheckDev:
     }
 
     if (!LogFileExist(L"Return_FindDevice.txt")) {//FindDevice未执行结束
-        goto FindDev;
+        goto LoopCheckDev;
     }
 
     //FindDevice执行完毕
@@ -1255,12 +1223,12 @@ CheckDev:
         ExitCode = EXIT_FAIL;
         goto Clean;
     }
-    
+
 
 InstSuccess:
     //清理历史记录文件
     while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
-    while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
+    while (LogFileExist(L"Return_InstallDriver.txt"))DelLogFile(L"Return_InstallDriver.txt");
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
 
     //存在驱动
@@ -1289,20 +1257,54 @@ void Uninstall() {
     WinExec("taskkill /f /im MltpSvc.exe", SW_HIDE);
 
     INT nRet = 0;////-0 系统内存或资源不足//--ERROR_BAD_FORMAT.EXE文件格式无效（比如不是32位应用程序）//--ERROR_FILE_NOT_FOUND 指定的文件设有找到//--ERROR_PATH_NOT_FOUND
-    INT retry = 0;
     INT nTry = 0;
 
     while (Rescan())break;//重新扫描设备
 
+//批处理模式卸载驱动
+UninstallBat:
+
     //清理历史记录文件
-    while(LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
+    while (LogFileExist(L"Return_UninstDrv.txt"))DelLogFile(L"Return_UninstDrv.txt");
+    while (LogFileExist(L"UninstDrvSucceeded.txt"))DelLogFile(L"UninstDrvSucceeded.txt");
+
+    INT retry = 0;
+
+    nRet = WinExec("cmd.exe /c UninstallDriver.bat", SW_HIDE);
+    if (nRet > 30) {
+    LoopWaitBat:
+        Sleep(500);
+        retry++;
+
+        if (retry > 30) {
+            goto SearchDev;//跳过批处理安装方式
+        }
+
+        if (!LogFileExist(L"Return_UninstDrv.txt")) {//UninstallDriver.bat未执行结束
+            goto LoopWaitBat;
+        }
+
+        if (LogFileExist(L"UninstDrvSucceeded.txt")) {//UninstallDriver.bat卸载驱动成功
+            DelLogFile(L"Return_UninstDrv.txt");
+            DelLogFile(L"UninstDrvSucceeded.txt");
+            goto UninstSuccess;//直接跳到结尾
+        }
+
+        DelLogFile(L"Return_UninstDrv.txt");
+        DelLogFile(L"UninstDrvSucceeded.txt");
+    }
+
+
+SearchDev:
+
+    //清理历史记录文件
+    while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
     while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
     while (LogFileExist(L"TouchPad_FOUND.txt"))DelLogFile(L"TouchPad_FOUND.txt");
 
-
     retry = 0;
     nTry = 3;
-FindDev:
+LoopFindDev:
     nRet = WinExec("MltpDrvMgr.exe FindDevice", SW_HIDE);
     if (nRet < 31) {
         MessageBox(NULL, L"Winexec failed to call finddevice subroutine! Cancel uninstall, please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1318,34 +1320,74 @@ FindDev:
         return;
     }
 
-    if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
+    if (LogFileExist(L"TouchPad_FOUND.txt")) {
         nTry = 5;
     }
 
     if (!LogFileExist(L"Return_FindDevice.txt")) {//FindDevice未执行结束
-        goto FindDev;
+        goto LoopFindDev;
     }
 
     //FindDevice执行完毕
-    DelLogFile(L"Return_FindDevice.txt");
+    while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
 
     if (!LogFileExist(L"TouchPad_FOUND.txt")) {
         MessageBox(NULL, L"No matching touchpad device is found. You can uninstall the program directly without uninstalling the driver.", L"MltpDrvMgr", MB_OK);
-        ExitCode = EXIT_OK;//这里不用安装，直接返回成功，但是跳到末尾清理程序
-        goto UninstDrvSuccess;
+        ExitCode = EXIT_OK;//这里不用卸载，直接跳到末尾成功程序
+        goto UninstSuccess;
     }
     DelLogFile(L"TouchPad_FOUND.txt");
 
     if (!LogFileExist(L"TouchPad_I2C_FOUND.txt")) {
         MessageBox(NULL, L"No matching I2C bus touchpad device is found, so the driver does not need to be unloaded, and the program can be unloaded directly.", L"MltpDrvMgr", MB_OK);
-        ExitCode = EXIT_OK;//这里不用安装，直接返回成功，但是跳到末尾清理程序
-        goto UninstDrvSuccess;
+        ExitCode = EXIT_OK;//这里不用卸载，直接跳到末尾成功程序
+        goto UninstSuccess;
+    }
+
+    if (!LogFileExist(L"OEMDriverName.txt")) {
+        MessageBox(NULL, L"No MouseLikeTouchPad_I2C driver found, no need to unload the driver.", L"MltpDrvMgr", MB_OK);
+        ExitCode = EXIT_OK;//这里不用卸载，直接跳到末尾成功程序
+        goto UninstSuccess;
+    }
+
+//批处理模式卸载驱动
+UninstBat:
+    //清理历史记录文件
+    while (LogFileExist(L"Return_UninstDrv.txt"))DelLogFile(L"Return_UninstDrv.txt");
+    while (LogFileExist(L"UninstDrvSucceeded.txt"))DelLogFile(L"UninstDrvSucceeded.txt");
+
+    retry = 0;
+
+    //nRet = WinExec(cmdLine, SW_HIDE);
+    nRet = WinExec("cmd.exe /c UninstDrv.bat", SW_HIDE);
+    if (nRet > 30) {
+    LoopWaitUninstBat:
+        Sleep(500);
+        retry++;
+
+        if (retry > 30) {
+            goto UninstallDrv;//超时跳过批处理卸载方式
+        }
+
+        if (!LogFileExist(L"Return_UninstDrv.txt")) {//UninstDrv.bat未执行结束
+            goto LoopWaitUninstBat;
+        }
+
+        if (LogFileExist(L"UninstDrvSucceeded.txt")) {//UninstDrv.bat卸载驱动成功
+            DelLogFile(L"Return_UninstDrv.txt");
+            DelLogFile(L"UninstDrvSucceeded.txt");
+            goto UninstSuccess;//直接跳到结尾
+        }
+
+        DelLogFile(L"Return_UninstDrv.txt");
+        DelLogFile(L"UninstDrvSucceeded.txt");
     }
 
 
+UninstallDrv:
 
     retry = 0;
-UninstDrv:
+LoopUninstDrv:
     nRet = WinExec("MltpDrvMgr.exe UninstallDriver", SW_HIDE);
     if (nRet < 31) {
         MessageBox(NULL, L"Winexec failed to call the uninstalldriver subroutine! Please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1353,59 +1395,18 @@ UninstDrv:
     else {
         Sleep(2000);
         retry++;
-        if (retry > 5) {
-            goto UninstBAT;
+        if (retry > 3) {
+            MessageBox(NULL, L"Uninstalldriver failed to unload the driver! Please try again later.", L"MltpDrvMgr", MB_OK);
+            ExitCode = EXIT_FAIL;
+            return;
         }
-            
-        if (!LogFileExist(L"Return_UninstallDriver.txt")) {//InstallDriver未执行结束
-            goto UninstDrv;
-        }        
+
+        if (!LogFileExist(L"Return_UninstallDriver.txt")) {//UninstallDriver未执行结束
+            goto LoopUninstDrv;
+        }
     }
 
-    goto NextUninstStep;//InstallDriver执行结束
-    
-
-    //批处理模式卸载驱动
-    nTry = 0;
-    //char cmdLine[MAX_PATH];
-            //memset(cmdLine, 0, MAX_PATH);
-            //strcat_s(cmdLine, cmdFilePath);
-            //strcpy_s(cmdLine, "\\cmd.exe /c UninstDrv.bat");
-UninstBAT:
-    retry = 0;
-    nTry++;
-
-    //nRet = WinExec(cmdLine, SW_HIDE);
-    nRet = WinExec("cmd.exe /c UninstDrv.bat", SW_HIDE);
-waitUninstBAT:
-    Sleep(500);
-    retry++;
-
-    if (retry > 10) {
-        goto UninstBAT;//超时再次批处理卸载方式
-    }
-
-    if (nTry > 3) {
-        MessageBox(NULL, L"Uninstalldriver failed to unload the driver! Please try again later.", L"MltpDrvMgr", MB_OK);
-        ExitCode = EXIT_FAIL;
-        return;
-    }
-
-    if (!LogFileExist(L"Return_UninstDrv.txt")) {//UninstDrv.bat未执行结束
-        goto waitUninstBAT;
-    }
-
-    if (LogFileExist(L"UninstDrvSucceeded.txt")) {//UninstDrv.bat卸载驱动成功
-        DelLogFile(L"Return_UninstDrv.txt");
-        DelLogFile(L"UninstDrvSucceeded.txt");
-        goto UninstDrvSuccess;//直接跳到结尾
-    }
-
-    DelLogFile(L"Return_UninstDrv.txt");
-    DelLogFile(L"UninstDrvSucceeded.txt");  
-    
-
-NextUninstStep:
+    //UninstallDriver执行结束
     DelLogFile(L"Return_UninstallDriver.txt");
 
     while (Rescan())break;//重新扫描设备
@@ -1429,11 +1430,11 @@ CheckDev:
     }
 
     if (!LogFileExist(L"Return_FindDevice.txt")) {//FindDevice未执行结束
-        goto FindDev;
+        goto CheckDev;
     }
 
     //FindDevice执行完毕
-    DelLogFile(L"Return_FindDevice.txt");
+    while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
 
     if (LogFileExist(L"OEMDriver.txt")) {
         MessageBox(NULL, L"The second verification failed to unload the driver. Please try again later.", L"MltpDrvMgr", MB_OK);
@@ -1442,7 +1443,7 @@ CheckDev:
     }
 
 
-UninstDrvSuccess:
+UninstSuccess:
     //清理历史记录文件
     while (LogFileExist(L"Return_FindDevice.txt"))DelLogFile(L"Return_FindDevice.txt");
     while (LogFileExist(L"Return_UninstallDriver.txt"))DelLogFile(L"Return_UninstallDriver.txt");
