@@ -19,7 +19,9 @@
 #include "shlobj.h" 
 #pragma comment(lib, "shell32.lib")
 
-
+#include <initguid.h>   // include before devpropdef.h
+#include <devpropdef.h>
+#include <devpkey.h>
 
 
 #define MltpDrvMgr_FLAG_FORCE       0x00000001

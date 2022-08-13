@@ -418,55 +418,50 @@ BOOL FindDevice()
         printf("未找到TouchPad触控板设备！\n");
     }
     else {
-        //生成I2C_hwID
-        wchar_t* pstr;
-        pstr = mystrcat(TouchPad_hwID, L"HID\\", L"ACPI\\");
-        pstr = mystrcat(pstr, L"&Col02", L"\0");
-        wcscpy_s(TouchPad_I2C_hwID, pstr);
-        //wprintf(TEXT("TouchPad I2C_hwID= [%s]\n"), I2C_hwID);
+        //获取Touchpad的父设备实例TouchPad_I2C_devInstanceID
+        DWORD RequiredSize = 0;
+        DEVPROPTYPE PropertyType = DEVPROP_TYPE_STRING;
+        WCHAR PropertyBuffer[4096] = { 0 };
+        if (!SetupDiGetDevicePropertyW(DeviceInfoSet, &DeviceInfoData, &DEVPKEY_Device_Parent, &PropertyType, (BYTE*)PropertyBuffer, sizeof(PropertyBuffer), &RequiredSize, 0)) {
+            printf("SetupDiGetDeviceProperty err！\n");
+        }
+        else {
+            wcscpy_s(TouchPad_I2C_devInstanceID, PropertyBuffer);
+            wprintf(TEXT("TouchPad_I2C_devInstanceID= [%s]\n"), TouchPad_I2C_devInstanceID);
+            //MessageBox(NULL, TouchPad_I2C_devInstanceID, L"MltpDrvMgr", MB_OK);
 
-        //验证I2C设备
-        //printf("开始查找TouchPad触控板的I2C设备！\n");
-        //wprintf(TEXT("Search for I2C_hwID Device ID: [%s]\n"), I2C_COMPATIBLE_hwID);
+            //查找TouchPad_I2C_hwID
+            printf("开始查找TouchPad触控板的I2C设备！\n");
+            wprintf(TEXT("Search for I2C_hwID Device ID: [%s]\n"), I2C_COMPATIBLE_hwID);
 
-        for (devIndex = 0; SetupDiEnumDeviceInfo(DeviceInfoSet, devIndex, &DeviceInfoData); devIndex++)
-        {
-            devHwIDs = NULL;
-            devCompatibleIDs = NULL;
-            //
-            // determine instance ID
-            //
-            if (CM_Get_Device_ID(DeviceInfoData.DevInst, devInstanceID, MAX_DEVICE_ID_LEN, 0) != CR_SUCCESS) {
-                printf("CM_Get_Device_ID err！\n");
-                devInstanceID[0] = TEXT('\0');
-            }
-            ////wprintf(TEXT("TouchPad I2C devInstance_ID: [%s]\n"), devInstance_ID);
+            if (SetupDiOpenDeviceInfo(DeviceInfoSet, TouchPad_I2C_devInstanceID, NULL, DIOD_INHERIT_CLASSDRVS, &DeviceInfoData)) {
+                //SetupDiBuildDriverInfoList(DeviceInfoSet, &DeviceInfoData, SPDIT_CLASSDRIVER);
 
-            devHwIDs = GetDevMultiSz(DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID);
-            devCompatibleIDs = GetDevMultiSz(DeviceInfoSet, &DeviceInfoData, SPDRP_COMPATIBLEIDS);
+                //SP_DRVINFO_DATA drvInfo;
+                //drvInfo.cbSize = sizeof(SP_DRVINFO_DATA);
+                //SetupDiEnumDriverInfo(DeviceInfoSet, &DeviceInfoData, SPDIT_CLASSDRIVER, 0, &drvInfo);
 
-            if (FuzzyCompareHwIds(devHwIDs, TouchPad_I2C_hwID) && FuzzyCompareHwIds(devCompatibleIDs, I2C_COMPATIBLE_hwID))
-            {
-                //printf("找到TouchPad触控板的I2C设备！\n");
-                //wprintf(TEXT("TouchPad I2C Device devInstance_ID= [%s]\n"), devInstance_ID);
-                //wprintf(TEXT("TouchPad I2C Device devHwIDs= [%s]\n"), devHwIDs[0]);
-                wcscpy_s(TouchPad_I2C_devInstanceID, devInstanceID);
-                wprintf(TEXT("TouchPad_I2C_hwID= [%s]\n"), TouchPad_I2C_hwID);
-                SaveTouchPad_I2C_hwID();
-                SaveTouchPad_I2C_devInstanceID();
-   
+
+                devHwIDs = GetDevMultiSz(DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID);
+                devCompatibleIDs = GetDevMultiSz(DeviceInfoSet, &DeviceInfoData, SPDRP_COMPATIBLEIDS);
+
+                if (FuzzyCompareHwIds(devCompatibleIDs, I2C_COMPATIBLE_hwID))
+                {
+                    //printf("找到TouchPad触控板的I2C设备！\n");
+                    //wprintf(TEXT("TouchPad I2C Device devHwIDs= [%s]\n"), devHwIDs[0]);
+                    wcscpy_s(TouchPad_I2C_hwID, devHwIDs[0]);
+                    wprintf(TEXT("TouchPad_I2C_hwID= [%s]\n"), TouchPad_I2C_hwID);
+                    SaveTouchPad_I2C_hwID();
+                    SaveTouchPad_I2C_devInstanceID();
+
+                    bTouchPad_I2C_FOUND = TRUE;
+                }
 
                 DelMultiSz(devHwIDs);
                 DelMultiSz(devCompatibleIDs);
-
-                bTouchPad_I2C_FOUND = TRUE;
-                break;
             }
 
-            DelMultiSz(devHwIDs);
-            DelMultiSz(devCompatibleIDs);
         }
-
     }
 
     if (!bTouchPad_I2C_FOUND) {
@@ -1163,9 +1158,42 @@ LoopFindDev:
     }
 
 
+
+//批处理模式2安装驱动
+InstallBatSecond:
+
+    //清理历史记录文件
+    while (LogFileExist(L"Return_InstDrv.txt"))DelLogFile(L"Return_InstDrv.txt");
+    while (LogFileExist(L"InstDrvSucceeded.txt"))DelLogFile(L"InstDrvSucceeded.txt");
+
+    retry = 0;
+    nRet = WinExec("cmd.exe /c Inst.bat", SW_HIDE);
+    if (nRet > 30) {
+    LoopWaitBat2:
+        Sleep(500);
+        retry++;
+
+        if (retry > 20) {
+            goto InstallDrv;//跳过批处理安装方式
+        }
+
+        if (!LogFileExist(L"Return_InstDrv.txt")) {//Inst.bat未执行结束
+            goto LoopWaitBat2;
+        }
+
+        if (LogFileExist(L"InstDrvSucceeded.txt")) {//Inst.bat安装驱动成功
+            DelLogFile(L"Return_InstDrv.txt");
+            DelLogFile(L"InstDrvSucceeded.txt");
+            goto InstSuccess;//直接跳到结尾
+        }
+
+        DelLogFile(L"Return_InstDrv.txt");
+        DelLogFile(L"InstDrvSucceeded.txt");
+    }
+
 InstallDrv:
     //安装驱动文件
-
+    
     retry = 0;
 LoopInstDrv:
     nRet = WinExec("MltpDrvMgr.exe InstallDriver", SW_HIDE);
