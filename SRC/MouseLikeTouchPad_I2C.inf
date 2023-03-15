@@ -5,7 +5,7 @@ ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = MouseLikeTouchPad_I2C.cat
 PnpLockdown=1	
-DriverVer = 07/17/2022,1.2.3.4
+DriverVer = 07/17/2023,1.2.3.4
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -24,9 +24,17 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 
 [MouseLikeTouchPad_I2C.NTamd64...1]
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
-%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001;微软标准I2C触摸板设备ID;小新系列、yoga系列、拯救者系列
 
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ELAN&DEV_0406;雷蛇灵刃15，2022款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款
+
+;以下未未测试验证的设备
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_06CB&DEV_CE44;联想thinkbook16 2023款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ASUE&DEV_140D;华硕 vivobook灵耀14 2023款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_32CD;惠普 光影精灵8 2022款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_04F3;戴尔 Inspiron灵越pro16 2023款
 
 [MouseLikeTouchPad_I2C_Device.NT]
 CopyFiles=MouseLikeTouchPad_I2C_Device.CopyFiles
