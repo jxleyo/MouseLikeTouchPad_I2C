@@ -1,28 +1,27 @@
-MouseLikeTouchPad_I2C Hid Driver for windows10ä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿é©±åŠ¨
+MouseLikeTouchPad_I2C Hid Driver for windows10·ÂÊó±êÊ½´¥Ãş°åÇı¶¯
 
-ä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿æ˜¯ä¸€ç§æ¨¡æ‹Ÿé¼ æ ‡åŠŸèƒ½çš„è§¦æ‘¸æ¿æŠ€æœ¯å®ç°ï¼Œå½“å‰çš„é€»è¾‘å®ç°ç‰ˆæœ¬æ˜¯å‘æ˜äººåŸºäºä»¿é¼ æ ‡è§¦æ‘¸æ¿ä¸“åˆ©æŠ€æœ¯æ ¹æ®äººæ‰‹æŒ‡æ“ä½œæ—¶è‡ªç„¶çŠ¶æ€å†æ¬¡ä¼˜åŒ–æ”¹è¿›è€Œæˆï¼Œ3æŒ‡å®Œæˆé¼ æ ‡å·¦é”®/å³é”®/ä¸­é”®å’ŒæŒ‡é’ˆçš„æ“ä½œï¼Œæ‰‹æŒ‡ä¸é¼ æ ‡çš„å„ä¸ªæŒ‰é”®ç­‰éƒ¨ä»¶çš„åŠŸèƒ½ä¸€ä¸€å¯¹åº”ï¼Œå…¶ä¸­çš„ä¸­æŒ‡å¯¹åº”é¼ æ ‡çš„æŒ‡é’ˆå®šä½å™¨ï¼Œé£ŸæŒ‡å¯¹åº”é¼ æ ‡å·¦é”®å’Œä¸­é”®ï¼ˆé£ŸæŒ‡ä¸ä¸­æŒ‡åˆ†å¼€æ—¶å®šä¹‰ä¸ºé¼ æ ‡å·¦é”®ï¼Œé£ŸæŒ‡ä¸ä¸­æŒ‡å¹¶æ‹¢æ—¶å®šä¹‰ä¸ºé¼ æ ‡ä¸­é”®ï¼‰ï¼Œæ— åæŒ‡å¯¹åº”é¼ æ ‡å³é”®ï¼Œä¸­æŒ‡æ— åæŒ‡æˆ–è€…ä¸­æŒ‡ä¸é£ŸæŒ‡2æŒ‡ä¸€èµ·å¿«é€Ÿè§¦æ‘¸åæ»‘åŠ¨æ“ä½œæ—¶å¯¹åº”é¼ æ ‡å‚ç›´æ»šè½®å’Œæ°´å¹³æ»šè½®ï¼Œå•æŒ‡é‡æŒ‰è§¦æ§æ¿å·¦ä¸‹è§’ç‰©ç†é”®ä¸ºé¼ æ ‡çš„åé€€åŠŸèƒ½é”®ï¼Œå•æŒ‡é‡æŒ‰è§¦æ§æ¿å³ä¸‹è§’ç‰©ç†é”®ä¸ºé¼ æ ‡çš„å‰è¿›åŠŸèƒ½é”®ï¼Œå•æŒ‡é‡æŒ‰è§¦æ§æ¿ä¸‹æ²¿ä¸­é—´ç‰©ç†é”®ä¸ºè°ƒèŠ‚é¼ æ ‡DPIçµæ•åº¦ï¼ˆæ…¢/ä¸­ç­‰/å¿«3æ®µçµæ•åº¦ï¼‰ï¼ŒåŒæŒ‡é‡æŒ‰è§¦æ§æ¿ä¸‹æ²¿ç‰©ç†é”®ä¸ºæ»šè½®å¼€å…³ï¼ˆå¼€å¯é¼ æ ‡æ»šè½®åŠè§¦æ‘¸æ¿æ‰‹åŠ¿åŠŸèƒ½æ–¹ä¾¿æ—¥å¸¸åº”ç”¨æ“ä½œï¼Œä¸´æ—¶å…³é—­é¼ æ ‡æ»šè½®åŠè§¦æ‘¸æ¿æ‰‹åŠ¿åŠŸèƒ½ä»¥é™ä½æ¸¸æˆè¯¯æ“ä½œç‡ï¼‰ï¼Œä¸‰æŒ‡é‡æŒ‰è§¦æ§æ¿ä¸‹æ²¿ç‰©ç†é”®ä¸ºåˆ‡æ¢æ»šè½®çš„æ“ä½œæ–¹å¼ï¼ˆç²¾ç¡®å¼è§¦æ‘¸æ¿åŒæŒ‡æ»‘åŠ¨æ‰‹åŠ¿/æ¨¡ä»¿é¼ æ ‡çš„æ»šè½®æ“ä½œï¼Œæ–¹ä¾¿å°‘æ•°å¯¹è§¦æ§æ¿åŒæŒ‡æ»‘åŠ¨æ”¯æŒå·®çš„åº”ç”¨å¦‚PTC Creoå¯ä»¥ä½¿ç”¨æ¨¡ä»¿çš„é¼ æ ‡æ»šè½®æ“ä½œï¼‰ï¼Œå››æŒ‡é‡æŒ‰è§¦æ§æ¿ä¸‹æ²¿ç‰©ç†é”®ä¸ºåˆ‡æ¢ä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿æ“ä½œæ–¹å¼çš„å¼€å…³ï¼ˆå…³é—­æ—¶æ¢å¤ä¸ºwindowsç³»ç»ŸåŸæœ¬çš„è§¦æ§æ¿æ–¹å¼ä»¥æ–¹ä¾¿å…¶ä»–æœªå­¦ä¹ ä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿æ“ä½œæ–¹æ³•çš„ç”¨æˆ·ä½¿ç”¨ï¼ŒåŒæ—¶ä¹Ÿèƒ½é€šè¿‡å¯¹æ¯”ä½“ç°å‡ºä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿é©±åŠ¨çš„å¼ºå¤§ä¹‹å¤„ï¼‰ã€‚
+·ÂÊó±êÊ½´¥Ãş°åÊÇÒ»ÖÖÄ£ÄâÊó±ê¹¦ÄÜµÄ´¥Ãş°å¼¼ÊõÊµÏÖ£¬µ±Ç°µÄÂß¼­ÊµÏÖ°æ±¾ÊÇ·¢Ã÷ÈË»ùÓÚ·ÂÊó±ê´¥Ãş°å×¨Àû¼¼Êõ¸ù¾İÈËÊÖÖ¸²Ù×÷Ê±×ÔÈ»×´Ì¬ÔÙ´ÎÓÅ»¯¸Ä½ø¶ø³É£¬3Ö¸Íê³ÉÊó±ê×ó¼ü/ÓÒ¼ü/ÖĞ¼üºÍÖ¸ÕëµÄ²Ù×÷£¬ÊÖÖ¸ÓëÊó±êµÄ¸÷¸ö°´¼üµÈ²¿¼şµÄ¹¦ÄÜÒ»Ò»¶ÔÓ¦£¬ÆäÖĞµÄÖĞÖ¸¶ÔÓ¦Êó±êµÄÖ¸Õë¶¨Î»Æ÷£¬Ê³Ö¸¶ÔÓ¦Êó±ê×ó¼üºÍÖĞ¼ü£¨Ê³Ö¸ÓëÖĞÖ¸·Ö¿ªÊ±¶¨ÒåÎªÊó±ê×ó¼ü£¬Ê³Ö¸ÓëÖĞÖ¸²¢Â£Ê±¶¨ÒåÎªÊó±êÖĞ¼ü£©£¬ÎŞÃûÖ¸¶ÔÓ¦Êó±êÓÒ¼ü£¬ÖĞÖ¸ÎŞÃûÖ¸»òÕßÖĞÖ¸ÓëÊ³Ö¸2Ö¸Ò»Æğ¿ìËÙ´¥Ãşºó»¬¶¯²Ù×÷Ê±¶ÔÓ¦Êó±ê´¹Ö±¹öÂÖºÍË®Æ½¹öÂÖ£¬µ¥Ö¸ÖØ°´´¥¿Ø°å×óÏÂ½ÇÎïÀí¼üÎªÊó±êµÄºóÍË¹¦ÄÜ¼ü£¬µ¥Ö¸ÖØ°´´¥¿Ø°åÓÒÏÂ½ÇÎïÀí¼üÎªÊó±êµÄÇ°½ø¹¦ÄÜ¼ü£¬µ¥Ö¸ÖØ°´´¥¿Ø°åÏÂÑØÖĞ¼äÎïÀí¼üÎªµ÷½ÚÊó±êDPIÁéÃô¶È£¨Âı/ÖĞµÈ/¿ì3¶ÎÁéÃô¶È£©£¬Ë«Ö¸ÖØ°´´¥¿Ø°åÏÂÑØÎïÀí¼üÎª¹öÂÖ¿ª¹Ø£¨¿ªÆôÊó±ê¹öÂÖ¼°´¥Ãş°åÊÖÊÆ¹¦ÄÜ·½±ãÈÕ³£Ó¦ÓÃ²Ù×÷£¬ÁÙÊ±¹Ø±ÕÊó±ê¹öÂÖ¼°´¥Ãş°åÊÖÊÆ¹¦ÄÜÒÔ½µµÍÓÎÏ·Îó²Ù×÷ÂÊ£©£¬ÈıÖ¸ÖØ°´´¥¿Ø°åÏÂÑØÎïÀí¼üÎªÇĞ»»¹öÂÖµÄ²Ù×÷·½Ê½£¨¾«È·Ê½´¥Ãş°åË«Ö¸»¬¶¯ÊÖÊÆ/Ä£·ÂÊó±êµÄ¹öÂÖ²Ù×÷£¬·½±ãÉÙÊı¶Ô´¥¿Ø°åË«Ö¸»¬¶¯Ö§³Ö²îµÄÓ¦ÓÃÈçPTC Creo¿ÉÒÔÊ¹ÓÃÄ£·ÂµÄÊó±ê¹öÂÖ²Ù×÷£©£¬ËÄÖ¸ÖØ°´´¥¿Ø°åÏÂÑØÎïÀí¼üÎªÇĞ»»·ÂÊó±êÊ½´¥Ãş°å²Ù×÷·½Ê½µÄ¿ª¹Ø£¨¹Ø±ÕÊ±»Ö¸´ÎªwindowsÏµÍ³Ô­±¾µÄ´¥¿Ø°å·½Ê½ÒÔ·½±ãÆäËûÎ´Ñ§Ï°·ÂÊó±êÊ½´¥Ãş°å²Ù×÷·½·¨µÄÓÃ»§Ê¹ÓÃ£¬Í¬Ê±Ò²ÄÜÍ¨¹ı¶Ô±ÈÌåÏÖ³ö·ÂÊó±êÊ½´¥Ãş°åÇı¶¯µÄÇ¿´óÖ®´¦£©¡£
 
-æ‰‹æŒ‡ä¸é¼ æ ‡æŒ‰é”®åŠŸèƒ½å®šä¹‰è§„åˆ™ï¼š 
-æ ¹æ®é¼ æ ‡å·¦é”®/ä¸­é”®æ™®éç”¨é£ŸæŒ‡æ“ä½œçš„ä¹ æƒ¯ã€æ‰‹æŒ‡è‡ªç„¶çŠ¶æ€æ¥åŒºåˆ†ç¡®å®šé¼ æ ‡å·¦é”®/å³é”®/ä¸­é”®æ“ä½œä¸æ»šåŠ¨æ“ä½œï¼›ä¸­æŒ‡å¯¹åº”é¼ æ ‡çš„æŒ‡é’ˆå®šä½å™¨ï¼›ä¸­æŒ‡è¢«å®šä¹‰ä¸ºæŒ‡é’ˆåé£ŸæŒ‡é¦–æ¬¡æ¥è§¦åˆ°è§¦æ§æ¿çš„æ—¶é—´ä¸ä¸­æŒ‡å®šä¹‰ä¸ºæŒ‡é’ˆçš„æ—¶é—´å·®è¶…è¿‡é˜ˆå€¼å¸¸é‡æ—¶é£ŸæŒ‡æ“ä½œå®šä¹‰ ä¸ºé¼ æ ‡å·¦é”®æˆ–ä¸­é”®ï¼ˆé£ŸæŒ‡ä¸ä¸­æŒ‡ä¸ºåˆ†å¼€çŠ¶æ€æ—¶é£ŸæŒ‡æ“ä½œå®šä¹‰ä¸ºé¼ æ ‡å·¦é”®ï¼Œé£ŸæŒ‡ä¸ä¸­æŒ‡å¹¶æ‹¢çŠ¶æ€æ—¶é£ŸæŒ‡æ“ä½œå®šä¹‰ä¸ºé¼ æ ‡ä¸­é”®ï¼Œå·¦é”®å’Œä¸­é”®äº’ç›¸åˆ‡æ¢éœ€è¦æŠ¬èµ·é£ŸæŒ‡åè¿›è¡Œæ”¹å˜ï¼Œå³é£ŸæŒ‡ä¸ä¸­æŒ‡åœ¨åˆ†å¼€ã€å¹¶æ‹¢çŠ¶æ€ä¹‹é—´æ»‘åŠ¨åˆ‡æ¢æ—¶å·¦é”®ä¸­é”®å®šä¹‰ä¿æŒä¸å˜ï¼‰ï¼›ä¸­æŒ‡è¢«å®šä¹‰ä¸ºæŒ‡é’ˆåæ— åæŒ‡é¦–æ¬¡æ¥è§¦åˆ°è§¦æ§æ¿çš„æ—¶é—´ä¸ä¸­æŒ‡å®šä¹‰ä¸ºæŒ‡é’ˆçš„æ—¶é—´å·®è¶…è¿‡é˜ˆå€¼å¸¸é‡æ—¶æ— åæŒ‡æ“ä½œå®šä¹‰ä¸ºé¼ æ ‡å³é”®ï¼ŒæŒ‡é’ˆè¢«å®šä¹‰åæ— åæŒ‡/é£ŸæŒ‡é¦–æ¬¡æ¥è§¦åˆ°è§¦æ§æ¿çš„æ—¶é—´ä¸ä¸­æŒ‡å®šä¹‰ä¸ºæŒ‡é’ˆçš„æ—¶é—´å·®å°äºé˜ˆå€¼å¸¸é‡æ—¶ï¼ˆä¸­æŒ‡æ— åæŒ‡æˆ–è€…ä¸­æŒ‡ä¸é£ŸæŒ‡2æŒ‡ä¸€èµ·å¿«é€Ÿè§¦æ‘¸åæ»‘åŠ¨æ“ä½œï¼‰å®šä¹‰ä¸ºé¼ æ ‡å‚ç›´æˆ–æ°´å¹³æ»šè½®ï¼ˆæ­£å¸¸æƒ…å†µä¸­æŒ‡æ— åæŒ‡æˆ–è€…ä¸­æŒ‡ä¸é£ŸæŒ‡2æŒ‡ä¸€èµ·æ»‘åŠ¨æ“ä½œçš„èˆ’é€‚æ€§æœ€é«˜ï¼‰ã€‚
+ÊÖÖ¸ÓëÊó±ê°´¼ü¹¦ÄÜ¶¨Òå¹æÔò£º 
+¸ù¾İÊó±ê×ó¼ü/ÖĞ¼üÆÕ±éÓÃÊ³Ö¸²Ù×÷µÄÏ°¹ß¡¢ÊÖÖ¸×ÔÈ»×´Ì¬À´Çø·ÖÈ·¶¨Êó±ê×ó¼ü/ÓÒ¼ü/ÖĞ¼ü²Ù×÷Óë¹ö¶¯²Ù×÷£»ÖĞÖ¸¶ÔÓ¦Êó±êµÄÖ¸Õë¶¨Î»Æ÷£»ÖĞÖ¸±»¶¨ÒåÎªÖ¸ÕëºóÊ³Ö¸Ê×´Î½Ó´¥µ½´¥¿Ø°åµÄÊ±¼äÓëÖĞÖ¸¶¨ÒåÎªÖ¸ÕëµÄÊ±¼ä²î³¬¹ıãĞÖµ³£Á¿Ê±Ê³Ö¸²Ù×÷¶¨Òå ÎªÊó±ê×ó¼ü»òÖĞ¼ü£¨Ê³Ö¸ÓëÖĞÖ¸Îª·Ö¿ª×´Ì¬Ê±Ê³Ö¸²Ù×÷¶¨ÒåÎªÊó±ê×ó¼ü£¬Ê³Ö¸ÓëÖĞÖ¸²¢Â£×´Ì¬Ê±Ê³Ö¸²Ù×÷¶¨ÒåÎªÊó±êÖĞ¼ü£¬×ó¼üºÍÖĞ¼ü»¥ÏàÇĞ»»ĞèÒªÌ§ÆğÊ³Ö¸ºó½øĞĞ¸Ä±ä£¬¼´Ê³Ö¸ÓëÖĞÖ¸ÔÚ·Ö¿ª¡¢²¢Â£×´Ì¬Ö®¼ä»¬¶¯ÇĞ»»Ê±×ó¼üÖĞ¼ü¶¨Òå±£³Ö²»±ä£©£»ÖĞÖ¸±»¶¨ÒåÎªÖ¸ÕëºóÎŞÃûÖ¸Ê×´Î½Ó´¥µ½´¥¿Ø°åµÄÊ±¼äÓëÖĞÖ¸¶¨ÒåÎªÖ¸ÕëµÄÊ±¼ä²î³¬¹ıãĞÖµ³£Á¿Ê±ÎŞÃûÖ¸²Ù×÷¶¨ÒåÎªÊó±êÓÒ¼ü£¬Ö¸Õë±»¶¨ÒåºóÎŞÃûÖ¸/Ê³Ö¸Ê×´Î½Ó´¥µ½´¥¿Ø°åµÄÊ±¼äÓëÖĞÖ¸¶¨ÒåÎªÖ¸ÕëµÄÊ±¼ä²îĞ¡ÓÚãĞÖµ³£Á¿Ê±£¨ÖĞÖ¸ÎŞÃûÖ¸»òÕßÖĞÖ¸ÓëÊ³Ö¸2Ö¸Ò»Æğ¿ìËÙ´¥Ãşºó»¬¶¯²Ù×÷£©¶¨ÒåÎªÊó±ê´¹Ö±»òË®Æ½¹öÂÖ£¨Õı³£Çé¿öÖĞÖ¸ÎŞÃûÖ¸»òÕßÖĞÖ¸ÓëÊ³Ö¸2Ö¸Ò»Æğ»¬¶¯²Ù×÷µÄÊæÊÊĞÔ×î¸ß£©¡£
 
-å¤šç‚¹ç”µå®¹å¼è§¦æ‘¸æ¿æ ¹æ®è§¦æ‘¸ç‚¹æ¥è§¦é¢å½¢çŠ¶å¾ˆå®¹æ˜“è§£å†³æ‰‹æŒçš„è¯¯è§¦ï¼ˆæ‰“å­—æ—¶è§¦æ‘¸æ¿æ”¯æ’‘æ‰‹æŒçš„æ¤­åœ†æ¥è§¦é¢çš„é•¿å®½æ¯”ç‰¹å¾æ¯”æ­£å¸¸æ‰‹æŒ‡å¤§æ‰€ä»¥å¾ˆå®¹æ˜“æ’é™¤è¿‡æ»¤æ‰ï¼‰ã€‚
-å› ä¸ºä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿é©±åŠ¨çš„æŒ‡é’ˆç§»åŠ¨åŠŸèƒ½é‡‡ç”¨é¼ æ ‡æ•°æ®æŠ¥å‘Šé›†åˆæ‰€ä»¥windowsè§¦æ‘¸æ¿è®¾ç½®çš„æ›´æ”¹å…‰æ ‡é€Ÿåº¦é€‰é¡¹æ— æ•ˆè€Œæ˜¯é€šè¿‡è°ƒèŠ‚é¼ æ ‡è®¾ç½®é‡Œçš„å…‰æ ‡é€Ÿåº¦ä»¥åŠå•æŒ‡é‡æŒ‰è§¦æ‘¸æ¿ä¸‹æ²¿è°ƒèŠ‚DPIçµæ•åº¦æ–¹å¼ã€‚
-æœ¬é©±åŠ¨åªé€‚åˆéƒ¨åˆ†åŒ¹é…çš„ç¬”è®°æœ¬ç”µè„‘å‹å·ï¼Œç¡¬ä»¶å…¼å®¹æ ‡å‡†ä»¥å®‰è£…æˆåŠŸå¹¶è¿è¡Œæ­£å¸¸æ¥åˆ¤åˆ«ï¼Œå¦å¤–åªæœ‰é‡‡ç”¨Parallel Report Modeå¹¶è¡ŒæŠ¥å‘Šæ¨¡å¼ç¡¬ä»¶çš„è§¦æ§æ¿æœ‰åˆ‡æ¢å›windowsåŸç‰ˆè§¦æ‘¸æ¿æ“ä½œæ–¹å¼çš„åŠŸèƒ½ï¼ŒHybrid ReportingModeæ··åˆæŠ¥å‘Šæ¨¡å¼ç¡¬ä»¶çš„åŸç‰ˆè§¦æ‘¸æ¿æ‰‹åŠ¿æ“ä½œå­˜åœ¨é—®é¢˜æœªè§£å†³æ‰€ä»¥ä¸å®ç°å…¶åˆ‡æ¢å›åŸç‰ˆè§¦æ‘¸æ¿æ“ä½œæ–¹å¼åŠŸèƒ½å¹¶ä¸”åŒæŒ‡æ»‘åŠ¨æ»šè½®æ“ä½œæœ‰å¡é¡¿æ‰€ä»¥é»˜è®¤è®¾ç½®ä¸ºæ¨¡ä»¿é¼ æ ‡æ»šè½®æ–¹å¼ã€‚
-sysé©±åŠ¨ç¨‹åºæ–‡ä»¶é‡‡ç”¨å¾®è½¯è®¤è¯çš„æ•°å­—ç­¾åè¯ä¹¦å®‰å…¨å¯é ï¼Œä½†å› ä¸ºexeå®‰è£…æ–‡ä»¶é‡‡ç”¨ä»·æ ¼è¾ƒä½çš„OVä»£ç ç­¾åè¯ä¹¦æ‰€ä»¥windowså®‰å…¨ä¸­å¿ƒä¼šå¼¹å‡ºè­¦å‘Šå¨èƒï¼Œé€‰æ‹©"æ›´å¤šä¿¡æ¯"åå†ç‚¹å‡»â€œä»è¦è¿è¡Œâ€å³å¯å®‰è£…ï¼Œæ— éœ€æ‹…å¿ƒå®‰å…¨é—®é¢˜ã€‚
+¶àµãµçÈİÊ½´¥Ãş°å¸ù¾İ´¥Ãşµã½Ó´¥ÃæĞÎ×´ºÜÈİÒ×½â¾öÊÖÕÆµÄÎó´¥£¨´ò×ÖÊ±´¥Ãş°åÖ§³ÅÊÖÕÆµÄÍÖÔ²½Ó´¥ÃæµÄ³¤¿í±ÈÌØÕ÷±ÈÕı³£ÊÖÖ¸´óËùÒÔºÜÈİÒ×ÅÅ³ı¹ıÂËµô£©¡£
+ÒòÎª·ÂÊó±êÊ½´¥Ãş°åÇı¶¯µÄÖ¸ÕëÒÆ¶¯¹¦ÄÜ²ÉÓÃÊó±êÊı¾İ±¨¸æ¼¯ºÏËùÒÔwindows´¥Ãş°åÉèÖÃµÄ¸ü¸Ä¹â±êËÙ¶ÈÑ¡ÏîÎŞĞ§¶øÊÇÍ¨¹ıµ÷½ÚÊó±êÉèÖÃÀïµÄ¹â±êËÙ¶ÈÒÔ¼°µ¥Ö¸ÖØ°´´¥Ãş°åÏÂÑØµ÷½ÚDPIÁéÃô¶È·½Ê½¡£
+±¾Çı¶¯Ö»ÊÊºÏ²¿·ÖÆ¥ÅäµÄ±Ê¼Ç±¾µçÄÔĞÍºÅ£¬Ó²¼ş¼æÈİ±ê×¼ÒÔ°²×°³É¹¦²¢ÔËĞĞÕı³£À´ÅĞ±ğ£¬ÁíÍâÖ»ÓĞ²ÉÓÃParallel Report Mode²¢ĞĞ±¨¸æÄ£Ê½Ó²¼şµÄ´¥¿Ø°åÓĞÇĞ»»»ØwindowsÔ­°æ´¥Ãş°å²Ù×÷·½Ê½µÄ¹¦ÄÜ£¬Hybrid ReportingMode»ìºÏ±¨¸æÄ£Ê½Ó²¼şµÄÔ­°æ´¥Ãş°åÊÖÊÆ²Ù×÷´æÔÚÎÊÌâÎ´½â¾öËùÒÔ²»ÊµÏÖÆäÇĞ»»»ØÔ­°æ´¥Ãş°å²Ù×÷·½Ê½¹¦ÄÜ²¢ÇÒË«Ö¸»¬¶¯¹öÂÖ²Ù×÷ÓĞ¿¨¶ÙËùÒÔÄ¬ÈÏÉèÖÃÎªÄ£·ÂÊó±ê¹öÂÖ·½Ê½¡£
+sysÇı¶¯³ÌĞòÎÄ¼ş²ÉÓÃÎ¢ÈíÈÏÖ¤µÄÊı×ÖÇ©ÃûÖ¤Êé°²È«¿É¿¿£¬µ«ÒòÎªexe°²×°ÎÄ¼ş²ÉÓÃ¼Û¸ñ½ÏµÍµÄOV´úÂëÇ©ÃûÖ¤ÊéËùÒÔwindows°²È«ÖĞĞÄ»áµ¯³ö¾¯¸æÍşĞ²£¬Ñ¡Ôñ"¸ü¶àĞÅÏ¢"ºóÔÙµã»÷¡°ÈÔÒªÔËĞĞ¡±¼´¿É°²×°£¬ÎŞĞèµ£ĞÄ°²È«ÎÊÌâ¡£
 
 
-é©±åŠ¨ä¸‹è½½ï¼š
-å¤åˆ¶ä¸‹é¢çš„é“¾æ¥åˆ°æµè§ˆå™¨åœ°å€æ åå›è½¦è¿›å…¥ä¸‹è½½é¡µé¢
+Çı¶¯ÏÂÔØ£º
+¸´ÖÆÏÂÃæµÄÁ´½Óµ½ä¯ÀÀÆ÷µØÖ·À¸ºó»Ø³µ½øÈëÏÂÔØÒ³Ãæ
 https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
-é€‰æ‹©ä¸åŒçš„å®‰è£…åŒ…ç‰ˆæœ¬ç›´æ¥ä¸‹è½½
+Ñ¡Ôñ²»Í¬µÄ°²×°°ü°æ±¾Ö±½ÓÏÂÔØ
 
-ä½¿ç”¨æ“ä½œè§†é¢‘æ•™ç¨‹ç½‘å€ï¼š
+Ê¹ÓÃ²Ù×÷ÊÓÆµ½Ì³ÌÍøÖ·£º
 https://space.bilibili.com/409976933
-
 https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
 
 
-MouseLikeTouchPad_I2C Hid Driver for windowsä»¿é¼ æ ‡å¼è§¦æ‘¸æ¿é©±åŠ¨
+MouseLikeTouchPad_I2C Hid Driver for windows·ÂÊó±êÊ½´¥Ãş°åÇı¶¯
 
 The MouseLikeTouchPad is a touchpad technology implementation that simulates the function of the mouse. The current logic implementation version is optimized and improved again by the inventor based on the patented technology of the mouse like touchpad according to the natural state of human fingers during operation. 3 fingers refers to the completion of the operation of the left / right / middle keys of the mouse. The fingers correspond to the functions of various buttons and other parts of the mouse one by one. The middle finger corresponds to the pointer locator of the mouse, The index finger corresponds to the left button and the middle button of the mouse (when the index finger and the middle finger are separated, it is defined as the left button of the mouse, and when the index finger and the middle finger are close together, it is defined as the middle button of the mouse), the ring finger corresponds to the right button of the mouse, and the middle finger ring finger or the middle finger and the index finger 2 together after quick touch correspond to the vertical wheel and the horizontal wheel of the mouse during sliding operation. Pressing the physical key at the lower left corner of the touch panel with a single finger is the backward function key of the mouse, Pressing the physical key at the lower right corner of the touch panel with a single finger is the forward function key of the mouse, pressing the middle physical key at the lower edge of the touch panel with a single finger is to adjust the DPI sensitivity of the mouse (slow / medium / fast 3-stage sensitivity), and pressing the physical key at the lower edge of the touch panel with a double finger is the wheel switch (turning on the mouse wheel and the touch pad gesture function is convenient for daily application and operation, and temporarily turning off the mouse wheel and the touch pad gesture function to reduce the misoperation rate of the game), Pressing the physical key on the lower edge of the touch pad with three fingers is the operation mode to switch the wheel (accurate touch pad two finger sliding gesture / imitating the wheel operation of the mouse, which is convenient for a few applications with poor support for the two finger sliding of the touch pad, such as PTC Creo, which can use the simulated mouse wheel operation), Press the physical key on the lower edge of the touch panel with four fingers to switch the operation mode of the mouse like touch panel (when it is closed, it will revert to the original touch panel mode of the windows system to facilitate the use of other users who have not learned the operation method of the mouse like touch panel. At the same time, it can also reflect the power of the mouse like touch panel drive through comparison).
 
@@ -39,12 +38,11 @@ The sys driver file adopts the Microsoft Certified Digital signature certificate
 Description of project folder classification:
 
 
-Driver downloadï¼š
+Driver download£º
 Copy the following link to the browser address bar and press enter to enter the download page
 https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
 Select different installation package versions to download directly
 
 the operation video tutorial website:
 https://space.bilibili.com/409976933
-
 https://www.youtube.com/channel/UC3hQyN-2ZL_q7pCKoASAblQ
