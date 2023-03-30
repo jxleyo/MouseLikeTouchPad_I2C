@@ -36,7 +36,7 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ASUE&DEV_140D;华硕 vivobook无畏14 2023款
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_32CD;惠普 光影精灵8 2022款
 
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款，已测试操作延时数秒不能用
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款，专用版代码中设置延迟模式功能报告为正常延迟
 
 [MouseLikeTouchPad_I2C_Device.NT]
 CopyFiles=MouseLikeTouchPad_I2C_Device.CopyFiles
