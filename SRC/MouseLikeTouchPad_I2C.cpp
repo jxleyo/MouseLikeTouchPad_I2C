@@ -1162,6 +1162,9 @@ NTSTATUS OnPrepareHardware(
     pDevContext->REPORTID_DEVICE_CAPS = 0;
     pDevContext->REPORTSIZE_DEVICE_CAPS = 0;
 
+    pDevContext->REPORTID_LATENCY_MODE = 0;
+    pDevContext->REPORTSIZE_LATENCY_MODE = 0;
+    
     pDevContext->REPORTID_INPUT_MODE = 0;
     pDevContext->REPORTSIZE_INPUT_MODE = 0;
 
@@ -3679,6 +3682,12 @@ HidSetFeature(
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
         //RegDebug(L"HidSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
     }
+    else if (reportId == FAKE_REPORTID_LATENCY_MODE) {//FAKE_REPORTID_LATENCY_MODE
+        reportID = pDevContext->REPORTID_LATENCY_MODE;//替换为真实值
+        reportDataSize = pDevContext->REPORTSIZE_LATENCY_MODE;
+        reportData = LATENCY_MODE_REPORT_Normal_Latency;
+        //RegDebug(L"HidSetFeature LATENCY_MODE_REPORT_Normal_Latency reportDataSize=", NULL, reportDataSize);
+    }
     else {
         status = STATUS_INVALID_PARAMETER;
         RegDebug(L"HidSetFeature reportId err", NULL, status);
@@ -4050,6 +4059,14 @@ AnalyzeHidReportDescriptor(
             //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_DEVICE_CAPS=", NULL, pDevContext->REPORTSIZE_DEVICE_CAPS);
             //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_DEVICE_CAPS=", NULL, pDevContext->REPORTID_DEVICE_CAPS);
             continue;
+        }
+        else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_LATENCY_MODE) {
+        //延迟模式功能报告//默认标准规范为HID_USAGE_LATENCY_MODE低位1bit组合成1个字节HID_USAGE_LATENCY_MODE报告
+        pDevContext->REPORTSIZE_LATENCY_MODE = (reportSize + 7) / 8;//报告数据总长度
+        pDevContext->REPORTID_LATENCY_MODE = reportId;
+        //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_LATENCY_MODE=", NULL, pDevContext->REPORTSIZE_LATENCY_MODE);
+        //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_LATENCY_MODE=", NULL, pDevContext->REPORTID_LATENCY_MODE);
+        continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_PAGE_VENDOR_DEFINED_DEVICE_CERTIFICATION) {
             pDevContext->REPORTSIZE_PTPHQA = 256;

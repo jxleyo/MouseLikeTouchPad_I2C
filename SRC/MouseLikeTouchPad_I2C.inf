@@ -24,8 +24,8 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 
 [MouseLikeTouchPad_I2C.NTamd64...1]
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
-%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001;微软标准I2C触摸板设备ID;小新系列、yoga系列、拯救者系列
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001;微软标准I2C触摸板设备ID;小新系列、yoga系列、拯救者系列
 
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ELAN&DEV_0406;雷蛇灵刃15 2022款、雷蛇灵刃16 2023款，已测试手势操作不佳，混合报告模式
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ELAN&DEV_2310;小米RedmibookPro15,已测试蓝屏死机
@@ -38,7 +38,7 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ASUE&DEV_140D;华硕 vivobook无畏14 2023款
 ;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_32CD;惠普 光影精灵8 2022款
 
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款，专用版代码中设置延迟模式功能报告为正常延迟
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款，
 
 [MouseLikeTouchPad_I2C_Device.NT]
 CopyFiles=MouseLikeTouchPad_I2C_Device.CopyFiles

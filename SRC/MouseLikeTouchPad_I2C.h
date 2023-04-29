@@ -279,6 +279,9 @@ typedef struct _DEVICE_CONTEXT
     UCHAR REPORTID_DEVICE_CAPS; 
     UCHAR REPORTSIZE_DEVICE_CAPS;
 
+    UCHAR REPORTID_LATENCY_MODE;
+    UCHAR REPORTSIZE_LATENCY_MODE;
+
     UCHAR REPORTID_PTPHQA;
     USHORT REPORTSIZE_PTPHQA;
 
@@ -754,6 +757,8 @@ HidSetReport(
 #define PTP_FEATURE_SELECTIVE_REPORTING   1
 #define PTP_SELECTIVE_REPORT_Button_Surface_ON 3
 
+#define LATENCY_MODE_REPORT_Normal_Latency 0
+
 #define PTP_CONTACT_CONFIDENCE_BIT   1
 #define PTP_CONTACT_TIPSWITCH_BIT    2
 
@@ -798,9 +803,10 @@ HidSetReport(
 //每个REPORTID_必须不同以区分报告类别，并且值在1 - 255之间
 #define FAKE_REPORTID_MOUSE 0x02
 #define FAKE_REPORTID_MULTITOUCH 0x05
-#define FAKE_REPORTID_DEVICE_CAPS 0x05
+#define FAKE_REPORTID_DEVICE_CAPS 0x04
 #define FAKE_REPORTID_INPUTMODE 0x03
 #define FAKE_REPORTID_FUNCTION_SWITCH 0x06   
+#define FAKE_REPORTID_LATENCY_MODE 0x07
 #define FAKE_REPORTID_PTPHQA 0x08
 
 #define FAKE_REPORTID_VendorDefined_9 0x09
@@ -936,15 +942,15 @@ const unsigned char SingleFingerHybridMode_PtpReportDescriptor[] = {//本描述符只
         0x25, 0x0f,                         //    LOGICAL_MAXIMUM (15)
         0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
 
-        //0x85, FAKE_REPORTID_Latency,   //    REPORT_ID   Latency mode feature report id
-        //0x09, 0x60,                         //    USAGE (  Latency mode feature report 延迟模式功能报表的可选支持) 
-        //0x75, 0x01,                         //    REPORT_SIZE (1)              
-        //0x95, 0x01,                         //    REPORT_COUNT (1)    
-        //0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
-        //0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
-        //0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
-        //0x95, 0x0F,                          //   REPORT_COUNT (15)  
-        //0xb1, 0x03,                         //    FEATURE (Constant,Var)  
+        0x85, FAKE_REPORTID_LATENCY_MODE,   //    REPORT_ID   Latency mode feature report id
+        0x09, 0x60,                         //    USAGE (  Latency mode feature report 延迟模式功能报表的可选支持) 
+        0x75, 0x01,                         //    REPORT_SIZE (1)              
+        0x95, 0x01,                         //    REPORT_COUNT (1)    
+        0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
+        0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        0x95, 0x07,                          //   REPORT_COUNT (7)  
+        0xb1, 0x03,                         //    FEATURE (Constant,Var)  
 
         0x06, 0x00, 0xff,                   //    USAGE_PAGE (Vendor Defined)
         0x85, FAKE_REPORTID_PTPHQA, //   REPORT_ID (PTPHQA) 
@@ -1126,15 +1132,15 @@ const unsigned char ParallelMode_PtpReportDescriptor[] = {
         0x25, 0x0f,                         //    LOGICAL_MAXIMUM (15)
         0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
 
-        //0x85, FAKE_REPORTID_Latency,   //    REPORT_ID   Latency mode feature report id
-        //0x09, 0x60,                         //    USAGE (  Latency mode feature report 延迟模式功能报表的可选支持) 
-        //0x75, 0x01,                         //    REPORT_SIZE (1)              
-        //0x95, 0x01,                         //    REPORT_COUNT (1)    
-        //0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
-        //0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
-        //0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
-        //0x95, 0x07,                          //   REPORT_COUNT (7)  
-        //0xb1, 0x03,                         //    FEATURE (Constant,Var)  
+        0x85, FAKE_REPORTID_LATENCY_MODE,   //    REPORT_ID   Latency mode feature report id
+        0x09, 0x60,                         //    USAGE (  Latency mode feature report 延迟模式功能报表的可选支持) 
+        0x75, 0x01,                         //    REPORT_SIZE (1)              
+        0x95, 0x01,                         //    REPORT_COUNT (1)    
+        0x15, 0x00,                         //       LOGICAL_MINIMUM (0) 
+        0x25, 0x01,                         //     LOGICAL_MAXIMUM (1)
+        0xb1, 0x02,                         //    FEATURE (Data,Var,Abs)
+        0x95, 0x07,                          //   REPORT_COUNT (7)  
+        0xb1, 0x03,                         //    FEATURE (Constant,Var)  
 
         0x85, FAKE_REPORTID_PTPHQA, //   REPORT_ID (PTPHQA) 
         0x06, 0x00, 0xff,                   //    USAGE_PAGE (Vendor Defined)
