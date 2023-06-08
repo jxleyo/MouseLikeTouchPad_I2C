@@ -651,6 +651,7 @@ VOID OnInternalDeviceIoControl(
     //    RegDebug(L"IOCTL_HID_READ_REPORT IoControlCode", NULL, IOCTL_HID_READ_REPORT);//0xb000b
     //    RegDebug(L"IOCTL_HID_WRITE_REPORT IoControlCode", NULL, IOCTL_HID_WRITE_REPORT);//0xb000f
     //    RegDebug(L"IOCTL_HID_GET_STRING IoControlCode", NULL, IOCTL_HID_GET_STRING);//0xb0013
+    //    RegDebug(L"IOCTL_HID_GET_INDEXED_STRING IoControlCode", NULL, IOCTL_HID_GET_INDEXED_STRING);////0xb01e2
     //    RegDebug(L"IOCTL_HID_GET_FEATURE IoControlCode", NULL, IOCTL_HID_GET_FEATURE);//0xb0192
     //    RegDebug(L"IOCTL_HID_SET_FEATURE IoControlCode", NULL, IOCTL_HID_SET_FEATURE);//0xb0191
     //    RegDebug(L"IOCTL_HID_GET_INPUT_REPORT IoControlCode", NULL, IOCTL_HID_GET_INPUT_REPORT);//0xb01a2
@@ -705,7 +706,7 @@ VOID OnInternalDeviceIoControl(
             //LONG outlen = pDevContext->HidSettings.ReportDescriptorLength;//设置描述符长度
             //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
 
-            PVOID outbuf = (PVOID)ParallelMode_PtpReportDescriptor;//(PVOID)ParallelMode_PtpReportDescriptor //(PVOID)MouseReportDescriptor//(PVOID)SingleFingerHybridMode_PtpReportDescriptor
+            PVOID outbuf = (PVOID)ParallelMode_PtpReportDescriptor;//(PVOID)ParallelMode_PtpReportDescriptor //(PVOID)MouseReportDescriptor
             LONG outlen = DefaultHidDescriptor.DescriptorList[0].wReportLength;
 
             status = WdfMemoryCopyFromBuffer(memory, 0, outbuf, outlen);
@@ -729,33 +730,6 @@ VOID OnInternalDeviceIoControl(
         {
             //RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
             //RegDebug(L"IOCTL_HID_READ_REPORT runtimes_IOCTL_HID_READ_REPORT", NULL, runtimes_IOCTL_HID_READ_REPORT++);
-            
-            //if (pDevContext->SetFeatureReady == TRUE) {//条件判断代码在设置input mode之前
-            //            if (pDevContext->SetInputModeOK) {
-            //                status = PtpSetFeature(pDevContext, PTP_FEATURE_SELECTIVE_REPORTING);//设置触摸板SELECTIVE_REPORTING
-            //                if (!NT_SUCCESS(status)) {
-            //                    RegDebug(L"HidSetFeature PTP_SET_FEATURE_SELECTIVE_REPORTING err", NULL, status);
-            //                }
-            //                else {
-            //                    pDevContext->SetFunSwicthOK = TRUE;
-            //                }
-            //            }
-
-            //            status = PtpSetFeature(pDevContext, PTP_FEATURE_INPUT_COLLECTION);//设置触摸板input mode
-            //            if (!NT_SUCCESS(status)) {
-            //                RegDebug(L"HidSetFeature PTP_SET_FEATURE_INPUT_COLLECTION err", NULL, status);
-            //            }
-            //            else {
-            //                pDevContext->SetInputModeOK = TRUE;
-            //            }
-
-            //            if (pDevContext->SetFunSwicthOK) {
-            //                pDevContext->SetFeatureReady = FALSE;
-            //                pDevContext->PtpInputModeOn = TRUE;//
-            //            }
-
-            //            RegDebug(L"IOCTL_HID_READ_REPORT SetFeatureReady", NULL, runtimes_ioControl);
-            //}
 
             status = HidReadReport(pDevContext, Request, &requestPendingFlag);
             if (requestPendingFlag) {
@@ -800,6 +774,14 @@ VOID OnInternalDeviceIoControl(
             status = HidGetString(pDevContext, Request);//代码会死机
             break;
         }  
+
+        //case IOCTL_HID_GET_INDEXED_STRING:
+        //{
+        //    RegDebug(L"IOCTL_HID_GET_INDEXED_STRING", NULL, runtimes_ioControl);
+        //    //status = STATUS_NOT_IMPLEMENTED;
+        //    status = HidGetString(pDevContext, Request);//代码会死机
+        //    break;
+        //}
 
         case IOCTL_HID_WRITE_REPORT:
         {
@@ -1176,7 +1158,6 @@ NTSTATUS OnPrepareHardware(
 
     pDevContext->HidReportDescriptorSaved = FALSE;
     
-    pDevContext->bHybrid_ReportingMode = FALSE;//默认初始值为Parallel mode并行报告模式
     pDevContext->DeviceDescriptorFingerCount = 0;//描述符计算单个报告数据包手指数量
 
     pDevContext->HostInitiatedResetActive = FALSE;//新增
@@ -1247,11 +1228,6 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     pDevContext->SetInputModeOK = FALSE;
     pDevContext->SetFunSwicthOK = FALSE;
     pDevContext->GetStringStep = 0;
-
-    RtlZeroMemory(&pDevContext->currentPartOfFrame, sizeof(HYBRID_REPORT));
-    RtlZeroMemory(&pDevContext->combinedPacket, sizeof(PTP_REPORT));
-    pDevContext->contactCountIndex = 0;
-    pDevContext->CombinedPacketReady = FALSE;
 
     pDevContext->bMouseLikeTouchPad_Mode = TRUE;//默认初始值为仿鼠标触摸板操作方式
 
@@ -3115,101 +3091,7 @@ OnInterruptIsr(
 
         PTP_REPORT ptpReport;
 
-        //Single finger hybrid reporting mode单指混合模式
-        if (pDevContext->bHybrid_ReportingMode) {//混合报告模式状态
-
-            //合并数据帧MergeFrame
-            HYBRID_REPORT* pCurrentPartOfFrame  = &pDevContext->currentPartOfFrame;//合并帧的部分数据包
-
-            PTP_REPORT* pCombinedPacket = &pDevContext->combinedPacket;
-            RtlCopyMemory(pCurrentPartOfFrame, pBuf, sizeof(HYBRID_REPORT));
-
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ReportID", NULL, pCurrentPartOfFrame->ReportID);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.C5_BLOB", NULL, pCurrentPartOfFrame->C5_BLOB);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Confidence", NULL, pCurrentPartOfFrame->Confidence);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding1", NULL, pCurrentPartOfFrame->Padding1);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactID", NULL, pCurrentPartOfFrame->ContactID);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.X", NULL, pCurrentPartOfFrame->X);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Y", NULL, pCurrentPartOfFrame->Y);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ScanTime", NULL, pCurrentPartOfFrame->ScanTime);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.ContactCount", NULL, pCurrentPartOfFrame->ContactCount);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.IsButtonClicked", NULL, pCurrentPartOfFrame->IsButtonClicked);
-            //RegDebug(L"OnInterruptIsr HYBRID PartOfFrame.Padding2", NULL, pCurrentPartOfFrame->Padding2);
-
-            if (pCurrentPartOfFrame->ScanTime == pCombinedPacket->ScanTime) {//与上个数据包同属一帧
-                //不要判断pCurrentFrame->Confidence && pCurrentFrame->TipSwitch是否有效，直接添加帧，否则有可能出现问题
-                pDevContext->contactCountIndex++;//后续帧索引号兼计数器
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pDevContext->contactCountIndex=", NULL, pDevContext->contactCountIndex);  
-
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check pCurrentPartOfFrame->ContactCount=", NULL, pCurrentPartOfFrame->ContactCount);
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT check PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);
-
-                if (pDevContext->contactCountIndex == (pCombinedPacket->ContactCount - 1)) {//帧内最后一个数据包
-    /*                RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket pDevContext->contactCountIndex=", NULL, pCombinedPacket->ContactCount);
-                    RegDebug(L"OnInterruptIsr HYBRID_REPORT lastpacket PartOfFrame.TipSwitch", NULL, pCurrentPartOfFrame->TipSwitch);*/
-                    pDevContext->CombinedPacketReady = TRUE;//合并帧结束，可以发送
-                }
-            }
-            else {//数据包属于新的一帧，当前合并帧结束
-                RtlZeroMemory(pCombinedPacket, sizeof(PTP_REPORT));
-                pDevContext->contactCountIndex = 0;//帧内索引号兼计数器重置
-                pDevContext->CombinedPacketReady = FALSE;//合并帧数据状态重置
-                pCombinedPacket->ContactCount = pCurrentPartOfFrame->ContactCount;//首帧包含接触点数量
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount==", NULL, pCombinedPacket->ContactCount);
-                pCombinedPacket->IsButtonClicked = pCurrentPartOfFrame->IsButtonClicked;
-                //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->IsButtonClicked==", NULL, pCombinedPacket->IsButtonClicked);
-                pCombinedPacket->ReportID = pCurrentPartOfFrame->ReportID;
-                //pCombinedPacket->ReportID = FAKE_REPORTID_MULTITOUCH;
-                pCombinedPacket->ScanTime = pCurrentPartOfFrame->ScanTime;
-
-                if (pCombinedPacket->ContactCount == 1) {//合并帧只有一个数据包时，立即发送而不需要等待下一个分数据包
-                    //RegDebug(L"OnInterruptIsr HYBRID_REPORT pCombinedPacket->ContactCount only1", NULL, pCombinedPacket->ContactCount);
-                    pDevContext->CombinedPacketReady = TRUE;//合并帧结束，可以发送了
-                }
-            }
-
-            //添加当前帧到合并数据包中，不要判断pCurrentFrame->Confidence && pCurrentFrame->TipSwitch是否有效，直接添加帧，否则有可能出现问题
-            BYTE i = pDevContext->contactCountIndex;
-            pCombinedPacket->Contacts[i].Confidence = pCurrentPartOfFrame->Confidence;
-            pCombinedPacket->Contacts[i].ContactID = pCurrentPartOfFrame->ContactID;
-            pCombinedPacket->Contacts[i].TipSwitch = pCurrentPartOfFrame->TipSwitch;
-            pCombinedPacket->Contacts[i].Padding = 0;
-            pCombinedPacket->Contacts[i].X = pCurrentPartOfFrame->X;
-            pCombinedPacket->Contacts[i].Y = pCurrentPartOfFrame->Y;
-
-
-            if (pDevContext->CombinedPacketReady) {//合并帧准备好了,发送合并帧
-                RtlCopyMemory(&ptpReport, pCombinedPacket, sizeof(PTP_REPORT));
-                ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-                //RegDebug(L"OnInterruptIsr HYBRID ptpReport=", &ptpReport, sizeof(PTP_REPORT));
-
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
-
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-                //RegDebug(L"OnInterruptIsr HYBRID PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
-
-                if (ptpReport.ScanTime > 0x64) {
-                    ptpReport.ScanTime = 0x64;
-                }
-                goto parse;
-
-            }
-   
-            goto exit;//等待下一个帧
-        }
-
-
         //Parallel mode
-
-        //
         if (!pDevContext->PtpInputModeOn) {//输入集合异常模式下  
             ////发送原始报告
             //status = SendOriginalReport(pDevContext, pBuf, Actual_inputReportLength);
@@ -3236,8 +3118,6 @@ OnInterruptIsr(
         //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
 
 
-
-parse:
         if (!pDevContext->bMouseLikeTouchPad_Mode) {//原版触控板操作方式直接发送原始报告
             PTP_PARSER* tps = &pDevContext->tp_settings;
             if (ptpReport.IsButtonClicked) {
@@ -4100,8 +3980,9 @@ AnalyzeHidReportDescriptor(
 
     //判断触摸板报告模式
     if (pDevContext->DeviceDescriptorFingerCount < 5) {//5个手指数据以下
-        pDevContext->bHybrid_ReportingMode = TRUE;//混合报告模式确认
-        RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+        //Single finger hybrid reporting mode单指混合报告模式确认，驱动不予支持
+        RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode Confirm", NULL, pDevContext->DeviceDescriptorFingerCount);
+        return STATUS_UNSUCCESSFUL;//返回后终止驱动程序
     }
 
 
@@ -4425,12 +4306,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
                 RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
                 if (!pDevContext->bWheelDisabled) {//开启滚轮功能时同时也恢复滚轮实现方式为触摸板双指滑动手势
-                    if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标(双指滑动手势还存在一些卡顿问题体验不好)
-                        pDevContext->bWheelScrollMode = TRUE;
-                    }
-                    else {
-                        pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
-                    }
+                    pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
                     RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
                 }
 
@@ -4449,8 +4325,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
             }
-            else if (currentFinger_Count == 4 && !pDevContext->bHybrid_ReportingMode) {//四指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
-                //混合报告模式的触控板存在诸多问题未解决所以没有此功能
+            else if (currentFinger_Count == 4) {//四指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
                 //因为原版触控板操作方式只是临时使用所以不保存到注册表，电脑重启或休眠唤醒后恢复到仿鼠标式触摸板模式
                 // 原版的PTP精确式触摸板操作方式时发送报告在本函数外部执行不需要浪费资源解析，切换回仿鼠标式触摸板模式也在本函数外部判断
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
@@ -4752,12 +4627,7 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
    tp->nMouse_Wheel_LastIndex = -1; //定义上次鼠标滚轮辅助参考手指触摸点坐标的数据索引号，-1为未定义
 
    pDevContext->bWheelDisabled = FALSE;//默认初始值为开启滚轮操作功能
-   if (pDevContext->bHybrid_ReportingMode) {//混合报告模式默认滚轮方式为模仿鼠标(双指滑动手势还存在一些卡顿问题体验不好)
-       pDevContext->bWheelScrollMode = TRUE;
-   }
-   else {
-       pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
-   }
+   pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
 
 
    tp->bMouse_Wheel_Mode = FALSE;
