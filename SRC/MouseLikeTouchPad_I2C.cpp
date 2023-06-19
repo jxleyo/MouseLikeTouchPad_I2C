@@ -4228,6 +4228,10 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
     //所有手指触摸点的索引号跟踪
     for (char i = 0; i < currentFinger_Count; i++) {
+        if (!tp->currentFinger.Contacts[i].Confidence || !tp->currentFinger.Contacts[i].TipSwitch) {//必须判断Confidence和TipSwitch才是有效触摸点数据     
+            continue;
+        }
+
         if (tp->nMouse_Pointer_LastIndex != -1) {
             if (tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].ContactID == tp->currentFinger.Contacts[i].ContactID) {
                 tp->nMouse_Pointer_CurrentIndex = i;//找到指针
@@ -4294,7 +4298,9 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             tp->bPhysicalButtonUp = TRUE;
             RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp TRUE", NULL, TRUE);
             if (currentFinger_Count == 1) {//单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），鼠标的后退/前进功能键不需要判断会自动释放)，
-                if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
+
+                //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
+                if (tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
                     && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y/2) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
                     //切换鼠标DPI灵敏度
                     SetNextSensitivity(pDevContext);//循环设置灵敏度
@@ -4342,7 +4348,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     if (tp->nMouse_Pointer_LastIndex == -1 && currentFinger_Count > 0) {//鼠标指针、左键、右键、中键都未定义,
         //指针触摸点压力、接触面长宽比阈值特征区分判定手掌打字误触和正常操作,压力越小接触面长宽比阈值越大、长度阈值越小
         for (UCHAR i = 0; i < currentFinger_Count; i++) {
-            if (tp->currentFinger.Contacts[i].ContactID == 0 && tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch\
+            //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
+            if (tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch\
                 && tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT) {//起点坐标在误触横竖线以内
                 tp->nMouse_Pointer_CurrentIndex = i;  //首个触摸点作为指针
                 tp->MousePointer_DefineTime = tp->current_Ticktime;//定义当前指针起始时间
@@ -4440,8 +4447,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 STABLE_INTERVAL = STABLE_INTERVAL_FingerSeparated_MSEC;
             }
 
-            float px = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X) / tp->thumb_Scale;
-            float py = (float)(tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y) / tp->thumb_Scale;
+            SHORT diffX = tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].X - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].X;
+            SHORT diffY = tp->currentFinger.Contacts[tp->nMouse_Pointer_CurrentIndex].Y - tp->lastFinger.Contacts[tp->nMouse_Pointer_LastIndex].Y;
+
+            float px = (float)(diffX / tp->thumb_Scale);
+            float py = (float)(diffY / tp->thumb_Scale);
 
             if (JitterFixTimer < STABLE_INTERVAL) {//触摸点稳定前修正
                 if (tp->nMouse_LButton_CurrentIndex != -1 || tp->nMouse_RButton_CurrentIndex != -1 || tp->nMouse_MButton_CurrentIndex != -1) {//有按键时修正，单指针时不需要使得指针更精确
@@ -4456,15 +4466,26 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
             double xx= pDevContext->MouseSensitivity_Value * px / tp->PointerSensitivity_x;
             double yy = pDevContext->MouseSensitivity_Value* py / tp->PointerSensitivity_y;
-            mReport.dx = (UCHAR)xx;
-            mReport.dy = (UCHAR)yy;
-            if (xx > 0.5 && xx < 1) {//慢速精细移动指针修正
-                mReport.dx = 1;
+            mReport.dx = (CHAR)xx;
+            mReport.dy = (CHAR)yy;
+
+            if (abs(xx) > 0.5 && abs(xx) < 1) {//慢速精细移动指针修正
+                if (xx > 0) {
+                    mReport.dx = 1;
+                }
+                else {
+                    mReport.dx = -1;
+                }
+
             }
-            if (yy > 0.5 && yy < 1) {//慢速精细移动指针修正
-                mReport.dy = 1;
+            if (abs(yy) > 0.5 && abs(yy) < 1) {//慢速精细移动指针修正
+                if (xx > 0) {
+                    mReport.dy = 1;
+                }
+                else {
+                    mReport.dy = -1;
+                }
             }
-            
 
         }
     }
