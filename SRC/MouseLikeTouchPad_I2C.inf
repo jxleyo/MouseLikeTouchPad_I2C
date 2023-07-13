@@ -5,7 +5,7 @@ ClassGuid = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
 Provider = %ManufacturerName%
 CatalogFile = MouseLikeTouchPad_I2C.cat
 PnpLockdown=1	
-DriverVer = 07/17/2023,1.0.1.0
+DriverVer = 07/17/2023,1.0.2.0
 
 [DestinationDirs]
 DefaultDestDir = 12
@@ -23,10 +23,23 @@ MouseLikeTouchPad_I2C.sys  = 99,,
 %ManufacturerName%=MouseLikeTouchPad_I2C,NTamd64...1
 
 [MouseLikeTouchPad_I2C.NTamd64...1]
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C
-%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\PNP0C50
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001;微软标准I2C触摸板设备ID;小新系列、yoga系列、拯救者系列
-;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MLTP0001;jxleyo仿鼠标触摸板MLTP标准I2C触摸板设备ID;
+;%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, Hid\MouseLikeTouchPad_I2C;//ACPI\PNP0C50，兼容ID最新windows系统已经不可用了
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MLTP0001;//jxleyo仿鼠标触摸板MLTP标准I2C触摸板设备ID;
+
+
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\MSFT0001;//微软标准I2C触摸板设备ID，小新系列、yoga系列、拯救者系列
+
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ELAN&DEV_0406;//雷蛇灵刃15 2022款、雷蛇灵刃16 2023款，已测试手势操作不佳，混合报告模式
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_DELL&DEV_0945;;//ACPI\DLL0945;戴尔 Dell XPS15 9510、9310 2021款、Dell Precision 5560。
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_04F3;//XPS13 9320、XPS15 9520、Dell Precision 5770
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_DELL&DEV_098F;//DELL098F:00 04F3:311C Touchpad;戴尔Dell XPS17 9700 2021款 
+
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_06CB&DEV_CE44;//联想thinkbook16 2023款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_ASUE&DEV_140D;//华硕 vivobook无畏14 2023款
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_32CD;//惠普 光影精灵8 2022款
+
+%MouseLikeTouchPad_I2C.DeviceDesc%=MouseLikeTouchPad_I2C_Device, ACPI\VEN_SYNA&DEV_7DAB;Acer非凡s3 2022款，
+
 
 [MouseLikeTouchPad_I2C_Device.NT]
 CopyFiles=MouseLikeTouchPad_I2C_Device.CopyFiles

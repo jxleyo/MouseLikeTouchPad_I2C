@@ -1,7 +1,7 @@
 #include "MouseLikeTouchPad_I2C.h"
 #include<math.h>
 extern "C" int _fltused = 0;
-#define debug_on 0
+
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry )
@@ -19,63 +19,16 @@ extern "C" int _fltused = 0;
 #endif
 
 
-VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue)//RegDebug(L"Run debug here",pBuffer,pBufferSize);//RegDebug(L"Run debug here",NULL,0x12345678);
-{
-    if (!debug_on) {//调试开关
-        return;
-    }
+#if DBG 
 
-    //初始化注册表项
-    UNICODE_STRING stringKey;
-    RtlInitUnicodeString(&stringKey, L"\\Registry\\Machine\\Software\\RegDebug");
+#define KdPrintData(_x_) KdPrintDataFun _x_
 
-    //初始化OBJECT_ATTRIBUTES结构
-    OBJECT_ATTRIBUTES  ObjectAttributes;
-    InitializeObjectAttributes(&ObjectAttributes, &stringKey, OBJ_CASE_INSENSITIVE, NULL, NULL);//OBJ_CASE_INSENSITIVE对大小写敏感
+#else 
 
-    //创建注册表项
-    HANDLE hKey;
-    ULONG Des;
-    NTSTATUS status = ZwCreateKey(&hKey, KEY_ALL_ACCESS, &ObjectAttributes, 0, NULL, REG_OPTION_NON_VOLATILE, &Des);
-    if (NT_SUCCESS(status))
-    {
-        if (Des == REG_CREATED_NEW_KEY)
-        {
-            KdPrint(("新建注册表项！\n"));
-        }
-        else
-        {
-            KdPrint(("要创建的注册表项已经存在！\n"));
-        }
-    }
-    else {
-        return;
-    }
+#define KdPrintData(_x_)
 
-    //初始化valueName
-    UNICODE_STRING valueName;
-    RtlInitUnicodeString(&valueName, strValueName);
+#endif // DBG wudfwdm
 
-    if (dataValue == NULL) {
-        //设置REG_DWORD键值
-        status = ZwSetValueKey(hKey, &valueName, 0, REG_DWORD, &datasizeValue, 4);
-        if (!NT_SUCCESS(status))
-        {
-            KdPrint(("设置REG_DWORD键值失败！\n"));
-        }
-    }
-    else {
-        //设置REG_BINARY键值
-        status = ZwSetValueKey(hKey, &valueName, 0, REG_BINARY, dataValue, datasizeValue);
-        if (!NT_SUCCESS(status))
-        {
-            KdPrint(("设置REG_BINARY键值失败！\n"));
-        }
-    }
-    ZwFlushKey(hKey);
-    //关闭注册表句柄
-    ZwClose(hKey);
-}
 
 
 EXTERN_C
@@ -92,10 +45,10 @@ AcpiInitialize(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"EventWrite_HIDI2C_ENUMERATION_ACPI_FAILURE", NULL, status);
+        KdPrint(("EventWrite_HIDI2C_ENUMERATION_ACPI_FAILURE,%x\n", status));
     }
 
-    RegDebug(L"AcpiInitialize ok", NULL, status);
+    KdPrint(("AcpiInitialize ok,%x\n", status));
     return status;
 }
 
@@ -124,7 +77,7 @@ AcpiGetDeviceInformation(
     if (acpiInfo == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"Failed allocating memory for ACPI output buffer", NULL, status);
+        KdPrint(("Failed allocating memory for ACPI output buffer,%x\n", status));
         goto exit;
     }
 
@@ -145,14 +98,14 @@ AcpiGetDeviceInformation(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"Failed sending IOCTL_ACPI_GET_DEVICE_INFORMATION", NULL, status);
+        KdPrint(("Failed sending IOCTL_ACPI_GET_DEVICE_INFORMATION,%x\n", status));
         goto exit;
     }
 
     if (acpiInfo->Signature != IOCTL_ACPI_GET_DEVICE_INFORMATION_SIGNATURE)
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"Incorrect signature for ACPI_GET_DEVICE_INFORMATION", NULL, status);
+        KdPrint(("Incorrect signature for ACPI_GET_DEVICE_INFORMATION,%x\n", status));
         goto exit;
     }
 
@@ -161,7 +114,7 @@ exit:
     if (acpiInfo != NULL)
         HIDI2C_FREE_POOL(acpiInfo);
 
-    RegDebug(L"_AcpiGetDeviceInformation end", NULL, status);
+    KdPrint(("_AcpiGetDeviceInformation end,%x\n", status));
     return status;
 }
 
@@ -188,14 +141,14 @@ AcpiGetDeviceMethod(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"AcpiDsmSupported err", NULL, status);
+        KdPrint(("AcpiDsmSupported err,%x\n", status));
         goto exit;
     }
 
     if (isSupported == FALSE)
     {
         status = STATUS_NOT_SUPPORTED;
-        RegDebug(L"Check for DSM support returned err", NULL, status);
+        KdPrint(("Check for DSM support returned err,%x\n", status));
         goto exit;
     }
 
@@ -203,14 +156,14 @@ AcpiGetDeviceMethod(
         (sizeof(ACPI_METHOD_ARGUMENT) *
             (ACPI_DSM_INPUT_ARGUMENTS_COUNT - 1)) +
         sizeof(GUID);//检查是否=0x40
-    RegDebug(L"AcpiGetDeviceMethod acpiInputSize", NULL, acpiInputSize);////检查是否=0x40
+    KdPrint(("AcpiGetDeviceMethod acpiInputSize,%x\n", acpiInputSize)); ////检查是否=0x40
 
     acpiInput = (PACPI_EVAL_INPUT_BUFFER_COMPLEX)HIDI2C_ALLOCATE_POOL(PagedPool, acpiInputSize);
 
     if (acpiInput == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"Failed allocating memory for ACPI Input buffer", NULL, status);
+        KdPrint(("Failed allocating memory for ACPI Input buffer,%x\n", status));
         goto exit;
     }
 
@@ -251,7 +204,7 @@ AcpiGetDeviceMethod(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"Failed executing DSM method IOCTL", NULL, status);
+        KdPrint(("Failed executing DSM method IOCTL,%x\n", status));
         goto exit;
     }
 
@@ -259,13 +212,13 @@ AcpiGetDeviceMethod(
         (acpiOutput.Argument[0].DataLength == 0))
     {
         status = STATUS_UNSUCCESSFUL;
-        RegDebug(L"Incorrect parameters returned for DSM method", NULL, status);
+        KdPrint(("Incorrect parameters returned for DSM method,%x\n", status));
         goto exit;
     }
 
     FxDeviceContext->AcpiSettings.HidDescriptorAddress = (USHORT)acpiOutput.Argument[0].Data[0];
 
-    //RegDebug(L"HID Descriptor offset retrieved from ACPI", NULL, FxDeviceContext->AcpiSettings.HidDescriptorAddress);
+    KdPrint(("HID Descriptor offset retrieved from ACPI,%x\n", FxDeviceContext->AcpiSettings.HidDescriptorAddress));
 
 
 exit:
@@ -273,7 +226,7 @@ exit:
     if (acpiInput != NULL)
         HIDI2C_FREE_POOL(acpiInput);
 
-    //RegDebug(L"AcpiGetDeviceMethod end", NULL, status);
+    KdPrint(("AcpiGetDeviceMethod end,%x\n", status));
     return status;
 }
 
@@ -305,7 +258,7 @@ AcpiDsmSupported(
     if (acpiInput == NULL)
     {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"Failed allocating memory for ACPI input buffer", NULL, status);
+        KdPrint(("Failed allocating memory for ACPI input buffer,%x\n", status));
         goto exit;
     }
 
@@ -345,7 +298,7 @@ AcpiDsmSupported(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"Failed sending DSM function query IOCTL", NULL, status);
+        KdPrint(("Failed sending DSM function query IOCTL,%x\n", status));
         goto exit;
     }
 
@@ -353,7 +306,7 @@ AcpiDsmSupported(
         (acpiOutput.Argument[0].DataLength == 0))
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"Incorrect return parameters for DSM function query IOCTL", NULL, status);
+        KdPrint(("Incorrect return parameters for DSM function query IOCTL,%x\n", status));
         goto exit;
     }
 
@@ -361,7 +314,7 @@ AcpiDsmSupported(
     if ((acpiOutput.Argument[0].Data[0] & (1 << FunctionIndex)) != 0)
     {
         support = TRUE;
-        RegDebug(L"Found supported DSM function", NULL, FunctionIndex);
+        KdPrint(("Found supported DSM function,%x\n", FunctionIndex));
     }
 
 exit:
@@ -371,7 +324,7 @@ exit:
         HIDI2C_FREE_POOL(acpiInput);
     }
 
-    //RegDebug(L"_AcpiDsmSupported end", NULL, status);
+    KdPrint(("_AcpiDsmSupported end,%x\n", status));
     *Supported = support;
     return status;
 }
@@ -411,7 +364,7 @@ AcpiPrepareInputParametersForDsm(
     pArgument->DataLength = sizeof(ULONG);
     pArgument->Argument = 0;
 
-    //RegDebug(L"AcpiPrepareInputParametersForDsm end", NULL, runtimes_hid++);
+    KdPrint(("AcpiPrepareInputParametersForDsm end,%x\n", runtimes_hid++));
     return;
 }
 
@@ -431,7 +384,7 @@ DriverEntry(_DRIVER_OBJECT* DriverObject, PUNICODE_STRING RegistryPath)
 		WDF_NO_HANDLE);
 
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfDriverCreate failed", NULL, status);
+		KdPrint(("WdfDriverCreate failed,%x\n", status));
 		return status;
 	}
 
@@ -448,7 +401,7 @@ void OnDriverUnload(_In_ WDFDRIVER Driver)
     PAGED_CODE();
 	UNREFERENCED_PARAMETER(pDriverObject);
 
-	RegDebug(L"OnDriverUnload", NULL, 0);
+	KdPrint(("OnDriverUnload,%x\n", 0));
 }
 
 
@@ -480,7 +433,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 	WDFDEVICE Device;
 	status = WdfDeviceCreate(&DeviceInit, &DeviceAttributes, &Device);
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfDeviceCreate failed", NULL, status);
+		KdPrint(("WdfDeviceCreate failed,%x\n", status));
 		return status;
 	}
 
@@ -497,7 +450,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 
     status = WdfTimerCreate(&timerConfig, &timerAttributes, &pDevContext->timerHandle);// WDFTIMER  
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"WdfTimerCreate failed", NULL, status);
+        KdPrint(("WdfTimerCreate failed,%x\n", status));
         return status;
     }
 
@@ -529,7 +482,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->IoctlQueue);
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfIoQueueCreate IoctlQueue failed", NULL, status);
+		KdPrint(("WdfIoQueueCreate IoctlQueue failed,%x\n", status));
 		return status;
 	}
 
@@ -537,7 +490,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->ReportQueue);
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfIoQueueCreate ReportQueue failed", NULL, status);
+		KdPrint(("WdfIoQueueCreate ReportQueue failed,%x\n", status));
 		return status;
 	}
 
@@ -545,7 +498,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     queueConfig.PowerManaged = WdfFalse;
     status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->CompletionQueue);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"WdfIoQueueCreate CompletionQueue failed", NULL, status);
+        KdPrint(("WdfIoQueueCreate CompletionQueue failed,%x\n", status));
         return status;
     }
 
@@ -553,7 +506,7 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->IdleQueue);
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfIoQueueCreate IdleQueue failed", NULL, status);
+		KdPrint(("WdfIoQueueCreate IdleQueue failed,%x\n", status));
 		return status;
 	}
 
@@ -561,11 +514,11 @@ NTSTATUS OnDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
     queueConfig.PowerManaged = WdfFalse;
 	status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &pDevContext->ResetNotificationQueue);
 	if (!NT_SUCCESS(status)) {
-		RegDebug(L"WdfIoQueueCreate ResetNotificationQueue failed", NULL, status);
+		KdPrint(("WdfIoQueueCreate ResetNotificationQueue failed,%x\n", status));
 		return status;
 	}
 
-	//RegDebug(L"OnDeviceAdd ok", NULL, 0);
+	KdPrint(("OnDeviceAdd ok,%x\n", 0));
 	return STATUS_SUCCESS;
 
 }
@@ -587,7 +540,7 @@ void HidEvtResetTimerFired(WDFTIMER timer)
     //if (!pDevContext->HostInitiatedResetActive) {
     //    WDFTIMER  timerHandle = pDevContext->timerHandle;
     //    if (timerHandle) {
-    //        RegDebug(L"HidEvtResetTimerFired WdfTimerStop", NULL, runtimes_HidEvtResetTimerFired);
+    //        KdPrint(("HidEvtResetTimerFired WdfTimerStop,%x\n", runtimes_HidEvtResetTimerFired);
     //        WdfTimerStop(pDevContext->timerHandle, TRUE);
     //    }
     //}
@@ -611,13 +564,13 @@ void HidEvtResetTimerFired(WDFTIMER timer)
 
     if (NT_SUCCESS(status)) {
         WdfRegistryAssignULong(hKey, &ValueNameString, 1);
-        RegDebug(L"HidEvtResetTimerFired WdfRegistryAssignULong ok", NULL, runtimes_HidEvtResetTimerFired);
+        KdPrint(("HidEvtResetTimerFired WdfRegistryAssignULong ok,%x\n", runtimes_HidEvtResetTimerFired));
     }
 
     if (hKey)
         WdfObjectDelete(hKey);
 
-    RegDebug(L"HidEvtResetTimerFired end", NULL, status);
+    KdPrint(("HidEvtResetTimerFired end,%x\n", status));
 }
 
 
@@ -643,44 +596,44 @@ VOID OnInternalDeviceIoControl(
     BOOLEAN requestPendingFlag = FALSE;
 
     runtimes_ioControl++;
-    //if (runtimes_ioControl == 1) {
-    //    RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST IoControlCode", NULL, IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST);//0xb002b
-    //    RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_DEVICE_DESCRIPTOR);//0xb0003
-    //    RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR IoControlCode", NULL, IOCTL_HID_GET_REPORT_DESCRIPTOR);//0xb0007
-    //    RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES IoControlCode", NULL, IOCTL_HID_GET_DEVICE_ATTRIBUTES);//0xb0027
-    //    RegDebug(L"IOCTL_HID_READ_REPORT IoControlCode", NULL, IOCTL_HID_READ_REPORT);//0xb000b
-    //    RegDebug(L"IOCTL_HID_WRITE_REPORT IoControlCode", NULL, IOCTL_HID_WRITE_REPORT);//0xb000f
-    //    RegDebug(L"IOCTL_HID_GET_STRING IoControlCode", NULL, IOCTL_HID_GET_STRING);//0xb0013
-    //    RegDebug(L"IOCTL_HID_GET_INDEXED_STRING IoControlCode", NULL, IOCTL_HID_GET_INDEXED_STRING);////0xb01e2
-    //    RegDebug(L"IOCTL_HID_GET_FEATURE IoControlCode", NULL, IOCTL_HID_GET_FEATURE);//0xb0192
-    //    RegDebug(L"IOCTL_HID_SET_FEATURE IoControlCode", NULL, IOCTL_HID_SET_FEATURE);//0xb0191
-    //    RegDebug(L"IOCTL_HID_GET_INPUT_REPORT IoControlCode", NULL, IOCTL_HID_GET_INPUT_REPORT);//0xb01a2
-    //    RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT IoControlCode", NULL, IOCTL_HID_SET_OUTPUT_REPORT);//0xb0195
-    //    RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION IoControlCode", NULL, IOCTL_HID_DEVICERESET_NOTIFICATION);//0xb0233
-    //}
+    if (runtimes_ioControl == 1) {
+        KdPrint(("IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST IoControlCode,%x\n", IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST));//0xb002b
+        KdPrint(("IOCTL_HID_GET_DEVICE_DESCRIPTOR IoControlCode,%x\n", IOCTL_HID_GET_DEVICE_DESCRIPTOR));//0xb0003
+        KdPrint(("IOCTL_HID_GET_REPORT_DESCRIPTOR IoControlCode,%x\n", IOCTL_HID_GET_REPORT_DESCRIPTOR));//0xb0007
+        KdPrint(("IOCTL_HID_GET_DEVICE_ATTRIBUTES IoControlCode,%x\n", IOCTL_HID_GET_DEVICE_ATTRIBUTES));//0xb0027
+        KdPrint(("IOCTL_HID_READ_REPORT IoControlCode,%x\n", IOCTL_HID_READ_REPORT));//0xb000b
+        KdPrint(("IOCTL_HID_WRITE_REPORT IoControlCode,%x\n", IOCTL_HID_WRITE_REPORT));//0xb000f
+        KdPrint(("IOCTL_HID_GET_STRING IoControlCode,%x\n", IOCTL_HID_GET_STRING));//0xb0013
+        KdPrint(("IOCTL_HID_GET_INDEXED_STRING IoControlCode,%x\n", IOCTL_HID_GET_INDEXED_STRING));////0xb01e2
+        KdPrint(("IOCTL_HID_GET_FEATURE IoControlCode,%x\n", IOCTL_HID_GET_FEATURE));//0xb0192
+        KdPrint(("IOCTL_HID_SET_FEATURE IoControlCode,%x\n", IOCTL_HID_SET_FEATURE));//0xb0191
+        KdPrint(("IOCTL_HID_GET_INPUT_REPORT IoControlCode,%x\n", IOCTL_HID_GET_INPUT_REPORT));//0xb01a2
+        KdPrint(("IOCTL_HID_SET_OUTPUT_REPORT IoControlCode,%x\n", IOCTL_HID_SET_OUTPUT_REPORT));//0xb0195
+        KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION IoControlCode,%x\n", IOCTL_HID_DEVICERESET_NOTIFICATION));//0xb0233
+    }
     
     switch (IoControlCode)
     {
         
         case IOCTL_HID_GET_DEVICE_DESCRIPTOR:
         {
-            RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_DEVICE_DESCRIPTOR,%x\n", runtimes_ioControl));
 
             WDFMEMORY memory;
             status = WdfRequestRetrieveOutputMemory(Request, &memory);
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
+                KdPrint(("IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfRequestRetrieveOutputMemory err,%x\n", runtimes_ioControl));
                 break;
             }
 
             //USHORT ReportDescriptorLength = pDevContext->HidSettings.ReportDescriptorLength;//设置描述符长度
             //HID_DESCRIPTOR HidDescriptor = {0x09, 0x21, 0x0100, 0x00, 0x01, { 0x22, ReportDescriptorLength }  // HidReportDescriptor
             //};
-            //RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR HidDescriptor=", &HidDescriptor, HidDescriptor.bLength);
+            //KdPrintData("IOCTL_HID_GET_DEVICE_DESCRIPTOR HidDescriptor=", &HidDescriptor, HidDescriptor.bLength);
 
             status = WdfMemoryCopyFromBuffer(memory, 0, (PVOID)&DefaultHidDescriptor, DefaultHidDescriptor.bLength);//DefaultHidDescriptor//HidDescriptor
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
+                KdPrint(("IOCTL_HID_GET_DEVICE_DESCRIPTOR WdfMemoryCopyFromBuffer err,%x\n", runtimes_ioControl));
                 break;
             }
             ////
@@ -693,25 +646,25 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_GET_REPORT_DESCRIPTOR:  
         {
-            RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_REPORT_DESCRIPTOR,%x\n", runtimes_ioControl));
 
             WDFMEMORY memory;
             status = WdfRequestRetrieveOutputMemory(Request, &memory);
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnInternalDeviceIoControl WdfRequestRetrieveOutputMemory err", NULL, runtimes_ioControl);
+                KdPrint(("OnInternalDeviceIoControl WdfRequestRetrieveOutputMemory err,%x\n", runtimes_ioControl));
                 break;
             }
     
             //PVOID outbuf = pDevContext->pReportDesciptorData;
             //LONG outlen = pDevContext->HidSettings.ReportDescriptorLength;//设置描述符长度
-            //RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
+            //KdPrintData(("IOCTL_HID_GET_REPORT_DESCRIPTOR HidDescriptor=", pDevContext->pReportDesciptorData, outlen);
 
             PVOID outbuf = (PVOID)ParallelMode_PtpReportDescriptor;//(PVOID)ParallelMode_PtpReportDescriptor //(PVOID)MouseReportDescriptor
             LONG outlen = DefaultHidDescriptor.DescriptorList[0].wReportLength;
 
             status = WdfMemoryCopyFromBuffer(memory, 0, outbuf, outlen);
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"IOCTL_HID_GET_REPORT_DESCRIPTOR WdfMemoryCopyFromBuffer err", NULL, runtimes_ioControl);
+                KdPrint(("IOCTL_HID_GET_REPORT_DESCRIPTOR WdfMemoryCopyFromBuffer err,%x\n", runtimes_ioControl));
                 break;
             }
             WdfRequestSetInformation(Request, outlen);
@@ -722,14 +675,14 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_GET_DEVICE_ATTRIBUTES:
         {
-            RegDebug(L"IOCTL_HID_GET_DEVICE_ATTRIBUTES", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_DEVICE_ATTRIBUTES,%x\n", runtimes_ioControl));
             status = HidGetDeviceAttributes(pDevContext, Request);
             break;
         }
         case IOCTL_HID_READ_REPORT:
         {
-            //RegDebug(L"IOCTL_HID_READ_REPORT", NULL, runtimes_ioControl);
-            //RegDebug(L"IOCTL_HID_READ_REPORT runtimes_IOCTL_HID_READ_REPORT", NULL, runtimes_IOCTL_HID_READ_REPORT++);
+            //KdPrint(("IOCTL_HID_READ_REPORT,%x\n", runtimes_ioControl));
+            KdPrint(("IOCTL_HID_READ_REPORT runtimes_IOCTL_HID_READ_REPORT,%x\n", runtimes_IOCTL_HID_READ_REPORT++));
 
             status = HidReadReport(pDevContext, Request, &requestPendingFlag);
             if (requestPendingFlag) {
@@ -740,7 +693,7 @@ VOID OnInternalDeviceIoControl(
        
         case IOCTL_HID_GET_FEATURE:
         {
-            RegDebug(L"IOCTL_HID_GET_FEATURE", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_FEATURE,%x\n", runtimes_ioControl));
 
             //status = HidGetFeature(pDevContext, Request, ReportTypeFeature);
 
@@ -755,7 +708,7 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_SET_FEATURE:
         {
-            RegDebug(L"IOCTL_HID_SET_FEATURE", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_SET_FEATURE,%x\n", runtimes_ioControl));
             
             status = HidSetFeature(pDevContext, Request, ReportTypeFeature);
 
@@ -769,7 +722,7 @@ VOID OnInternalDeviceIoControl(
         
         case IOCTL_HID_GET_STRING:
         {
-            RegDebug(L"IOCTL_HID_GET_STRING", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_STRING,%x\n", runtimes_ioControl));
             //status = STATUS_NOT_IMPLEMENTED;
             status = HidGetString(pDevContext, Request);//代码会死机
             break;
@@ -777,7 +730,7 @@ VOID OnInternalDeviceIoControl(
 
         //case IOCTL_HID_GET_INDEXED_STRING:
         //{
-        //    RegDebug(L"IOCTL_HID_GET_INDEXED_STRING", NULL, runtimes_ioControl);
+        //    KdPrint(("IOCTL_HID_GET_INDEXED_STRING,%x\n", runtimes_ioControl));
         //    //status = STATUS_NOT_IMPLEMENTED;
         //    status = HidGetString(pDevContext, Request);//代码会死机
         //    break;
@@ -785,20 +738,20 @@ VOID OnInternalDeviceIoControl(
 
         case IOCTL_HID_WRITE_REPORT:
         {
-            RegDebug(L"IOCTL_HID_WRITE_REPORT", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_WRITE_REPORT,%x\n", runtimes_ioControl));
             status = HidWriteReport(pDevContext, Request);
             break;
         }
      
         case IOCTL_HID_GET_INPUT_REPORT:
-            RegDebug(L"IOCTL_HID_GET_INPUT_REPORT", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_GET_INPUT_REPORT,%x\n", runtimes_ioControl));
             //status = STATUS_NOT_SUPPORTED;
             hidReportType = ReportTypeInput;//1
             status = HidGetReport(pDevContext, Request, hidReportType);
             break;
 
         case IOCTL_HID_SET_OUTPUT_REPORT:
-            RegDebug(L"IOCTL_HID_SET_OUTPUT_REPORT", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_SET_OUTPUT_REPORT,%x\n", runtimes_ioControl));
             status = HidSetReport(pDevContext, Request, ReportTypeOutput);//2
             break;
 
@@ -806,7 +759,7 @@ VOID OnInternalDeviceIoControl(
        // them to go into idle
         case IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST:
         {
-            RegDebug(L"IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST,%x\n", runtimes_ioControl));
             status = HidSendIdleNotification(pDevContext, Request, &requestPendingFlag);
             break;
         }
@@ -815,7 +768,7 @@ VOID OnInternalDeviceIoControl(
        // We only allow one Device Reset Notification request at a time.
         case IOCTL_HID_DEVICERESET_NOTIFICATION:
         {
-            RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION", NULL, runtimes_ioControl);
+            KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION,%x\n", runtimes_ioControl));
             //BOOLEAN requestPendingFlag_reset = FALSE;
             //status = HidSendResetNotification(pDevContext, Request, &requestPendingFlag_reset);
             //if (requestPendingFlag_reset) {
@@ -825,7 +778,7 @@ VOID OnInternalDeviceIoControl(
             //WdfIoQueueGetState(pDevContext->ResetNotificationQueue, &IoControlCode, NULL);
             status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);
             if (NT_SUCCESS(status)){
-                RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestForwardToIoQueue ok", NULL, runtimes_ioControl);
+                KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestForwardToIoQueue ok,%x\n", runtimes_ioControl));
                 return;
             }
                 
@@ -837,7 +790,7 @@ VOID OnInternalDeviceIoControl(
             //{
             //    status = STATUS_INVALID_DEVICE_REQUEST;
             //    requestPendingFlag = FALSE;
-            //    RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION STATUS_INVALID_DEVICE_REQUEST", NULL, runtimes_ioControl);
+            //    KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION STATUS_INVALID_DEVICE_REQUEST,%x\n", runtimes_ioControl));
             //}
             //else
             //{
@@ -854,7 +807,7 @@ VOID OnInternalDeviceIoControl(
             //        pDevContext->DeviceResetNotificationRequest = Request;
             //        status = STATUS_PENDING;    // just to satisfy the compilier
             //        requestPendingFlag = TRUE;
-            //        RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestMarkCancelableEx ok", NULL, runtimes_ioControl);
+            //        KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION WdfRequestMarkCancelableEx ok,%x\n", runtimes_ioControl));
             //    }
             //    else
             //    {
@@ -865,7 +818,7 @@ VOID OnInternalDeviceIoControl(
             //        NT_ASSERT(status == STATUS_CANCELLED);
             //        status = STATUS_CANCELLED;    // just to satisfy the compilier
             //        requestPendingFlag = FALSE;
-            //        RegDebug(L"IOCTL_HID_DEVICERESET_NOTIFICATION  STATUS_CANCELLED", NULL, runtimes_ioControl);
+            //        KdPrint(("IOCTL_HID_DEVICERESET_NOTIFICATION  STATUS_CANCELLED,%x\n", runtimes_ioControl));
 
             //    }
             //}
@@ -877,8 +830,8 @@ VOID OnInternalDeviceIoControl(
         default:
         {
             status = STATUS_NOT_SUPPORTED;
-            RegDebug(L"STATUS_NOT_SUPPORTED", NULL, IoControlCode);
-            RegDebug(L"STATUS_NOT_SUPPORTED FUNCTION_FROM_CTL_CODE", NULL, FUNCTION_FROM_CTL_CODE(IoControlCode));
+            KdPrint(("STATUS_NOT_SUPPORTED,%x\n", IoControlCode));
+            KdPrint(("STATUS_NOT_SUPPORTED FUNCTION_FROM_CTL_CODE,%x\n", FUNCTION_FROM_CTL_CODE(IoControlCode)));
         }
 
     }
@@ -901,7 +854,7 @@ void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
 
     UNREFERENCED_PARAMETER(Queue);
 
-    RegDebug(L"OnIoStop start", NULL, runtimes_ioControl);
+    KdPrint(("OnIoStop start,%x\n", runtimes_ioControl));
 
     //NTSTATUS status;
     //PDEVICE_CONTEXT pDevContext;
@@ -913,10 +866,10 @@ void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
 
     if (RequestParameters.Type == WdfRequestTypeDeviceControlInternal && RequestParameters.Parameters.DeviceIoControl.IoControlCode == IOCTL_HID_SEND_IDLE_NOTIFICATION_REQUEST && (ActionFlags & 1) != 0)//RequestParameters.Parameters.Others.IoControlCode
     {
-        RegDebug(L"OnIoStop WdfRequestStopAcknowledge", NULL, runtimes_ioControl);
+        KdPrint(("OnIoStop WdfRequestStopAcknowledge,%x\n", runtimes_ioControl));
         WdfRequestStopAcknowledge(Request, 0);
     }
-    RegDebug(L"OnIoStop end", NULL, runtimes_ioControl);
+    KdPrint(("OnIoStop end,%x\n", runtimes_ioControl));
 }
 
 //
@@ -1051,14 +1004,14 @@ void OnIoStop(WDFQUEUE Queue, WDFREQUEST Request, ULONG ActionFlags)
 NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE PreviousState)
 {
     runtimes_OnPostInterruptsEnabled++;
-    RegDebug(L"OnPostInterruptsEnabled runtimes_OnPostInterruptsEnabled ", NULL, runtimes_OnPostInterruptsEnabled);
+    KdPrint(("OnPostInterruptsEnabled runtimes_OnPostInterruptsEnabled ,%x\n", runtimes_OnPostInterruptsEnabled));
 
     NTSTATUS status = STATUS_SUCCESS;
     PDEVICE_CONTEXT pDevContext = GetDeviceContext(Device);
     NT_ASSERT(pDevContext != NULL);
 
     if (PreviousState == WdfPowerDeviceD3Final) {
-        RegDebug(L"OnPostInterruptsEnabled HidReset", NULL, runtimes_OnPostInterruptsEnabled);
+        KdPrint(("OnPostInterruptsEnabled HidReset,%x\n", runtimes_OnPostInterruptsEnabled));
         status = HidReset(pDevContext);  
 
        // //新增代码，安装驱动后首次运行重新加电就无需重启计算机，FirstD0Entry需要在OnPrepareHardware里初始化而不能在OnD0Entry里，每次加电会运行OnD0Entry，
@@ -1067,13 +1020,13 @@ NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE Previo
        //    status = HidPower(pDevContext, WdfPowerDeviceD3);
        //    if (!NT_SUCCESS(status))
        //    {
-       //        RegDebug(L"OnPostInterruptsEnabled _HidPower WdfPowerDeviceD3 failed", NULL, status);
+       //        KdPrint(("OnPostInterruptsEnabled _HidPower WdfPowerDeviceD3 failed,%x\n", status));
        //    }
        //    else {
        //        status = HidPower(pDevContext, WdfPowerDeviceD0);
        //        if (!NT_SUCCESS(status))
        //        {
-       //            RegDebug(L"OnPostInterruptsEnabled _HidPower WdfPowerDeviceD0 failed", NULL, status);
+       //            KdPrint(("OnPostInterruptsEnabled _HidPower WdfPowerDeviceD0 failed,%x\n", status));
        //        }
        //        else {
        //            pDevContext->FirstD0Entry = FALSE;
@@ -1086,7 +1039,7 @@ NTSTATUS OnPostInterruptsEnabled(WDFDEVICE Device, WDF_POWER_DEVICE_STATE Previo
     
 
     UNREFERENCED_PARAMETER(pDevContext);
-    RegDebug(L"OnPostInterruptsEnabled end runtimes_hid", NULL, runtimes_hid++);
+    KdPrint(("OnPostInterruptsEnabled end runtimes_hid,%x\n", runtimes_hid++));
     return status;
 }
 
@@ -1102,12 +1055,12 @@ NTSTATUS OnSelfManagedIoSuspend(WDFDEVICE Device)
 
         WDFTIMER  timerHandle = pDevContext->timerHandle;
         if (timerHandle) {
-            RegDebug(L"OnSelfManagedIoSuspend WdfTimerStop", NULL, runtimes_OnSelfManagedIoSuspend);
+            KdPrint(("OnSelfManagedIoSuspend WdfTimerStop,%x\n", runtimes_OnSelfManagedIoSuspend));
             WdfTimerStop(pDevContext->timerHandle, TRUE);
         }
 
 
-    RegDebug(L"OnSelfManagedIoSuspend end runtimes_hid", NULL, runtimes_hid++);
+    KdPrint(("OnSelfManagedIoSuspend end runtimes_hid,%x\n", runtimes_hid++));
     return status;
 }
 
@@ -1121,13 +1074,13 @@ NTSTATUS OnPrepareHardware(
 
     NTSTATUS status = SpbInitialize(pDevContext, ResourceList, ResourceListTranslated);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"OnPrepareHardware SpbInitialize failed", NULL, status);
+        KdPrint(("OnPrepareHardware SpbInitialize failed,%x\n", status));
         return status;
     }
 
     status = AcpiInitialize(pDevContext);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"OnPrepareHardware AcpiInitialize failed", NULL, status);
+        KdPrint(("OnPrepareHardware AcpiInitialize failed,%x\n", status));
         return status;
     }
 
@@ -1172,7 +1125,7 @@ NTSTATUS OnPrepareHardware(
     runtimes_HidEvtResetTimerFired = 0;
     runtimes_IOCTL_HID_READ_REPORT = 0;
 
-    RegDebug(L"OnPrepareHardware ok", NULL, status);
+    KdPrint(("OnPrepareHardware ok,%x\n", status));
     return STATUS_SUCCESS;
 }
 
@@ -1190,7 +1143,7 @@ NTSTATUS OnReleaseHardware(_In_  WDFDEVICE FxDevice, _In_  WDFCMRESLIST  FxResou
         WdfDeleteObjectSafe(pDevContext->SpbIoTarget);
     }
 
-    RegDebug(L"OnReleaseHardware ok", NULL, 0);
+    KdPrint(("OnReleaseHardware ok,%x\n", 0));
     return STATUS_SUCCESS;
 
 }
@@ -1201,7 +1154,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
 
     NTSTATUS status = HidInitialize(pDevContext, FxPreviousState);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"OnD0Entry HidInitialize failed", NULL, status);
+        KdPrint(("OnD0Entry HidInitialize failed,%x\n", status));
         return status;
     }
 
@@ -1209,14 +1162,14 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     if (!pDevContext->HidReportDescriptorSaved) {
         status = GetReportDescriptor(pDevContext);
         if (!NT_SUCCESS(status)) {
-            RegDebug(L"GetReportDescriptor err", NULL, runtimes_ioControl);
+            KdPrint(("GetReportDescriptor err,%x\n", runtimes_ioControl));
             return status;
         }
         pDevContext->HidReportDescriptorSaved = TRUE;
 
         status = AnalyzeHidReportDescriptor(pDevContext);
         if (!NT_SUCCESS(status)) {
-            RegDebug(L"AnalyzeHidReportDescriptor err", NULL, runtimes_ioControl);
+            KdPrint(("AnalyzeHidReportDescriptor err,%x\n", runtimes_ioControl));
             return status;
         }
     }
@@ -1246,15 +1199,15 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     {
         if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
         {
-            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+            KdPrint(("OnPrepareHardware GetRegisterMouseSensitivity STATUS_OBJECT_NAME_NOT_FOUND,%x\n", status));
             status = SetRegisterMouseSensitivity(pDevContext, pDevContext->MouseSensitivity_Index);//初始默认设置
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnPrepareHardware SetRegisterMouseSensitivity err", NULL, status);
+                KdPrint(("OnPrepareHardware SetRegisterMouseSensitivity err,%x\n", status));
             }
         }
         else
         {
-            RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity err", NULL, status);
+            KdPrint(("OnPrepareHardware GetRegisterMouseSensitivity err,%x\n", status));
         }
     }
     else {
@@ -1263,7 +1216,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
         }
         pDevContext->MouseSensitivity_Index = (UCHAR)ms_idx;
         pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];
-        RegDebug(L"OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=", NULL, pDevContext->MouseSensitivity_Index);
+        KdPrint(("OnPrepareHardware GetRegisterMouseSensitivity MouseSensitivity_Index=,%x\n", pDevContext->MouseSensitivity_Index));
     }
 
 
@@ -1271,7 +1224,7 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
 
     PowerIdleIrpCompletion(pDevContext);//
 
-    RegDebug(L"OnD0Entry ok", NULL, 0);
+    KdPrint(("OnD0Entry ok,%x\n", 0));
     return STATUS_SUCCESS;
 }
 
@@ -1284,7 +1237,7 @@ NTSTATUS OnD0Exit(_In_ WDFDEVICE FxDevice, _In_ WDF_POWER_DEVICE_STATE FxPreviou
 
     NTSTATUS status = HidDestroy(pDevContext, FxPreviousState);
 
-    RegDebug(L"OnD0Exit ok", NULL, 0);
+    KdPrint(("OnD0Exit ok,%x\n", 0));
     return status;
 }
 
@@ -1327,7 +1280,7 @@ SpbInitialize(
                     FxDeviceContext->SpbConnectionId.HighPart = pDescriptor->u.Connection.IdHighPart;
 
                     connFound = TRUE;
-                    RegDebug(L"I2C resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
+                    KdPrint(("I2C resource found with connection id:,%x\n", FxDeviceContext->SpbConnectionId.LowPart));
                 }
                 
                 if ((pDescriptor->u.Connection.Class == CM_RESOURCE_CONNECTION_CLASS_GPIO) &&
@@ -1337,7 +1290,7 @@ SpbInitialize(
                     FxDeviceContext->SpbConnectionId.LowPart = pDescriptor->u.Connection.IdLowPart;
                     FxDeviceContext->SpbConnectionId.HighPart = pDescriptor->u.Connection.IdHighPart;
                     connFound = TRUE;
-                    RegDebug(L"I2C GPIO resource found with connection id:", NULL, FxDeviceContext->SpbConnectionId.LowPart);
+                    KdPrint(("I2C GPIO resource found with connection id:,%x\n", FxDeviceContext->SpbConnectionId.LowPart));
                 }
                 break;
 
@@ -1345,7 +1298,7 @@ SpbInitialize(
                 interruptFound = TRUE;
                 interruptIndex = i;
 
-                RegDebug(L"Interrupt resource found at index:", NULL, interruptIndex);
+                KdPrint(("Interrupt resource found at index:,%x\n", interruptIndex));
 
                 break;
 
@@ -1358,7 +1311,7 @@ SpbInitialize(
         if ((connFound == FALSE) || (interruptFound == FALSE))
         {
             status = STATUS_INSUFFICIENT_RESOURCES;
-            RegDebug(L"Failed finding required resources", NULL, status);
+            KdPrint(("Failed finding required resources,%x\n", status));
 
             goto exit;
         }
@@ -1377,7 +1330,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfIoTargetCreate failed creating SPB target", NULL, status);
+            KdPrint(("WdfIoTargetCreate failed creating SPB target,%x\n", status));
 
             WdfDeleteObjectSafe(FxDeviceContext->SpbIoTarget);
             goto exit;
@@ -1393,7 +1346,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"ResourceHub failed to create device path", NULL, status);
+            KdPrint(("ResourceHub failed to create device path,%x\n", status));
 
             goto exit;
         }
@@ -1415,7 +1368,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfIoTargetOpen failed to open SPB target", NULL, status);
+            KdPrint(("WdfIoTargetOpen failed to open SPB target,%x\n", status));
 
             goto exit;
         }
@@ -1436,7 +1389,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfRequestCreate failed creating SPB request", NULL, status);
+            KdPrint(("WdfRequestCreate failed creating SPB request,%x\n", status));
 
             goto exit;
         }
@@ -1464,7 +1417,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfWaitLockCreate failed creating interrupt lock", NULL, status);
+            KdPrint(("WdfWaitLockCreate failed creating interrupt lock,%x\n", status));
 
             goto exit;
         }
@@ -1491,7 +1444,7 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfInterruptCreate failed creating interrupt", NULL, status);
+            KdPrint(("WdfInterruptCreate failed creating interrupt,%x\n", status));
 
             goto exit;
         }
@@ -1508,22 +1461,22 @@ SpbInitialize(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfSpinLockCreate failed creating inprogress spinlock", NULL, status);
+            KdPrint(("WdfSpinLockCreate failed creating inprogress spinlock,%x\n", status));
 
             goto exit;
         }
     }
 
-    RegDebug(L"SpbInitialize ok", NULL, status);
+    KdPrint(("SpbInitialize ok,%x\n", status));
 
 exit:
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"EventWrite_HIDI2C_ENUMERATION_SPB_FAILURE", NULL, status);
+        KdPrint(("EventWrite_HIDI2C_ENUMERATION_SPB_FAILURE,%x\n", status));
     }
 
-    //RegDebug(L"SpbInitialize end", NULL, status);
+    KdPrint(("SpbInitialize end,%x\n", status));
     return status;
 }
 
@@ -1536,7 +1489,7 @@ SpbDestroy(
     WdfDeleteObjectSafe(FxDeviceContext->SpbRequest);
     WdfDeleteObjectSafe(FxDeviceContext->SpbIoTarget);
 
-    RegDebug(L"WdfObjectDelete closed and deleted SpbIoTarget", NULL, 0);
+    KdPrint(("WdfObjectDelete closed and deleted SpbIoTarget,%x\n", 0));
 
     return;
 }
@@ -1560,7 +1513,7 @@ SpbWrite(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"SpbWrite failed parameters DataLength", NULL, status);
+        KdPrint(("SpbWrite failed parameters DataLength,%x\n", status));
 
         goto exit;
     }
@@ -1579,7 +1532,7 @@ SpbWrite(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"WdfMemoryCreate failed allocating memory buffer for SpbWrite", NULL, status);
+        KdPrint(("WdfMemoryCreate failed allocating memory buffer for SpbWrite,%x\n", status));
 
         goto exit;
     }
@@ -1609,7 +1562,7 @@ SpbWrite(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite without a timeout", NULL, status);
+            KdPrint(("WdfIoTargetSendWriteSynchronously failed sending SpbWrite without a timeout,%x\n", status));
 
             goto exit;
         }
@@ -1631,7 +1584,7 @@ SpbWrite(
 
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"WdfIoTargetSendWriteSynchronously failed sending SpbWrite with timeout", NULL, status);
+            KdPrint(("WdfIoTargetSendWriteSynchronously failed sending SpbWrite with timeout,%x\n", status));
 
             goto exit;
         }
@@ -1641,14 +1594,14 @@ SpbWrite(
     if (bytesWritten != expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        RegDebug(L"WdfIoTargetSendWriteSynchronously returned with bytes expected", NULL, status);
+        KdPrint(("WdfIoTargetSendWriteSynchronously returned with bytes expected,%x\n", status));
 
         goto exit;
     }
 
 exit:
 
-    //RegDebug(L"SpbWrite end", NULL, status);
+    //KdPrint(("SpbWrite end,%x\n", status));
     WdfDeleteObjectSafe(memoryWrite);
     return status;
 }
@@ -1669,7 +1622,7 @@ SpbWritelessRead(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"SpbWritelessRead failed parameters DataLength", NULL, status);
+        KdPrint(("SpbWritelessRead failed parameters DataLength,%x\n", status));
 
         goto exit;
     }
@@ -1684,7 +1637,7 @@ SpbWritelessRead(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"WdfMemoryAssignBuffer failed assigning input report buffer", NULL, status);
+        KdPrint(("WdfMemoryAssignBuffer failed assigning input report buffer,%x\n", status));
         goto exit;
     }
 
@@ -1715,13 +1668,13 @@ SpbWritelessRead(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"Failed sending SPB Read bytes", NULL, status);
+        KdPrint(("Failed sending SPB Read bytes,%x\n", status));
     }
 
 
 exit:
 
-    //RegDebug(L"SpbWritelessRead end", NULL, status);
+    //KdPrint(("SpbWritelessRead end,%x\n", status));
     return status;
 }
 
@@ -1745,7 +1698,7 @@ SpbRead(
     if (Data == NULL || DataLength <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"SpbRead failed parameters DataLength", NULL, status);
+        KdPrint(("SpbRead failed parameters DataLength,%x\n", status));
 
         goto exit;
     }
@@ -1774,7 +1727,7 @@ SpbRead(
     status = ::SpbSequence(FxIoTarget, &sequence, sizeof(sequence), &bytesReturned, Timeout);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        KdPrint(("SpbSequence failed sending a sequence,%x\n", status));
         goto exit;
     }
 
@@ -1783,12 +1736,12 @@ SpbRead(
     if (bytesReturned < expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
+        KdPrint(("SpbSequence returned with  bytes expected,%x\n", status));
     }
 
 exit:
 
-    //RegDebug(L"SpbRead end", NULL, status);
+    //KdPrint(("SpbRead end,%x\n", status));
     return status;
 }
 
@@ -1812,7 +1765,7 @@ SpbWriteWrite(
         DataSecond == NULL || DataLengthSecond <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        //RegDebug(L"SpbWriteWrite failed parameters DataFirst DataLengthFirst", NULL, status);
+        KdPrint(("SpbWriteWrite failed parameters DataFirst DataLengthFirst,%x\n", status));
 
         goto exit;
     }
@@ -1846,7 +1799,7 @@ SpbWriteWrite(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        KdPrint(("SpbSequence failed sending a sequence,%x\n", status));
 
         goto exit;
     }
@@ -1856,14 +1809,14 @@ SpbWriteWrite(
     if (bytesReturned != expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        RegDebug(L"SpbSequence returned with  bytes expected", NULL, status);
+        KdPrint(("SpbSequence returned with  bytes expected,%x\n", status));
 
         goto exit;
     }
 
 exit:
 
-    //RegDebug(L"SpbWriteWrite end", NULL, status);
+    //KdPrint(("SpbWriteWrite end,%x\n", status));
     return status;
 }
 
@@ -1889,7 +1842,7 @@ SpbWriteRead(
         DataSecond == NULL || DataLengthSecond <= 0)
     {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"SpbWriteRead failed parameters DataFirst DataLengthFirst", NULL, status);
+        KdPrint(("SpbWriteRead failed parameters DataFirst DataLengthFirst,%x\n", status));
 
         goto exit;
     }
@@ -1929,7 +1882,7 @@ SpbWriteRead(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"SpbSequence failed sending a sequence", NULL, status);
+        KdPrint(("SpbSequence failed sending a sequence,%x\n", status));
 
         goto exit;
     }
@@ -1939,12 +1892,12 @@ SpbWriteRead(
     if (bytesReturned < expectedLength)
     {
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        RegDebug(L"SpbSequence returned with bytes expected", NULL, status);
+        KdPrint(("SpbSequence returned with bytes expected,%x\n", status));
     }
 
 exit:
 
-    //RegDebug(L"SpbWriteRead end", NULL, status);
+    //KdPrint(("SpbWriteRead end,%x\n", status));
     return status;
 }
 
@@ -1977,7 +1930,7 @@ SpbSequence(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"WdfMemoryCreatePreallocated failed creating memory for sequence", NULL, status);
+        KdPrint(("WdfMemoryCreatePreallocated failed creating memory for sequence,%x\n", status));
         goto exit;
     }
 
@@ -2019,7 +1972,7 @@ SpbSequence(
   
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"Failed sending SPB Sequence IOCTL bytes", NULL, status);
+        KdPrint(("Failed sending SPB Sequence IOCTL bytes,%x\n", status));
 
         goto exit;
     }
@@ -2028,7 +1981,7 @@ SpbSequence(
 
 exit:
 
-    //RegDebug(L"_SpbSequence end", NULL, status);
+    //KdPrint(("_SpbSequence end,%x\n", status));
     WdfDeleteObjectSafe(memorySequence);
     return status;
 }
@@ -2039,7 +1992,7 @@ exit:
 
 NTSTATUS HidPower(PDEVICE_CONTEXT pDevContext, SHORT PowerState)
 {
-    //RegDebug(L"HidPower start", NULL, runtimes_hid++);
+    KdPrint(("HidPower start,%x\n", runtimes_hid++));
 
     NTSTATUS status = STATUS_SUCCESS;
     USHORT RegisterAddress;
@@ -2050,10 +2003,10 @@ NTSTATUS HidPower(PDEVICE_CONTEXT pDevContext, SHORT PowerState)
     USHORT state = PowerState | 0x800;
     status = SpbWrite(IoTarget, RegisterAddress, (PUCHAR)&state, 2, 5* HIDI2C_REQUEST_DEFAULT_TIMEOUT);//原先单位为秒太大改为ms
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"HidPower SpbWrite failed", NULL, status);
+        KdPrint(("HidPower SpbWrite failed,%x\n", status));
     }
 
-    RegDebug(L"HidPower end", NULL, runtimes_hid++);
+    KdPrint(("HidPower end,%x\n", runtimes_hid++));
     return status;
 }
 
@@ -2092,13 +2045,13 @@ NTSTATUS HidReset(PDEVICE_CONTEXT pDevContext)
         status = WdfRegistryQueryULong(hKey, &ValueNameString, &value);
         if (NT_SUCCESS(status))
         {
-            RegDebug(L"HidReset WdfRegistryQueryULong ok", NULL, status);
+            KdPrint(("HidReset WdfRegistryQueryULong ok,%x\n", status));
         }
         else
         {
             if (status == STATUS_OBJECT_NAME_NOT_FOUND)// ((NTSTATUS)0xC0000034L)
             {
-                RegDebug(L"HidReset WdfRegistryQueryULong STATUS_OBJECT_NAME_NOT_FOUND", NULL, status);
+                KdPrint(("HidReset WdfRegistryQueryULong STATUS_OBJECT_NAME_NOT_FOUND,%x\n", status));
             }
         }
     }
@@ -2114,14 +2067,14 @@ NTSTATUS HidReset(PDEVICE_CONTEXT pDevContext)
     {      
         WdfIoQueueStopSynchronously(pDevContext->IoctlQueue);
         WdfTimerStart(pDevContext->timerHandle, WDF_REL_TIMEOUT_IN_MS(400));//400,不支持20ms以下
-        RegDebug(L"HidReset WdfTimerStart timerHandle", NULL, status);
+        KdPrint(("HidReset WdfTimerStart timerHandle,%x\n", status));
     }
 
     status = SpbWrite(pDevContext->SpbIoTarget, RegisterAddress, data, 2u, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///原先单位为秒太大改为ms
     if (NT_SUCCESS(status))
     {
         pDevContext->HostInitiatedResetActive = TRUE;
-        RegDebug(L"HidReset HostInitiatedResetActive TRUE", NULL, runtimes_hid++);
+        KdPrint(("HidReset HostInitiatedResetActive TRUE,%x\n", runtimes_hid++));
 
     }
 
@@ -2136,12 +2089,12 @@ NTSTATUS HidDestroy(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE FxTarget
     NTSTATUS status = HidPower(pDevContext, 1);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidDestroy _HidPower failed", NULL, status);
+        KdPrint(("HidDestroy _HidPower failed,%x\n", status));
         goto exit;
     }
 
     if (FxTargetState != WdfPowerDeviceD3Final) {
-        RegDebug(L"HidDestroy FxTargetState err", NULL, status);
+        KdPrint(("HidDestroy FxTargetState err,%x\n", status));
         goto exit;
     }
 
@@ -2152,7 +2105,7 @@ NTSTATUS HidDestroy(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE FxTarget
     }
 
 exit:
-    RegDebug(L"HidDestroy end", NULL, status);
+    KdPrint(("HidDestroy end,%x\n", status));
     return status;
 }
 
@@ -2164,14 +2117,14 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
 
     WDF_DEVICE_POWER_STATE state;
     state = WdfDeviceGetDevicePowerState(pDevContext->FxDevice);
-    //RegDebug(L"HidInitialize powerstate", NULL, state);//测试为WdfDevStatePowerD0Starting
+    KdPrint(("HidInitialize powerstate,%x\n", state));//测试为WdfDevStatePowerD0Starting
 
     if (FxPreviousState != WdfPowerDeviceD3Final)
     {
         status = HidPower(pDevContext, 0);
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"_HidPower failed", NULL, status);
+            KdPrint(("_HidPower failed,%x\n", status));
             goto exit;
         }
     }
@@ -2179,7 +2132,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
     status = HidGetHidDescriptor(pDevContext);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"_HidGetHidDescriptor failed", NULL, status);
+        KdPrint(("HidGetHidDescriptor failed,%x\n", status));
         goto exit;
     }
 
@@ -2191,7 +2144,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
         //
         //  No memory
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"HidInitialize ExAllocatePoolWithTag failed", NULL, status);
+        KdPrint(("HidInitialize ExAllocatePoolWithTag failed,%x\n", status));
         goto exit;
     }
   
@@ -2210,7 +2163,7 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
         status = WdfMemoryCreatePreallocated(&attributes, Sequence, SequenceLength, pInputReportMemory);
         if (!NT_SUCCESS(status))
         {
-            RegDebug(L"HidInitialize WdfMemoryCreatePreallocated failed", NULL, status);
+            KdPrint(("HidInitialize WdfMemoryCreatePreallocated failed,%x\n", status));
             goto exit;
         }
     }
@@ -2225,14 +2178,14 @@ NTSTATUS HidInitialize(PDEVICE_CONTEXT pDevContext, WDF_POWER_DEVICE_STATE  FxPr
     status = WdfSpinLockCreate(&lockAttributes, &pDevContext->InputReportListLock);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidInitialize WdfSpinLockCreate failed", NULL, status);
+        KdPrint(("HidInitialize WdfSpinLockCreate failed,%x\n", status));
         goto exit;
     }
 
-    RegDebug(L"HidInitialize ok", NULL, status);
+    KdPrint(("HidInitialize ok,%x\n", status));
 
 exit:
-    //RegDebug(L"HidInitialize end", NULL, status);
+    KdPrint(("HidInitialize end,%x\n", status));
     return status;
 }
 
@@ -2276,7 +2229,7 @@ NTSTATUS HidSendIdleNotification(
     else
     {
         status = STATUS_NO_CALLBACK_ACTIVE;
-        RegDebug(L"HidSendIdleNotification STATUS_NO_CALLBACK_ACTIVE", NULL, status);
+        KdPrint(("HidSendIdleNotification STATUS_NO_CALLBACK_ACTIVE,%x\n", status));
     }
 
     return status;
@@ -2299,25 +2252,25 @@ NTSTATUS HidGetHidDescriptor(PDEVICE_CONTEXT pDevContext)
     ULONG DelayUs = 0;
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, (PBYTE)&pDevContext->HidSettings.HidDescriptorLength, 0x1Eu, DelayUs, 0);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"HidGetHidDescriptor SpbRead failed", NULL, status);
+        KdPrint(("HidGetHidDescriptor SpbRead failed,%x\n", status));
         return status;
     }
-    //RegDebug(L"HidGetHidDescriptor SpbRead data=", pHidDescriptorLength, 0x1e);
+    //KdPrintData(("HidGetHidDescriptor SpbRead data=", pHidDescriptorLength, 0x1e));
 
-   /* RegDebug(L"_HidGetHidDescriptor SpbRead HidDescriptorLength=", NULL, pDevContext->HidSettings.HidDescriptorLength);
-    RegDebug(L"_HidGetHidDescriptor SpbRead BcdVersion=", NULL, pDevContext->HidSettings.BcdVersion);
-    RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorLength=", NULL, pDevContext->HidSettings.ReportDescriptorLength);
-    RegDebug(L"_HidGetHidDescriptor SpbRead ReportDescriptorAddress=", NULL, pDevContext->HidSettings.ReportDescriptorAddress);
-    RegDebug(L"_HidGetHidDescriptor SpbRead InputRegisterAddress=", NULL, pDevContext->HidSettings.InputRegisterAddress);
-    RegDebug(L"_HidGetHidDescriptor SpbRead InputReportMaxLength=", NULL, pDevContext->HidSettings.InputReportMaxLength);
-    RegDebug(L"_HidGetHidDescriptor SpbRead OutputRegisterAddress=", NULL, pDevContext->HidSettings.OutputRegisterAddress);
-    RegDebug(L"_HidGetHidDescriptor SpbRead OutputReportMaxLength=", NULL, pDevContext->HidSettings.OutputReportMaxLength);
-    RegDebug(L"_HidGetHidDescriptor SpbRead CommandRegisterAddress=", NULL, pDevContext->HidSettings.CommandRegisterAddress);
-    RegDebug(L"_HidGetHidDescriptor SpbRead DataRegisterAddress=", NULL, pDevContext->HidSettings.DataRegisterAddress);
-    RegDebug(L"_HidGetHidDescriptor SpbRead VendorId=", NULL, pDevContext->HidSettings.VendorId);
-    RegDebug(L"_HidGetHidDescriptor SpbRead ProductId=", NULL, pDevContext->HidSettings.ProductId);
-    RegDebug(L"_HidGetHidDescriptor SpbRead VersionId=", NULL, pDevContext->HidSettings.VersionId);
-    RegDebug(L"_HidGetHidDescriptor SpbRead Reserved=", NULL, pDevContext->HidSettings.Reserved);*/
+    KdPrint(("HidGetHidDescriptor spbread HidDescriptorLength=,%x\n", pDevContext->HidSettings.HidDescriptorLength));
+    KdPrint(("HidGetHidDescriptor spbread BcdVersion=,%x\n", pDevContext->HidSettings.BcdVersion));
+    KdPrint(("HidGetHidDescriptor spbread ReportDescriptorLength=,%x\n", pDevContext->HidSettings.ReportDescriptorLength));
+    KdPrint(("HidGetHidDescriptor spbread ReportDescriptorAddress=,%x\n", pDevContext->HidSettings.ReportDescriptorAddress));
+    KdPrint(("HidGetHidDescriptor spbread InputRegisterAddress=,%x\n", pDevContext->HidSettings.InputRegisterAddress));
+    KdPrint(("HidGetHidDescriptor spbread InputReportMaxLength=,%x\n", pDevContext->HidSettings.InputReportMaxLength));
+    KdPrint(("HidGetHidDescriptor spbread OutputRegisterAddress=,%x\n", pDevContext->HidSettings.OutputRegisterAddress));
+    KdPrint(("HidGetHidDescriptor spbread OutputReportMaxLength=,%x\n", pDevContext->HidSettings.OutputReportMaxLength));
+    KdPrint(("HidGetHidDescriptor spbread CommandRegisterAddress=,%x\n", pDevContext->HidSettings.CommandRegisterAddress));
+    KdPrint(("HidGetHidDescriptor spbread DataRegisterAddress=,%x\n", pDevContext->HidSettings.DataRegisterAddress));
+    KdPrint(("HidGetHidDescriptor spbread VendorId=,%x\n", pDevContext->HidSettings.VendorId));
+    KdPrint(("HidGetHidDescriptor spbread ProductId=,%x\n", pDevContext->HidSettings.ProductId));
+    KdPrint(("HidGetHidDescriptor spbread VersionId=,%x\n", pDevContext->HidSettings.VersionId));
+    KdPrint(("HidGetHidDescriptor spbread Reserved=,%x\n", pDevContext->HidSettings.Reserved));
 
 
     if (*pHidDescriptorLength != 30//pDeviceContext->HidSettings.HidDescriptorLength!=30
@@ -2332,10 +2285,10 @@ NTSTATUS HidGetHidDescriptor(PDEVICE_CONTEXT pDevContext)
     {
 
         status = STATUS_DEVICE_PROTOCOL_ERROR;
-        RegDebug(L"_HidGetHidDescriptor STATUS_DEVICE_PROTOCOL_ERROR", NULL, status);
+        KdPrint(("HidGetHidDescriptor STATUS_DEVICE_PROTOCOL_ERROR,%x\n", status));
     }
 
-    //RegDebug(L"_HidGetHidDescriptor end", NULL, status);
+    KdPrint(("HidGetHidDescriptor end,%x\n", status));
     return status;
 }
 
@@ -2358,7 +2311,7 @@ HidGetDeviceAttributes(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidGetDeviceAttributes WdfRequestRetrieveOutputBuffer failed", NULL, status);
+        KdPrint(("HidGetDeviceAttributes WdfRequestRetrieveOutputBuffer failed,%x\n", status));
         goto exit;
     }
 
@@ -2373,7 +2326,7 @@ HidGetDeviceAttributes(
     );
 
 exit:
-    RegDebug(L"HidGetDeviceAttributes end", NULL, status);
+    KdPrint(("HidGetDeviceAttributes end,%x\n", status));
     return status;
 }
 
@@ -2396,7 +2349,7 @@ HidGetDeviceDescriptor(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidGetDeviceDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
+        KdPrint(("HidGetDeviceDescriptor WdfRequestRetrieveOutputBuffer failed,%x\n", status));
         goto exit;
     }
 
@@ -2418,7 +2371,7 @@ HidGetDeviceDescriptor(
     );
 
 exit:
-    RegDebug(L"HidGetDeviceDescriptor end", NULL, status);
+    KdPrint(("HidGetDeviceDescriptor end,%x\n", status));
     return status;
 }
 
@@ -2429,7 +2382,7 @@ HidGetReportDescriptor(
     WDFREQUEST Request
 )
 {
-    RegDebug(L"HidGetReportDescriptor start", NULL, runtimes_ioControl);
+    KdPrint(("HidGetReportDescriptor start,%x\n", runtimes_ioControl));
 
     NTSTATUS status = STATUS_SUCCESS;
     WDFMEMORY RequestMemory;
@@ -2437,8 +2390,8 @@ HidGetReportDescriptor(
     status = WdfRequestRetrieveOutputMemory(Request, &RequestMemory);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidGetReportDescriptor WdfRequestRetrieveOutputBuffer failed", NULL, status);
-        goto exit;
+        KdPrint(("HidGetReportDescriptor WdfRequestRetrieveOutputBuffer failed,%x\n", status));
+        goto Exit;
     }
 
     USHORT RegisterAddress = pDevContext->HidSettings.ReportDescriptorAddress;
@@ -2447,26 +2400,28 @@ HidGetReportDescriptor(
     PBYTE pReportDesciptorData = (PBYTE)WdfMemoryGetBuffer(RequestMemory, NULL);
     if (!pReportDesciptorData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"HidGetReportDescriptor WdfMemoryGetBuffer failed", NULL, status);
-        goto exit;
+        KdPrint(("HidGetReportDescriptor WdfMemoryGetBuffer failed,%x\n", status));
+        goto Exit;
     }
 
     ULONG DelayUs = 0;
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, pReportDesciptorData, ReportLength, DelayUs, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///原先单位为秒太大改为ms
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidGetReportDescriptor SpbRead failed", NULL, status);
-        goto exit;
+        KdPrint(("HidGetReportDescriptor SpbRead failed,%x\n", status));
+        goto Exit;
     }
-    RegDebug(L"HidGetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
+
+    KdPrintData(("HidGetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength));
+
 
     WdfRequestSetInformation(
         Request,
         ReportLength
     );
 
-exit:
-    RegDebug(L"HidGetReportDescriptor end", NULL, status);
+Exit:
+    KdPrint(("HidGetReportDescriptor end,%x\n", status));
     return status;
 }
 
@@ -2477,7 +2432,7 @@ HidGetString(
     WDFREQUEST Request
 )
 {
-    RegDebug(L"HidGetString start", NULL, runtimes_ioControl);
+    KdPrint(("HidGetString start,%x\n", runtimes_ioControl));
     UNREFERENCED_PARAMETER(pDevContext);
 
     NTSTATUS status = STATUS_SUCCESS;
@@ -2492,7 +2447,7 @@ HidGetString(
 
     //LONG dw = *(PULONG)IoStack->Parameters.DeviceIoControl.Type3InputBuffer;//注意这个Type3InputBuffer读取会蓝屏，所以需要测试得出实际wStrID调用顺序
     //USHORT wStrID = LOWORD(dw);//
-    //RegDebug(L"HidGetString: wStrID=", NULL, wStrID);
+    //KdPrint(("HidGetString: wStrID=,%x\n", wStrID));
 
     //switch (wStrID) {
     //case HID_STRING_ID_IMANUFACTURER:
@@ -2509,7 +2464,7 @@ HidGetString(
     //    break;
     //default:
     //    status = STATUS_INVALID_PARAMETER;
-    //    RegDebug(L"HidGetString: unkown string id", NULL, 0);
+    //    KdPrint(("HidGetString: unkown string id,%x\n", 0));
     //    goto exit;
     //}
 
@@ -2522,29 +2477,29 @@ HidGetString(
           (*step)++;
           stringSizeCb = sizeof(MANUFACTURER_ID_STRING);
           string = MANUFACTURER_ID_STRING;
-          //RegDebug(L"HidGetString: HID_STRING_ID_IMANUFACTURER", string, stringSizeCb*2+2);
+          //KdPrintData("HidGetString: HID_STRING_ID_IMANUFACTURER", string, stringSizeCb*2+2);
     }
     else if (*step == 2) {//case HID_STRING_ID_IPRODUCT:
         (*step)++;
          stringSizeCb = sizeof(PRODUCT_ID_STRING);
          string = PRODUCT_ID_STRING;
-         //egDebug(L"HidGetString: HID_STRING_ID_IPRODUCT", string, stringSizeCb * 2 + 2);
+         //KdPrintData("HidGetString: HID_STRING_ID_IPRODUCT", string, stringSizeCb * 2 + 2);
     }
     else if (*step == 3) {//case HID_STRING_ID_ISERIALNUMBER:
         (*step)++;
          stringSizeCb = sizeof(SERIAL_NUMBER_STRING);
          string = SERIAL_NUMBER_STRING;
-         //RegDebug(L"HidGetString: HID_STRING_ID_ISERIALNUMBER", string, stringSizeCb * 2 + 2);
+         //KdPrintData("HidGetString: HID_STRING_ID_ISERIALNUMBER", string, stringSizeCb * 2 + 2);
     }
     else{
          status = STATUS_INVALID_PARAMETER;
-         RegDebug(L"HidGetString: unkown string id", NULL, 0);
+         KdPrint(("HidGetString: unkown string id,%x\n", 0));
          goto exit;
     }
     
 
     ULONG bufferlength = IoStack->Parameters.DeviceIoControl.OutputBufferLength;
-    RegDebug(L"HidGetString: bufferlength=", NULL, bufferlength);
+    KdPrint(("HidGetString: bufferlength=,%x\n", bufferlength));
     int i = -1;
     do {
         ++i;
@@ -2555,7 +2510,7 @@ HidGetString(
     if (stringSizeCb > bufferlength)
     {
         status = STATUS_INVALID_BUFFER_SIZE;
-        RegDebug(L"HidGetString STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        KdPrint(("HidGetString STATUS_INVALID_BUFFER_SIZE,%x\n", status));
         goto exit;
     }
 
@@ -2563,7 +2518,7 @@ HidGetString(
     pIrp->IoStatus.Information = stringSizeCb;
 
 exit:
-    RegDebug(L"HidGetString end", NULL, status);
+    KdPrint(("HidGetString end,%x\n", status));
     return status;
 }
 
@@ -2595,7 +2550,7 @@ HidWriteReport(
                 RegisterAddress = pDevContext->HidSettings.OutputRegisterAddress;
                 if (OutputReportLength > OutputReportMaxLength) {
                     status = STATUS_INVALID_PARAMETER;
-                    RegDebug(L"HidWriteReport OutputReportLength STATUS_INVALID_PARAMETER", NULL, status);
+                    KdPrint(("HidWriteReport OutputReportLength STATUS_INVALID_PARAMETER,%x\n", status));
                     goto exit;
                 }
 
@@ -2603,7 +2558,7 @@ HidWriteReport(
                 pReportData = pReportDesciptorData;
                 if (!pReportDesciptorData) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    RegDebug(L"HidWriteReport ExAllocatePoolWithTag failed", NULL, status);
+                    KdPrint(("HidWriteReport ExAllocatePoolWithTag failed,%x\n", status));
                     goto exit;
                 }
 
@@ -2614,7 +2569,7 @@ HidWriteReport(
                 status = SpbWrite(pDevContext->SpbIoTarget, RegisterAddress, pReportData, OutputReportLength, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///原先为秒太大改为ms
                 if (!NT_SUCCESS(status))
                 {
-                    RegDebug(L"HidWriteReport SpbWrite failed", NULL, status);
+                    KdPrint(("HidWriteReport SpbWrite failed,%x\n", status));
                     goto exit;
                 }
 
@@ -2622,17 +2577,17 @@ HidWriteReport(
             }
             else {
                 status = STATUS_BUFFER_TOO_SMALL;
-                RegDebug(L"HidWriteReport STATUS_BUFFER_TOO_SMALL", NULL, status);
+                KdPrint(("HidWriteReport STATUS_BUFFER_TOO_SMALL,%x\n", status));
             }
         }
         else {
             status = STATUS_INVALID_BUFFER_SIZE;
-            RegDebug(L"HidWriteReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+            KdPrint(("HidWriteReport STATUS_INVALID_BUFFER_SIZE,%x\n", status));
         }
     }
     else {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"HidWriteReport STATUS_INVALID_PARAMETER", NULL, status);
+        KdPrint(("HidWriteReport STATUS_INVALID_PARAMETER,%x\n", status));
     }
 
 exit:
@@ -2640,7 +2595,7 @@ exit:
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
     }
 
-    RegDebug(L"HidWriteReport end", NULL, status);
+    KdPrint(("HidWriteReport end,%x\n", status));
     return status;
 }
 
@@ -2657,14 +2612,14 @@ HidSendResetNotification(
     status = WdfRequestForwardToIoQueue(Request, pDevContext->ResetNotificationQueue);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidSendResetNotification WdfRequestForwardToIoQueue failed", NULL, status);
+        KdPrint(("HidSendResetNotification WdfRequestForwardToIoQueue failed,%x\n", status));
         goto exit;
     }
 
     *requestPendingFlag_reset = TRUE;
 
 exit:
-    RegDebug(L"HidSendResetNotification end", NULL, status);
+    KdPrint(("HidSendResetNotification end,%x\n", status));
     return status;
 }
 
@@ -2681,14 +2636,14 @@ NTSTATUS HidReadReport(
     status = WdfRequestForwardToIoQueue(Request, pDevContext->ReportQueue);
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"HidReadReport WdfRequestForwardToIoQueue failed", NULL, status);
+        KdPrint(("HidReadReport WdfRequestForwardToIoQueue failed,%x\n", status));
         goto exit;
     }
 
     *requestPendingFlag = TRUE;
 
 exit:
-    RegDebug(L"HidReadReport end", NULL, status);
+    KdPrint(("HidReadReport end,%x\n", status));
     return status;
 }
 
@@ -2718,17 +2673,18 @@ HidGetReport(
     WdfRequestGetParameters(Request, &RequestParameters);
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength >= sizeof(HID_XFER_PACKET)) {
-        RegDebug(L"HidGetReport OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
-        RegDebug(L"HidGetReport Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
+        KdPrint(("HidGetReport OutputBufferLength=,%x\n", (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength));
+        KdPrint(("HidGetReport Parameters.Write.Length=,%x\n", (ULONG)RequestParameters.Parameters.Write.Length));
         pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
         if (!pHidPacket) {
             status = STATUS_INVALID_PARAMETER;
-            RegDebug(L"HidGetReport STATUS_INVALID_PARAMETER", NULL, status);
-            goto exit;
+            KdPrint(("HidGetReport STATUS_INVALID_PARAMETER,%x\n", status));
+            goto Exit;
         }
-        RegDebug(L"HidGetReport pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
-        RegDebug(L"HidGetReport pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
-        RegDebug(L"HidGetReport pHidPacket->reportId=", NULL, pHidPacket->reportId);
+
+        KdPrint(("HidGetReport pHidPacket->reportBufferLen=,%x\n", pHidPacket->reportBufferLen));
+        KdPrint(("HidGetReport pHidPacket->reportId=,%x\n", pHidPacket->reportId));
+        KdPrintData(("HidGetReport pHidPacket=", (PUCHAR)pHidPacket, sizeof(PHID_XFER_PACKET)));
 
         reportBufferLen = pHidPacket->reportBufferLen;
         if (reportBufferLen) {
@@ -2738,8 +2694,8 @@ HidGetReport(
             if (Type) {
                 if (Type != 2) {
                     status = STATUS_INVALID_PARAMETER;
-                    RegDebug(L"HidGetReport Type STATUS_INVALID_PARAMETER", NULL, status);
-                    goto exit;
+                    KdPrint(("HidGetReport Type STATUS_INVALID_PARAMETER,%x\n", status));
+                    goto Exit;
                 }
 
                 mflag = 0x230;
@@ -2750,7 +2706,7 @@ HidGetReport(
             }
 
             UCHAR reportId = pHidPacket->reportId;
-            RegDebug(L"HidGetReport reportId=", NULL, reportId);
+            KdPrint(("HidGetReport reportId=,%x\n", reportId));
             if (reportId >= 0xFu) {
                 HeaderLength = 3;
                 PFlag = mflag | 0xF;
@@ -2759,8 +2715,8 @@ HidGetReport(
                 pReportData = pReportDesciptorHeader;
                 if (!pReportDesciptorHeader) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    RegDebug(L"HidGetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
-                    goto exit;
+                    KdPrint(("HidGetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
+                    goto Exit;
                 }
 
                 bAllocatePoolFlag = TRUE;
@@ -2775,14 +2731,15 @@ HidGetReport(
                 HeaderLength = 2;
                 PFlag = mflag | reportId;
             }
-            RegDebug(L"HidGetReport pReportDataHeader=", pReportData, HeaderLength);
+
+            KdPrintData(("HidGetReport pReportDataHeader=", pReportData, HeaderLength));
 
             RegisterAddressSecond = pDevContext->HidSettings.DataRegisterAddress;
             pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
             if (!pReportDesciptorData) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                RegDebug(L"HidGetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
-                goto exit;
+                KdPrint(("HidGetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
+                goto Exit;
             }
 
             memset(pReportDesciptorData, 0, reportBufferLen + 2);
@@ -2792,18 +2749,19 @@ HidGetReport(
             if (NT_SUCCESS(status)) {
                 size_t ReportSize = *(PUSHORT)pReportDesciptorData - 2;
                 if (!ReportSize) {
-                    RegDebug(L"HidGetReport ReportSize err", NULL, (ULONG)ReportSize);
+                    KdPrint(("HidGetReport ReportSize err,%x\n", (ULONG)ReportSize));
                 }
                 else {
                     if (reportBufferLen < ReportSize) {
                         status = STATUS_BUFFER_TOO_SMALL;
-                        RegDebug(L"HidGetReport ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
-                        goto exit;
+                        KdPrint(("HidGetReport ReportSize STATUS_BUFFER_TOO_SMALL,%x\n", status));
+                        goto Exit;
 
                     }
 
                     memmove(pHidPacket, pReportDesciptorData + 2, ReportSize);
-                    RegDebug(L"HidGetReport pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
+                    KdPrintData(("HidGetReport pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2));
+
                     WdfRequestSetInformation(Request, ReportSize);
 
                 }
@@ -2811,25 +2769,25 @@ HidGetReport(
         }
         else {
             status = STATUS_BUFFER_TOO_SMALL;
-            RegDebug(L"HidGetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
-            goto exit;
+            KdPrint(("HidGetReport STATUS_BUFFER_TOO_SMALL,%x\n", status));
+            goto Exit;
         }
 
         if (NT_SUCCESS(status)) {
-            goto exit;
+            goto Exit;
         }
     }
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    RegDebug(L"HidGetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+    KdPrint(("HidGetReport STATUS_INVALID_BUFFER_SIZE,%x\n", status));
 
-exit:
+Exit:
     if (pReportDesciptorData)
         ExFreePoolWithTag(pReportDesciptorData, HIDI2C_POOL_TAG);
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    RegDebug(L"HidGetReport end", NULL, status);
+    KdPrint(("HidGetReport end,%x\n", status));
     return status;
 }
 
@@ -2859,14 +2817,14 @@ HidSetReport(
 
     if (RequestParameters.Parameters.DeviceIoControl.InputBufferLength < sizeof(HID_XFER_PACKET)) {
         status = STATUS_INVALID_BUFFER_SIZE;
-        RegDebug(L"HidSetReport STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        KdPrint(("HidSetReport STATUS_INVALID_BUFFER_SIZE,%x\n", status));
         goto exit;
     }
 
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (!pHidPacket) {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"HidSetReport STATUS_INVALID_PARAMETER", NULL, status);
+        KdPrint(("HidSetReport STATUS_INVALID_PARAMETER,%x\n", status));
         goto exit;
     }
 
@@ -2878,7 +2836,7 @@ HidSetReport(
         if (Type) {
             if (Type != 1) {
                 status = STATUS_INVALID_PARAMETER;
-                RegDebug(L"HidSetReport Type STATUS_INVALID_PARAMETER", NULL, status);
+                KdPrint(("HidSetReport Type STATUS_INVALID_PARAMETER,%x\n", status));
                 goto exit;
             }
 
@@ -2898,7 +2856,7 @@ HidSetReport(
             pReportData = pReportDesciptorHeader;
             if (!pReportDesciptorHeader) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                RegDebug(L"HidSetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                KdPrint(("HidSetReport pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
                 goto exit;
             }
 
@@ -2919,7 +2877,7 @@ HidSetReport(
         pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
         if (!pReportDesciptorData) {
             status = STATUS_INSUFFICIENT_RESOURCES;
-            RegDebug(L"HidSetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+            KdPrint(("HidSetReport pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
             goto exit;
         }
 
@@ -2934,7 +2892,7 @@ HidSetReport(
     }
     else {
         status = STATUS_BUFFER_TOO_SMALL;
-        RegDebug(L"HidSetReport STATUS_BUFFER_TOO_SMALL", NULL, status);
+        KdPrint(("HidSetReport STATUS_BUFFER_TOO_SMALL,%x\n", status));
         goto exit;
     }
 
@@ -2944,7 +2902,7 @@ exit:
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    RegDebug(L"HidSetReport end", NULL, status);
+    KdPrint(("HidSetReport end,%x\n", status));
     return status;
 
 }
@@ -2961,8 +2919,8 @@ OnInterruptIsr(
     NTSTATUS status = STATUS_SUCCESS;
 
     runtimes_OnInterruptIsr++;
-    RegDebug(L"OnInterruptIsr runtimes_OnInterruptIsr",  NULL, runtimes_OnInterruptIsr);
-    RegDebug(L"OnInterruptIsr runtimes_hid", NULL, runtimes_hid++);
+    KdPrint(("OnInterruptIsr runtimes_OnInterruptIsr,%x\n", runtimes_OnInterruptIsr));
+    KdPrint(("OnInterruptIsr runtimes_hid,%x\n", runtimes_hid++));
 
 
     PUSHORT   pInputReportBuffer = NULL;
@@ -2990,8 +2948,8 @@ OnInterruptIsr(
 
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"SpbWritelessRead failed inputRegister", NULL, status);
-        goto exit;
+        KdPrint(("SpbWritelessRead failed inputRegister,%x\n", status));
+        goto Exit;
     }
 
     USHORT Actual_HidDescriptorLength = pInputReportBuffer[0];
@@ -3006,7 +2964,7 @@ OnInterruptIsr(
                 WdfIoQueueStart(pDevContext->IoctlQueue);
             }
 
-            RegDebug(L"OnInterruptIsr ok", NULL, status);
+            KdPrint(("OnInterruptIsr ok,%x\n", status));
         }
         else {        
            // //
@@ -3048,34 +3006,34 @@ OnInterruptIsr(
             status = WdfIoQueueRetrieveNextRequest(pDevContext->ResetNotificationQueue, &deviceResetNotificationRequest);
             if (!NT_SUCCESS(status)) {
                 if (status == STATUS_NO_MORE_ENTRIES) {
-                    RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest STATUS_NO_MORE_ENTRIES ", NULL, status);
-                    goto exit;
+                    KdPrint(("OnInterruptIsr WdfIoQueueRetrieveNextRequest STATUS_NO_MORE_ENTRIES ,%x\n", status));
+                    goto Exit;
                 }
                 else {
-                    RegDebug(L"OnInterruptIsr WdfIoQueueRetrieveNextRequest failed ", NULL, status);
+                    KdPrint(("OnInterruptIsr WdfIoQueueRetrieveNextRequest failed ,%x\n", status));
                 }
             }
             else {
                 WdfRequestComplete(deviceResetNotificationRequest, status);
-                RegDebug(L"OnInterruptIsr  WdfRequestComplete", NULL, runtimes_OnInterruptIsr);
+                KdPrint(("OnInterruptIsr  WdfRequestComplete,%x\n", runtimes_OnInterruptIsr));
             }
         }
 
-        goto exit;
+        goto Exit;
     }
 
     //
     if (*pInputReportBuffer)
     {
  
-        RegDebug(L"OnInterruptIsr pInputReportBuffer ", pInputReportBuffer, Actual_HidDescriptorLength);
-        
+        KdPrintData(("OnInterruptIsr pInputReportBuffer =", (PUCHAR)pInputReportBuffer, Actual_HidDescriptorLength));
+
         if (pDevContext->HostInitiatedResetActive == TRUE)
         {
             status = STATUS_DEVICE_PROTOCOL_ERROR;
-            RegDebug(L"Invalid input report returned for Reset command", NULL, status);
+            KdPrint(("Invalid input report returned for Reset command,%x\n", status));
 
-            goto exit;
+            goto Exit;
         }
 
         Actual_inputReportLength = Actual_HidDescriptorLength - HID_REPORT_LENGTH_FIELD_SIZE;
@@ -3083,8 +3041,8 @@ OnInterruptIsr(
         if (Actual_inputReportLength <= 0 || (ULONG)Actual_inputReportLength > inputReportMaxLength)
         {
             status = STATUS_DEVICE_PROTOCOL_ERROR;
-            RegDebug(L"Invalid input report returned inputReportActualLength", NULL, status);
-            goto exit;
+            KdPrint(("Invalid input report returned inputReportActualLength,%x\n", status));
+            goto Exit;
         }
 
         PBYTE pBuf = (PBYTE)pInputReportBuffer + 2;
@@ -3096,26 +3054,26 @@ OnInterruptIsr(
             ////发送原始报告
             //status = SendOriginalReport(pDevContext, pBuf, Actual_inputReportLength);
             //if (!NT_SUCCESS(status)) {
-            //    RegDebug(L"OnInterruptIsr SendOriginalReport failed", NULL, runtimes_ioControl);
+            //    KdPrint(("OnInterruptIsr SendOriginalReport failed,%x\n", runtimes_ioControl));
             //}
-            RegDebug(L"OnInterruptIsr PtpInputModeOn not ready", NULL, runtimes_ioControl);
-            goto exit;
+            KdPrint(("OnInterruptIsr PtpInputModeOn not ready,%x\n", runtimes_ioControl));
+            goto Exit;
         }
 
 
         ptpReport = *(PPTP_REPORT)pBuf;
         ptpReport.ReportID = FAKE_REPORTID_MULTITOUCH;
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ReportID", NULL, ptpReport.ReportID);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.IsButtonClicked", NULL, ptpReport.IsButtonClicked);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ScanTime", NULL, ptpReport.ScanTime);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.ContactCount", NULL, ptpReport.ContactCount);
+        KdPrint(("OnInterruptIsr PTP_REPORT.ReportID,%x\n", ptpReport.ReportID));
+        KdPrint(("OnInterruptIsr PTP_REPORT.IsButtonClicked,%x\n", ptpReport.IsButtonClicked));
+        KdPrint(("OnInterruptIsr PTP_REPORT.ScanTime,%x\n", ptpReport.ScanTime));
+        KdPrint(("OnInterruptIsr PTP_REPORT.ContactCount,%x\n", ptpReport.ContactCount));
 
-        //RegDebug(L"OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ", NULL, ptpReport.Contacts[0].Confidence);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ", NULL, ptpReport.Contacts[0].ContactID);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ", NULL, ptpReport.Contacts[0].TipSwitch);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Padding ", NULL, ptpReport.Contacts[0].Padding);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].X ", NULL, ptpReport.Contacts[0].X);
-        //RegDebug(L"OnInterruptIsr PTP_REPORT.Contacts[0].Y ", NULL, ptpReport.Contacts[0].Y);
+        KdPrint(("OnInterruptIsr PTP_REPORT..Contacts[0].Confidence ,%x\n", ptpReport.Contacts[0].Confidence));
+        KdPrint(("OnInterruptIsr PTP_REPORT.Contacts[0].ContactID ,%x\n", ptpReport.Contacts[0].ContactID));
+        KdPrint(("OnInterruptIsr PTP_REPORT.Contacts[0].TipSwitch ,%x\n", ptpReport.Contacts[0].TipSwitch));
+        KdPrint(("OnInterruptIsr PTP_REPORT.Contacts[0].Padding ,%x\n", ptpReport.Contacts[0].Padding));
+        KdPrint(("OnInterruptIsr PTP_REPORT.Contacts[0].X ,%x\n", ptpReport.Contacts[0].X));
+        KdPrint(("OnInterruptIsr PTP_REPORT.Contacts[0].Y ,%x\n", ptpReport.Contacts[0].Y));
 
 
         if (!pDevContext->bMouseLikeTouchPad_Mode) {//原版触控板操作方式直接发送原始报告
@@ -3123,22 +3081,22 @@ OnInterruptIsr(
             if (ptpReport.IsButtonClicked) {
                 //需要进行离开判定，否则本次或下次进入MouseLikeTouchPad解析器后关系bPhysicalButtonUp还会被内部的代码段执行造成未知问题
                 tps->bPhysicalButtonUp = FALSE;
-                RegDebug(L"OnInterruptIsr bPhysicalButtonUp FALSE", NULL, FALSE);
+                KdPrint(("OnInterruptIsr bPhysicalButtonUp FALSE,%x\n", FALSE));
             }
             else {
                 if (!tps->bPhysicalButtonUp) {
                     tps->bPhysicalButtonUp = TRUE;
-                    RegDebug(L"OnInterruptIsr bPhysicalButtonUp TRUE", NULL, TRUE);
+                    KdPrint(("OnInterruptIsr bPhysicalButtonUp TRUE,%x\n", TRUE));
 
                     if (ptpReport.ContactCount == 4 && !pDevContext->bMouseLikeTouchPad_Mode) {//四指按压触控板物理按键时，切换回仿鼠标式触摸板模式，
                         pDevContext->bMouseLikeTouchPad_Mode = TRUE;
-                        RegDebug(L"OnInterruptIsr bMouseLikeTouchPad_Mode TRUE", NULL, status);
+                        KdPrint(("OnInterruptIsr bMouseLikeTouchPad_Mode TRUE,%x\n", status));
 
                         //切换回仿鼠标式触摸板模式的同时也恢复滚轮功能和实现方式
                         pDevContext->bWheelDisabled = FALSE;
-                        RegDebug(L"OnInterruptIsr bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                        KdPrint(("OnInterruptIsr bWheelDisabled=,%x\n", pDevContext->bWheelDisabled));
                         pDevContext->bWheelScrollMode = FALSE;
-                        RegDebug(L"OnInterruptIsr bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                        KdPrint(("OnInterruptIsr bWheelScrollMode=,%x\n", pDevContext->bWheelScrollMode));
                     }
                 }
             }
@@ -3146,7 +3104,7 @@ OnInterruptIsr(
             //windows原版的PTP精确式触摸板操作方式，直接发送PTP报告
             status = SendPtpMultiTouchReport(pDevContext, &ptpReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"OnInterruptIsr SendPtpMultiTouchReport ptpReport failed", NULL, status);
+                KdPrint(("OnInterruptIsr SendPtpMultiTouchReport ptpReport failed,%x\n", status));
             }
            
         }
@@ -3155,8 +3113,8 @@ OnInterruptIsr(
             MouseLikeTouchPad_parse(pDevContext, &ptpReport);
         }
 
-        RegDebug(L"OnInterruptIsr SendReport end", NULL, runtimes_ioControl);
-        goto exit;
+        KdPrint(("OnInterruptIsr SendReport end,%x\n", runtimes_ioControl));
+        goto Exit;
 
     }
 
@@ -3165,8 +3123,8 @@ OnInterruptIsr(
 
    
 
-exit:
-    //RegDebug(L"OnInterruptIsr end", NULL, status);
+Exit:
+    KdPrint(("OnInterruptIsr end,%x\n", status));
     return TRUE;
 }
 
@@ -3205,19 +3163,19 @@ PowerIdleIrpWorkitem(
     {
         //
         NT_ASSERTMSG("WdfRequestForwardToIoQueue to IdleQueue failed!", FALSE);
-        RegDebug(L"PowerIdleIrpWorkitem WdfRequestForwardToIoQueue IdleQueue failed", NULL, status);
+        KdPrint(("PowerIdleIrpWorkitem WdfRequestForwardToIoQueue IdleQueue failed,%x\n", status));
 
         WdfRequestComplete(pWorkItemContext->FxRequest, status);
     }
     else
     {
-        RegDebug(L"Forwarded idle notification Request to IdleQueue", NULL, status);
+        KdPrint(("Forwarded idle notification Request to IdleQueue,%x\n", status));
     }
 
 
     WdfObjectDelete(IdleWorkItem);
 
-    RegDebug(L"PowerIdleIrpWorkitem end", NULL, status);
+    KdPrint(("PowerIdleIrpWorkitem end,%x\n", status));
     return;
 }
 
@@ -3237,16 +3195,16 @@ PowerIdleIrpCompletion(
 
         if (!NT_SUCCESS(status) || (request == NULL))
         {
-            RegDebug(L"WdfIoQueueRetrieveNextRequest failed to find idle notification request in IdleQueue", NULL, status);//STATUS_NO_MORE_ENTRIES
+            KdPrint(("WdfIoQueueRetrieveNextRequest failed to find idle notification request in IdleQueue,%x\n", status));//STATUS_NO_MORE_ENTRIES
         }
         else
         {
             WdfRequestComplete(request, status);
-            RegDebug(L"Completed idle notification Request from IdleQueue", NULL, status);
+            KdPrint(("Completed idle notification Request from IdleQueue,%x\n", status));
         }
     }
 
-    RegDebug(L"PowerIdleIrpCompletion end", NULL, status);//
+    KdPrint(("PowerIdleIrpCompletion end,%x\n", status));//
     return;
 }
 
@@ -3274,7 +3232,7 @@ PtpReportFeatures(
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength < sizeof(HID_XFER_PACKET))
     {
-        RegDebug(L"STATUS_BUFFER_TOO_SMALL", NULL, 0x12345678);
+        KdPrint(("STATUS_BUFFER_TOO_SMALL,%x\n", 0x12345678));
         Status = STATUS_BUFFER_TOO_SMALL;
         goto exit;
     }
@@ -3282,7 +3240,7 @@ PtpReportFeatures(
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (pHidPacket == NULL)
     {
-        RegDebug(L"STATUS_INVALID_DEVICE_REQUEST", NULL, 0x12345678);
+        KdPrint(("STATUS_INVALID_DEVICE_REQUEST,%x\n", 0x12345678));
         Status = STATUS_INVALID_DEVICE_REQUEST;
         goto exit;
     }
@@ -3292,7 +3250,7 @@ PtpReportFeatures(
             ReportSize = sizeof(PTP_DEVICE_CAPS_FEATURE_REPORT);
             if (pHidPacket->reportBufferLen < ReportSize) {
                 Status = STATUS_INVALID_BUFFER_SIZE;
-                RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
+                KdPrint(("PtpGetFeatures REPORTID_DEVICE_CAPS STATUS_INVALID_BUFFER_SIZE,%x\n", pHidPacket->reportId));
                 goto exit;
             }
 
@@ -3301,9 +3259,9 @@ PtpReportFeatures(
             capsReport->MaximumContactPoints = PTP_MAX_CONTACT_POINTS;// pDevContext->CONTACT_COUNT_MAXIMUM;// PTP_MAX_CONTACT_POINTS;
             capsReport->ButtonType = PTP_BUTTON_TYPE_CLICK_PAD;// pDevContext->PAD_TYPE;// PTP_BUTTON_TYPE_CLICK_PAD;
             capsReport->ReportID = FAKE_REPORTID_DEVICE_CAPS;// pDevContext->REPORTID_DEVICE_CAPS;//FAKE_REPORTID_DEVICE_CAPS
-            RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_DEVICE_CAPS", NULL, pHidPacket->reportId);
-            RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS MaximumContactPoints", NULL, capsReport->MaximumContactPoints);
-            RegDebug(L"PtpGetFeatures REPORTID_DEVICE_CAPS REPORTID_DEVICE_CAPS ButtonType", NULL, capsReport->ButtonType);
+            KdPrint(("PtpGetFeatures pHidPacket->reportId REPORTID_DEVICE_CAPS,%x\n", pHidPacket->reportId));
+            KdPrint(("PtpGetFeatures REPORTID_DEVICE_CAPS MaximumContactPoints,%x\n", capsReport->MaximumContactPoints));
+            KdPrint(("PtpGetFeatures REPORTID_DEVICE_CAPS REPORTID_DEVICE_CAPS ButtonType,%x\n", capsReport->ButtonType));
     }
     else if (reportId == FAKE_REPORTID_PTPHQA) {//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             // Size sanity check
@@ -3311,7 +3269,7 @@ PtpReportFeatures(
             if (pHidPacket->reportBufferLen < ReportSize)
             {
                 Status = STATUS_INVALID_BUFFER_SIZE;
-                RegDebug(L"PtpGetFeatures REPORTID_PTPHQA STATUS_INVALID_BUFFER_SIZE", NULL, pHidPacket->reportId);
+                KdPrint(("PtpGetFeatures REPORTID_PTPHQA STATUS_INVALID_BUFFER_SIZE,%x\n", pHidPacket->reportId));
                 goto exit;
             }
 
@@ -3321,18 +3279,18 @@ PtpReportFeatures(
             certReport->ReportID = FAKE_REPORTID_PTPHQA;//FAKE_REPORTID_PTPHQA//pDevContext->REPORTID_PTPHQA
             pDevContext->PtpInputModeOn = TRUE;//测试
 
-            RegDebug(L"PtpGetFeatures pHidPacket->reportId REPORTID_PTPHQA", NULL, pHidPacket->reportId);
+            KdPrint(("PtpGetFeatures pHidPacket->reportId REPORTID_PTPHQA,%x\n", pHidPacket->reportId));
 
     }
     else{
 
             Status = STATUS_NOT_SUPPORTED;
-            RegDebug(L"PtpGetFeatures pHidPacket->reportId STATUS_NOT_SUPPORTED", NULL, pHidPacket->reportId);
+            KdPrint(("PtpGetFeatures pHidPacket->reportId STATUS_NOT_SUPPORTED,%x\n", pHidPacket->reportId));
             goto exit;
     }
     
     WdfRequestSetInformation(Request, ReportSize);
-    RegDebug(L"PtpGetFeatures STATUS_SUCCESS pDeviceContext->PtpInputOn", NULL, pDevContext->PtpInputModeOn);
+    KdPrint(("PtpGetFeatures STATUS_SUCCESS pDeviceContext->PtpInputOn,%x\n", pDevContext->PtpInputModeOn));
 
 
 exit:
@@ -3367,17 +3325,17 @@ HidGetFeature(
     WdfRequestGetParameters(Request, &RequestParameters);
 
     if (RequestParameters.Parameters.DeviceIoControl.OutputBufferLength >= sizeof(HID_XFER_PACKET)) {
-        RegDebug(L"HidGetFeature OutputBufferLength=", NULL, (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength);
-        RegDebug(L"HidGetFeature Parameters.Write.Length=", NULL, (ULONG)RequestParameters.Parameters.Write.Length);
+        KdPrint(("HidGetFeature OutputBufferLength=,%x\n", (ULONG)RequestParameters.Parameters.DeviceIoControl.OutputBufferLength));
+        KdPrint(("HidGetFeature Parameters.Write.Length=,%x\n", (ULONG)RequestParameters.Parameters.Write.Length));
         pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
         if (!pHidPacket) {
             status = STATUS_INVALID_PARAMETER;
-            RegDebug(L"HidGetFeature STATUS_INVALID_PARAMETER", NULL, status);
+            KdPrint(("HidGetFeature STATUS_INVALID_PARAMETER,%x\n", status));
             goto exit;
         }
-        RegDebug(L"HidGetFeature pHidPacket=", pHidPacket, sizeof(PHID_XFER_PACKET));
-        RegDebug(L"HidGetFeature pHidPacket->reportBufferLen=", NULL, pHidPacket->reportBufferLen);
-        RegDebug(L"HidGetFeature pHidPacket->reportId=", NULL, pHidPacket->reportId);
+        KdPrintData(("HidGetFeature pHidPacket=", (PUCHAR)pHidPacket, sizeof(PHID_XFER_PACKET)));
+        KdPrint(("HidGetFeature pHidPacket->reportBufferLen=,%x\n", pHidPacket->reportBufferLen));
+        KdPrint(("HidGetFeature pHidPacket->reportId=,%x\n", pHidPacket->reportId));
 
         reportBufferLen = pHidPacket->reportBufferLen;
         if (reportBufferLen) {
@@ -3387,7 +3345,7 @@ HidGetFeature(
             if (Type) {
                 if (Type != 2) {
                     status = STATUS_INVALID_PARAMETER;
-                    RegDebug(L"HidGetFeature Type STATUS_INVALID_PARAMETER", NULL, status);
+                    KdPrint(("HidGetFeature Type STATUS_INVALID_PARAMETER,%x\n", status));
                     goto exit;
                 }
 
@@ -3400,13 +3358,13 @@ HidGetFeature(
 
             UCHAR reportId = pHidPacket->reportId;
             if (reportId == pDevContext->REPORTID_DEVICE_CAPS) {
-                RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS reportId=", NULL, reportId);
+                KdPrint(("HidGetFeature REPORTID_DEVICE_CAPS reportId=,%x\n", reportId));
             }
             else if (reportId == pDevContext->REPORTID_PTPHQA) {
-                RegDebug(L"HidGetFeature REPORTID_PTPHQA reportId=", NULL, reportId);
+                KdPrint(("HidGetFeature REPORTID_PTPHQA reportId=,%x\n", reportId));
             }
             else {
-                RegDebug(L"HidGetFeature Not Support reportId=", NULL, reportId);
+                KdPrint(("HidGetFeature Not Support reportId=,%x\n", reportId));
             }
             if (reportId >= 0xFu) {
                 HeaderLength = 3;
@@ -3416,7 +3374,7 @@ HidGetFeature(
                 pReportData = pReportDesciptorHeader;
                 if (!pReportDesciptorHeader) {
                     status = STATUS_INSUFFICIENT_RESOURCES;
-                    RegDebug(L"HidGetFeature pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                    KdPrint(("HidGetFeature pReportDesciptorHeader STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
                     goto exit;
                 }
 
@@ -3432,13 +3390,14 @@ HidGetFeature(
                 HeaderLength = 2;
                 PFlag = mflag | reportId;
             }
-            RegDebug(L"HidGetFeature pReportDataHeader=", pReportData, HeaderLength);
+            KdPrintData(("HidGetFeature pReportDataHeader=", pReportData, HeaderLength));
+            KdPrint(("HidGetFeature pReportDataHeader=,%x\n", pReportData));
 
             RegisterAddressSecond = pDevContext->HidSettings.DataRegisterAddress;
             pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportBufferLen + 2, HIDI2C_POOL_TAG);
             if (!pReportDesciptorData) {
                 status = STATUS_INSUFFICIENT_RESOURCES;
-                RegDebug(L"HidGetFeature pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+                KdPrint(("HidGetFeature pReportDesciptorData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
                 goto exit;
             }
 
@@ -3449,26 +3408,26 @@ HidGetFeature(
             if (NT_SUCCESS(status)) {
                 size_t ReportSize = *(PUSHORT)pReportDesciptorData - 2;
                 if (!ReportSize) {
-                    RegDebug(L"HidGetFeature ReportSize err", NULL, (ULONG)ReportSize);
+                    KdPrint(("HidGetFeature ReportSize err,%x\n", (ULONG)ReportSize));
                 }
                 else {
                     if (reportBufferLen < ReportSize) {
                         status = STATUS_BUFFER_TOO_SMALL;
-                        RegDebug(L"HidGetFeature ReportSize STATUS_BUFFER_TOO_SMALL", NULL, status);
+                        KdPrint(("HidGetFeature ReportSize STATUS_BUFFER_TOO_SMALL,%x\n", status));
                         goto exit;
 
                     }
 
                     memmove(pHidPacket, pReportDesciptorData + 2, ReportSize);
-                    RegDebug(L"HidGetFeature pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2);
+                    KdPrintData(("HidGetFeature pReportDesciptorData=", pReportDesciptorData, (ULONG)reportBufferLen + 2));
                     if (reportId == pDevContext->REPORTID_DEVICE_CAPS) {
-                        RegDebug(L"HidGetFeature REPORTID_DEVICE_CAPS pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        KdPrintData(("HidGetFeature REPORTID_DEVICE_CAPS pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2));
                     }
                     else if (reportId == pDevContext->REPORTID_PTPHQA) {
-                        RegDebug(L"HidGetFeature REPORTID_PTPHQA pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        KdPrintData(("HidGetFeature REPORTID_PTPHQA pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2));
                     }
                     else {
-                        RegDebug(L"HidGetFeature Not Support pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2);
+                        KdPrintData(("HidGetFeature Not Support pReportDesciptorData=", pReportDesciptorData, (ULONG)ReportSize + 2));
                     }
                     WdfRequestSetInformation(Request, ReportSize);
 
@@ -3477,7 +3436,7 @@ HidGetFeature(
         }
         else {
             status = STATUS_BUFFER_TOO_SMALL;
-            RegDebug(L"HidGetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
+            KdPrint(("HidGetFeature STATUS_BUFFER_TOO_SMALL,%x\n", status));
             goto exit;
         }
 
@@ -3487,7 +3446,7 @@ HidGetFeature(
     }
 
     status = STATUS_INVALID_BUFFER_SIZE;
-    RegDebug(L"HidGetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
+    KdPrint(("HidGetFeature STATUS_INVALID_BUFFER_SIZE,%x\n", status));
 
 exit:
     if (pReportDesciptorData)
@@ -3495,7 +3454,7 @@ exit:
     if (pReportData && bAllocatePoolFlag)
         ExFreePoolWithTag(pReportData, HIDI2C_POOL_TAG);
 
-    RegDebug(L"HidGetFeature end", NULL, status);
+    KdPrint(("HidGetFeature end,%x\n", status));
     return status;
 
 }
@@ -3531,21 +3490,21 @@ HidSetFeature(
 
     if (RequestParameters.Parameters.DeviceIoControl.InputBufferLength < sizeof(HID_XFER_PACKET)) {
         status = STATUS_INVALID_BUFFER_SIZE;
-        RegDebug(L"HidSetFeature STATUS_INVALID_BUFFER_SIZE", NULL, status);
+        KdPrint(("HidSetFeature STATUS_INVALID_BUFFER_SIZE,%x\n", status));
         goto exit;
     }
 
     pHidPacket = (PHID_XFER_PACKET)WdfRequestWdmGetIrp(Request)->UserBuffer;
     if (!pHidPacket) {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"HidSetFeature STATUS_INVALID_PARAMETER", NULL, status);
+        KdPrint(("HidSetFeature STATUS_INVALID_PARAMETER,%x\n", status));
         goto exit;
     }
 
     ULONG reportBufferLen = pHidPacket->reportBufferLen;
     if (!reportBufferLen) {
         status = STATUS_BUFFER_TOO_SMALL;
-        RegDebug(L"HidSetFeature STATUS_BUFFER_TOO_SMALL", NULL, status);
+        KdPrint(("HidSetFeature STATUS_BUFFER_TOO_SMALL,%x\n", status));
         goto exit;
     }
 
@@ -3554,23 +3513,23 @@ HidSetFeature(
         reportID = pDevContext->REPORTID_INPUT_MODE;//替换为真实值
         reportDataSize = pDevContext->REPORTSIZE_INPUT_MODE;
         reportData = PTP_COLLECTION_WINDOWS;
-        //RegDebug(L"HidSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
+        KdPrint(("HidSetFeature PTP_COLLECTION_WINDOWS reportDataSize=,%x\n", reportDataSize));
     }
     else if (reportId == FAKE_REPORTID_FUNCTION_SWITCH) {//FAKE_REPORTID_FUNCTION_SWITCH
         reportID = pDevContext->REPORTID_FUNCTION_SWITCH;//替换为真实值
         reportDataSize = pDevContext->REPORTSIZE_FUNCTION_SWITCH;
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
-        //RegDebug(L"HidSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
+        KdPrint(("HidSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=,%x\n", reportDataSize));
     }
     else if (reportId == FAKE_REPORTID_LATENCY_MODE) {//FAKE_REPORTID_LATENCY_MODE
         reportID = pDevContext->REPORTID_LATENCY_MODE;//替换为真实值
         reportDataSize = pDevContext->REPORTSIZE_LATENCY_MODE;
         reportData = LATENCY_MODE_REPORT_Normal_Latency;
-        //RegDebug(L"HidSetFeature LATENCY_MODE_REPORT_Normal_Latency reportDataSize=", NULL, reportDataSize);
+        KdPrint(("HidSetFeature LATENCY_MODE_REPORT_Normal_Latency reportDataSize=,%x\n", reportDataSize));
     }
     else {
         status = STATUS_INVALID_PARAMETER;
-        RegDebug(L"HidSetFeature reportId err", NULL, status);
+        KdPrint(("HidSetFeature reportId err,%x\n", status));
         goto exit;
     }
 
@@ -3580,20 +3539,20 @@ HidSetFeature(
         pReportHeaderData = HeaderData3;
         *(PUSHORT)pReportHeaderData = 0x033F;//0x0330 | 0xF
         pReportHeaderData[2] = reportID;
-        RegDebug(L"HidSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        KdPrintData(("HidSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength));
     }
     else {
         HeaderLength = 2;
         pReportHeaderData = HeaderData2;
         *(PUSHORT)pReportHeaderData = 0x0330 | reportID;   //USHORT左边字节为低位LowByte右边字节为高位HighByte,
-        RegDebug(L"HidSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        KdPrintData(("HidSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength));
     }
 
     reportLength = 3 + reportDataSize;
     pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     if (!pFeatureReportData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"HidSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+        KdPrint(("HidSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
         goto exit;
     }
 
@@ -3603,10 +3562,10 @@ HidSetFeature(
     pFeatureReportData[3] = reportData;//PTP_COLLECTION_WINDOWS或者PTP_SELECTIVE_REPORT_Button_Surface_ON
 
     if (reportID == pDevContext->REPORTID_INPUT_MODE) {//SetType== PTP_FEATURE_INPUT_COLLECTION
-        RegDebug(L"HidSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
+        KdPrintData(("HidSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength));
     }
     else if (reportID == pDevContext->REPORTID_FUNCTION_SWITCH){//SetType== PTP_FEATURE_SELECTIVE_REPORTING
-        RegDebug(L"HidSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
+        KdPrintData(("HidSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength));
     }
 
     RegisterAddressFirst = pDevContext->HidSettings.CommandRegisterAddress;
@@ -3614,7 +3573,7 @@ HidSetFeature(
 
     status = SpbWriteWrite(pDevContext->SpbIoTarget, RegisterAddressFirst, pReportHeaderData, HeaderLength, RegisterAddressSecond, pFeatureReportData, reportLength);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"HidSetFeature SpbWriteWrite err", NULL, status);
+        KdPrint(("HidSetFeature SpbWriteWrite err,%x\n", status));
     }
     WdfRequestSetInformation(Request, reportDataSize);
     if (reportID == pDevContext->REPORTID_INPUT_MODE) {//SetType== PTP_FEATURE_INPUT_COLLECTION
@@ -3626,7 +3585,7 @@ HidSetFeature(
     
     if (pDevContext->SetInputModeOK && pDevContext->SetFunSwicthOK) {
         pDevContext->PtpInputModeOn = TRUE;
-        RegDebug(L"HidSetFeature PtpInputModeOn=", NULL, pDevContext->PtpInputModeOn);
+        KdPrint(("HidSetFeature PtpInputModeOn=,%x\n", pDevContext->PtpInputModeOn));
     }
 
 exit:
@@ -3634,7 +3593,7 @@ exit:
         ExFreePoolWithTag(pFeatureReportData, HIDI2C_POOL_TAG);
     }
 
-    RegDebug(L"HidSetFeature end", NULL, status);
+    KdPrint(("HidSetFeature end,%x\n", status));
     return status;
 }
 
@@ -3663,13 +3622,13 @@ PtpSetFeature(
         reportID = pDevContext->REPORTID_INPUT_MODE;////reportID//yoga14s为0x04,matebook为0x03
         reportDataSize = pDevContext->REPORTSIZE_INPUT_MODE;
         reportData = PTP_COLLECTION_WINDOWS;
-        RegDebug(L"PtpSetFeature PTP_COLLECTION_WINDOWS reportDataSize=", NULL, reportDataSize);
+        KdPrint(("PtpSetFeature PTP_COLLECTION_WINDOWS reportDataSize=,%x\n", reportDataSize));
     }
     else {//SetType== PTP_FEATURE_SELECTIVE_REPORTING
         reportID = pDevContext->REPORTID_FUNCTION_SWITCH;////reportID//yoga14s为0x06,matebook为0x05
         reportDataSize = pDevContext->REPORTSIZE_FUNCTION_SWITCH;
         reportData = PTP_SELECTIVE_REPORT_Button_Surface_ON;
-        RegDebug(L"PtpSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=", NULL, reportDataSize);
+        KdPrint(("PtpSetFeature PTP_SELECTIVE_REPORT_Button_Surface_ON reportDataSize=,%x\n", reportDataSize));
     }
     
     if (reportID >= 0xFu) {
@@ -3677,26 +3636,26 @@ PtpSetFeature(
         pReportHeaderData = HeaderData3;
         *(PUSHORT)pReportHeaderData = 0x033F;//0x0330 | 0xF
         pReportHeaderData[2] = reportID;
-        RegDebug(L"PtpSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        KdPrintData(("PtpSetFeature reportID>=0xF pReportHeaderData=", pReportHeaderData, HeaderLength));
     }
     else {
         HeaderLength = 2;
         pReportHeaderData = HeaderData2;
         *(PUSHORT)pReportHeaderData = 0x0330 | reportID;   //USHORT左边字节为低位LowByte右边字节为高位HighByte,
-        RegDebug(L"PtpSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength);
+        KdPrintData(("PtpSetFeature reportID<0xF pReportHeaderData=", pReportHeaderData, HeaderLength));
     }
 
 
     //USHORT hxp_size = sizeof(HID_XFER_PACKET);
-    //RegDebug(L"PtpSetFeature hxp_size=", NULL, hxp_size);
+    //KdPrint(("PtpSetFeature hxp_size=,%x\n", hxp_size));
 
     //reportLength = (USHORT)(hxp_size + reportDataSize + 2);
-    //RegDebug(L"PtpSetFeature reportLength=", NULL, reportLength);
+    //KdPrint(("PtpSetFeature reportLength=,%x\n", reportLength));
 
     //pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     //if (!pFeatureReportData) {
     //    status = STATUS_INSUFFICIENT_RESOURCES;
-    //    RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+    //    KdPrint(("PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
     //    goto exit;
     //}
     //
@@ -3707,12 +3666,12 @@ PtpSetFeature(
     //hxp->reportBufferLen = reportDataSize;
     //hxp->reportId = reportID;
     //hxp->reportBuffer[0] = reportData; // 
-    //RegDebug(L"PtpSetFeature hxp->reportId=", NULL, hxp->reportId);
+    //KdPrint(("PtpSetFeature hxp->reportId=,%x\n", hxp->reportId));
 
     //RtlZeroMemory(pFeatureReportData, reportLength);
     //*(PUSHORT)pFeatureReportData = reportLength;
     //RtlCopyMemory(pFeatureReportData + 2, hxp, reportLength - 2);
-    //RegDebug(L"PtpSetFeature pFeatureReportData=", pFeatureReportData, reportLength);
+    //KdPrintData(("PtpSetFeature pFeatureReportData=", pFeatureReportData, reportLength));
 
 
 
@@ -3720,7 +3679,7 @@ PtpSetFeature(
     pFeatureReportData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, reportLength, HIDI2C_POOL_TAG);
     if (!pFeatureReportData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES", NULL, status);
+        KdPrint(("PtpSetFeature pFeatureReportData STATUS_INSUFFICIENT_RESOURCES,%x\n", status));
         goto exit;
     }
 
@@ -3730,10 +3689,10 @@ PtpSetFeature(
     pFeatureReportData[3] = reportData;//PTP_COLLECTION_WINDOWS或者PTP_SELECTIVE_REPORT_Button_Surface_ON
 
     if (SetType == PTP_FEATURE_INPUT_COLLECTION) {
-        RegDebug(L"PtpSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength);
+        KdPrintData(("PtpSetFeature PTP_FEATURE_INPUT_COLLECTION pFeatureReportData=", pFeatureReportData, reportLength));
     }
     else {//SetType== PTP_FEATURE_SELECTIVE_REPORTING
-        RegDebug(L"PtpSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength);
+        KdPrintData(("PtpSetFeature PTP_FEATURE_SELECTIVE_REPORTING pFeatureReportData=", pFeatureReportData, reportLength));
     }
 
     RegisterAddressFirst = pDevContext->HidSettings.CommandRegisterAddress;
@@ -3741,7 +3700,7 @@ PtpSetFeature(
 
     status = SpbWriteWrite(pDevContext->SpbIoTarget, RegisterAddressFirst, pReportHeaderData, HeaderLength, RegisterAddressSecond, pFeatureReportData, reportLength);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"PtpSetFeature SpbWriteWrite err", NULL, status);
+        KdPrint(("PtpSetFeature SpbWriteWrite err,%x\n", status));
     }
 
 exit:
@@ -3749,7 +3708,7 @@ exit:
         ExFreePoolWithTag(pFeatureReportData, HIDI2C_POOL_TAG);
     }
 
-    RegDebug(L"PtpSetFeature end", NULL, status);
+    KdPrint(("PtpSetFeature end,%x\n", status));
     return status;
 
 }
@@ -3760,7 +3719,7 @@ GetReportDescriptor(
     PDEVICE_CONTEXT pDevContext
 )
 {
-    RegDebug(L"GetReportDescriptor start", NULL, runtimes_ioControl);
+    KdPrint(("GetReportDescriptor start,%x\n", runtimes_ioControl));
 
     NTSTATUS status = STATUS_SUCCESS;
 
@@ -3770,7 +3729,7 @@ GetReportDescriptor(
     PBYTE pReportDesciptorData = (PBYTE)ExAllocatePoolWithTag(NonPagedPoolNx, ReportLength, HIDI2C_POOL_TAG);
     if (!pReportDesciptorData) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        RegDebug(L"GetReportDescriptor ExAllocatePoolWithTag failed", NULL, status);
+        KdPrint(("GetReportDescriptor ExAllocatePoolWithTag failed,%x\n", status));
         return status;
     }
 
@@ -3778,12 +3737,12 @@ GetReportDescriptor(
     status = SpbRead(pDevContext->SpbIoTarget, RegisterAddress, pReportDesciptorData, ReportLength, DelayUs, HIDI2C_REQUEST_DEFAULT_TIMEOUT);///原先单位为秒太大改为ms
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"GetReportDescriptor SpbRead failed", NULL, status);
+        KdPrint(("GetReportDescriptor SpbRead failed,%x\n", status));
         return status;
     }
 
     pDevContext->pReportDesciptorData = pReportDesciptorData;
-    RegDebug(L"GetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength);
+    KdPrintData(("GetReportDescriptor pReportDesciptorData=", pReportDesciptorData, ReportLength));
 
     return status;
 }
@@ -3797,7 +3756,7 @@ AnalyzeHidReportDescriptor(
     NTSTATUS status = STATUS_SUCCESS;
     PBYTE descriptor = pDevContext->pReportDesciptorData;
     if (!descriptor) {
-        RegDebug(L"AnalyzeHidReportDescriptor pReportDesciptorData err", NULL, status);
+        KdPrint(("AnalyzeHidReportDescriptor pReportDesciptorData err,%x\n", status));
         return STATUS_UNSUCCESSFUL;
     }
 
@@ -3833,17 +3792,17 @@ AnalyzeHidReportDescriptor(
             if (depth == 1 && usagePage == HID_USAGE_PAGE_DIGITIZER && lastUsage == HID_USAGE_CONFIGURATION) {
                 inConfigTlc = true;
                 lastCollection = HID_USAGE_CONFIGURATION;
-                //RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inConfigTlc,%x\n", 0));
             }
             else if (depth == 1 && usagePage == HID_USAGE_PAGE_DIGITIZER && lastUsage == HID_USAGE_DIGITIZER_TOUCH_PAD) {
                 inTouchTlc = true;
                 lastCollection = HID_USAGE_DIGITIZER_TOUCH_PAD;
-                //RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inTouchTlc,%x\n", 0));
             }
             else if (depth == 1 && usagePage == HID_USAGE_PAGE_GENERIC && lastUsage == HID_USAGE_GENERIC_MOUSE) {
                 inMouseTlc = true;
                 lastCollection = HID_USAGE_GENERIC_MOUSE;
-                //RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inMouseTlc,%x\n", 0));
             }
         }
         else if (type == HID_TYPE_END_COLLECTION) {
@@ -3852,15 +3811,15 @@ AnalyzeHidReportDescriptor(
             //下面3个Tlc状态更新是有必要的，可以防止后续相关集合Tlc错误判定发生
             if (depth == 0 && inConfigTlc) {
                 inConfigTlc = false;
-                //RegDebug(L"AnalyzeHidReportDescriptor inConfigTlc end", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inConfigTlc end,%x\n", 0));
             }
             else if (depth == 0 && inTouchTlc) {
                 inTouchTlc = false;
-                //RegDebug(L"AnalyzeHidReportDescriptor inTouchTlc end", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inTouchTlc end,%x\n", 0));
             }
             else if (depth == 0 && inMouseTlc) {
                 inMouseTlc = false;
-                //RegDebug(L"AnalyzeHidReportDescriptor inMouseTlc end", NULL, 0);
+                //KdPrint(("AnalyzeHidReportDescriptor inMouseTlc end,%x\n", 0));
             }
 
         }
@@ -3906,52 +3865,52 @@ AnalyzeHidReportDescriptor(
 
         else if (inTouchTlc && depth == 2 && lastCollection == HID_USAGE_DIGITIZER_TOUCH_PAD  && lastUsage == HID_USAGE_DIGITIZER_FINGER) {//
             pDevContext->REPORTID_MULTITOUCH_COLLECTION = reportId;
-            RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MULTITOUCH_COLLECTION=", NULL, pDevContext->REPORTID_MULTITOUCH_COLLECTION);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_MULTITOUCH_COLLECTION=,%x\n", pDevContext->REPORTID_MULTITOUCH_COLLECTION));
 
             //这里计算单个报告数据包的手指数量用来后续判断报告模式及bHybrid_ReportingMode的赋值
             pDevContext->DeviceDescriptorFingerCount++;
-            RegDebug(L"AnalyzeHidReportDescriptor DeviceDescriptorFingerCount=", NULL, pDevContext->DeviceDescriptorFingerCount);
+            KdPrint(("AnalyzeHidReportDescriptor DeviceDescriptorFingerCount=,%x\n", pDevContext->DeviceDescriptorFingerCount));
         }
         else if (inMouseTlc && depth == 2 && lastCollection == HID_USAGE_GENERIC_MOUSE  && lastUsage == HID_USAGE_GENERIC_POINTER) {
             //下层的Mouse集合report本驱动并不会读取，只是作为输出到上层类驱动的Report使用
             pDevContext->REPORTID_MOUSE_COLLECTION = reportId;
-            RegDebug(L"AnalyzeHidReportDescriptor REPORTID_MOUSE_COLLECTION=", NULL, pDevContext->REPORTID_MOUSE_COLLECTION);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_MOUSE_COLLECTION=,%x\n", pDevContext->REPORTID_MOUSE_COLLECTION));
         }
         else if (inConfigTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_INPUT_MODE) {
             pDevContext->REPORTSIZE_INPUT_MODE = (reportSize + 7) / 8;//报告数据总长度
             pDevContext->REPORTID_INPUT_MODE = reportId;
-           // RegDebug(L"AnalyzeHidReportDescriptor REPORTID_INPUT_MODE=", NULL, pDevContext->REPORTID_INPUT_MODE);
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_INPUT_MODE=", NULL, pDevContext->REPORTSIZE_INPUT_MODE);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_INPUT_MODE=,%x\n", pDevContext->REPORTID_INPUT_MODE));
+            KdPrint(("AnalyzeHidReportDescriptor REPORTSIZE_INPUT_MODE=,%x\n", pDevContext->REPORTSIZE_INPUT_MODE));
             continue;
         }
         else if (inConfigTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_SURFACE_SWITCH || lastUsage == HID_USAGE_BUTTON_SWITCH) {
             //默认标准规范为HID_USAGE_SURFACE_SWITCH与HID_USAGE_BUTTON_SWITCH各1bit组合低位成1个字节HID_USAGE_FUNCTION_SWITCH报告
             pDevContext->REPORTSIZE_FUNCTION_SWITCH = (reportSize + 7) / 8;//报告数据总长度
             pDevContext->REPORTID_FUNCTION_SWITCH = reportId;
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_FUNCTION_SWITCH=", NULL, pDevContext->REPORTID_FUNCTION_SWITCH);
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_FUNCTION_SWITCH=", NULL, pDevContext->REPORTSIZE_FUNCTION_SWITCH);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_FUNCTION_SWITCH=,%x\n", pDevContext->REPORTID_FUNCTION_SWITCH));
+            KdPrint(("AnalyzeHidReportDescriptor REPORTSIZE_FUNCTION_SWITCH=,%x\n", pDevContext->REPORTSIZE_FUNCTION_SWITCH));
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_CONTACT_COUNT_MAXIMUM || lastUsage == HID_USAGE_PAD_TYPE) {
             //默认标准规范为HID_USAGE_CONTACT_COUNT_MAXIMUM与HID_USAGE_PAD_TYPE各4bit组合低位成1个字节HID_USAGE_DEVICE_CAPS报告
             pDevContext->REPORTSIZE_DEVICE_CAPS = (reportSize + 7) / 8;//报告数据总长度
             pDevContext->REPORTID_DEVICE_CAPS = reportId;
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_DEVICE_CAPS=", NULL, pDevContext->REPORTSIZE_DEVICE_CAPS);
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_DEVICE_CAPS=", NULL, pDevContext->REPORTID_DEVICE_CAPS);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTSIZE_DEVICE_CAPS=,%x\n", pDevContext->REPORTSIZE_DEVICE_CAPS));
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_DEVICE_CAPS=,%x\n", pDevContext->REPORTID_DEVICE_CAPS));
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_LATENCY_MODE) {
-        //延迟模式功能报告//默认标准规范为HID_USAGE_LATENCY_MODE低位1bit组合成1个字节HID_USAGE_LATENCY_MODE报告
-        pDevContext->REPORTSIZE_LATENCY_MODE = (reportSize + 7) / 8;//报告数据总长度
-        pDevContext->REPORTID_LATENCY_MODE = reportId;
-        //RegDebug(L"AnalyzeHidReportDescriptor REPORTSIZE_LATENCY_MODE=", NULL, pDevContext->REPORTSIZE_LATENCY_MODE);
-        //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_LATENCY_MODE=", NULL, pDevContext->REPORTID_LATENCY_MODE);
-        continue;
+            //延迟模式功能报告//默认标准规范为HID_USAGE_LATENCY_MODE低位1bit组合成1个字节HID_USAGE_LATENCY_MODE报告
+            pDevContext->REPORTSIZE_LATENCY_MODE = (reportSize + 7) / 8;//报告数据总长度
+            pDevContext->REPORTID_LATENCY_MODE = reportId;
+            KdPrint(("AnalyzeHidReportDescriptor REPORTSIZE_LATENCY_MODE=,%x\n", pDevContext->REPORTSIZE_LATENCY_MODE));
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_LATENCY_MODE=,%x\n", pDevContext->REPORTID_LATENCY_MODE));
+            continue;
         }
         else if (inTouchTlc && type == HID_TYPE_FEATURE && lastUsage == HID_USAGE_PAGE_VENDOR_DEFINED_DEVICE_CERTIFICATION) {
             pDevContext->REPORTSIZE_PTPHQA = 256;
             pDevContext->REPORTID_PTPHQA = reportId;
-            //RegDebug(L"AnalyzeHidReportDescriptor REPORTID_PTPHQA=", NULL, pDevContext->REPORTID_PTPHQA);
+            KdPrint(("AnalyzeHidReportDescriptor REPORTID_PTPHQA=,%x\n", pDevContext->REPORTID_PTPHQA));
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_INPUT && lastUsage == HID_USAGE_X) {
@@ -3959,10 +3918,10 @@ AnalyzeHidReportDescriptor(
             tp->logicalMax_X = logicalMax;
             tp->unitExp = UnitExponent_Table[unitExp];
             tp->unit = unit;
-            //RegDebug(L"AnalyzeHidReportDescriptor physicalMax_X=", NULL, tp->physicalMax_X);
-            //RegDebug(L"AnalyzeHidReportDescriptor logicalMax_X=", NULL, tp->logicalMax_X);
-            //RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
-            //RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
+            KdPrint(("AnalyzeHidReportDescriptor physicalMax_X=,%x\n", tp->physicalMax_X));
+            KdPrint(("AnalyzeHidReportDescriptor logicalMax_X=,%x\n", tp->logicalMax_X));
+            KdPrint(("AnalyzeHidReportDescriptor unitExp=,%x\n", tp->unitExp));
+            KdPrint(("AnalyzeHidReportDescriptor unit=,%x\n", tp->unit));
             continue;
         }
         else if (inTouchTlc && type == HID_TYPE_INPUT && lastUsage == HID_USAGE_Y) {
@@ -3970,10 +3929,10 @@ AnalyzeHidReportDescriptor(
             tp->logicalMax_Y = logicalMax;
             tp->unitExp = UnitExponent_Table[unitExp];
             tp->unit = unit;
-            //RegDebug(L"AnalyzeHidReportDescriptor physicalMax_Y=", NULL, tp->physicalMax_Y);
-            //RegDebug(L"AnalyzeHidReportDescriptor logicalMax_Y=", NULL, tp->logicalMax_Y);
-            //RegDebug(L"AnalyzeHidReportDescriptor unitExp=", NULL, tp->unitExp);
-           // RegDebug(L"AnalyzeHidReportDescriptor unit=", NULL, tp->unit);
+            KdPrint(("AnalyzeHidReportDescriptor physicalMax_Y=,%x\n", tp->physicalMax_Y));
+            KdPrint(("AnalyzeHidReportDescriptor logicalMax_Y=,%x\n", tp->logicalMax_Y));
+            KdPrint(("AnalyzeHidReportDescriptor unitExp=,%x\n", tp->unitExp));
+            KdPrint(("AnalyzeHidReportDescriptor unit=,%x\n", tp->unit));
             continue;
         }
     }
@@ -3981,7 +3940,7 @@ AnalyzeHidReportDescriptor(
     //判断触摸板报告模式
     if (pDevContext->DeviceDescriptorFingerCount < 5) {//5个手指数据以下
         //Single finger hybrid reporting mode单指混合报告模式确认，驱动不予支持
-        RegDebug(L"AnalyzeHidReportDescriptor bHybrid_ReportingMode Confirm", NULL, pDevContext->DeviceDescriptorFingerCount);
+        KdPrint(("AnalyzeHidReportDescriptor bHybrid_ReportingMode Confirm,%x\n", pDevContext->DeviceDescriptorFingerCount));
         return STATUS_UNSUCCESSFUL;//返回后终止驱动程序
     }
 
@@ -3998,18 +3957,18 @@ AnalyzeHidReportDescriptor(
     }
     
     if (!tp->physical_Width_mm) {
-        //RegDebug(L"AnalyzeHidReportDescriptor physical_Width_mm err", NULL, 0);
+        KdPrint(("AnalyzeHidReportDescriptor physical_Width_mm err,%x\n", 0));
         return STATUS_UNSUCCESSFUL;
     }
     if (!tp->physical_Height_mm) {
-        //RegDebug(L"AnalyzeHidReportDescriptor physical_Height_mm err", NULL, 0);
+        KdPrint(("AnalyzeHidReportDescriptor physical_Height_mm err,%x\n", 0));
         return STATUS_UNSUCCESSFUL;
     }
 
     tp->TouchPad_DPMM_x = float(tp->logicalMax_X / tp->physical_Width_mm);//单位为dot/mm
     tp->TouchPad_DPMM_y = float(tp->logicalMax_Y / tp->physical_Height_mm);//单位为dot/mm
-    //RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_x=", NULL, (ULONG)tp->TouchPad_DPMM_x);
-    //RegDebug(L"AnalyzeHidReportDescriptor TouchPad_DPMM_y=", NULL, (ULONG)tp->TouchPad_DPMM_y);
+    KdPrint(("AnalyzeHidReportDescriptor TouchPad_DPMM_x=,%x\n", (ULONG)tp->TouchPad_DPMM_x));
+    KdPrint(("AnalyzeHidReportDescriptor TouchPad_DPMM_y=,%x\n", (ULONG)tp->TouchPad_DPMM_y));
 
     //动态调整手指头大小常量
     tp->thumb_Width = 18;//手指头宽度,默认以中指18mm宽为基准
@@ -4033,11 +3992,11 @@ AnalyzeHidReportDescriptor(
         tp->StartX_RIGHT = tp->logicalMax_X;
     }
     
-    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartTop_Y =", NULL, tp->StartY_TOP);
-    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_LEFT =", NULL, tp->StartX_LEFT);
-    //RegDebug(L"AnalyzeHidReportDescriptor tp->StartX_RIGHT =", NULL, tp->StartX_RIGHT);
+    KdPrint(("AnalyzeHidReportDescriptor tp->StartTop_Y =,%x\n", tp->StartY_TOP));
+    KdPrint(("AnalyzeHidReportDescriptor tp->StartX_LEFT =,%x\n", tp->StartX_LEFT));
+    KdPrint(("AnalyzeHidReportDescriptor tp->StartX_RIGHT =,%x\n", tp->StartX_RIGHT));
 
-    RegDebug(L"AnalyzeHidReportDescriptor end", NULL, status);
+    KdPrint(("AnalyzeHidReportDescriptor end,%x\n", status));
     return status;
 }
 
@@ -4052,24 +4011,24 @@ SendOriginalReport(PDEVICE_CONTEXT pDevContext, PVOID OriginalReport, size_t out
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendOriginalReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        KdPrint(("SendOriginalReport WdfIoQueueRetrieveNextRequest failed,%x\n", runtimes_ioControl));
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendOriginalReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        KdPrint(("SendOriginalReport WdfRequestRetrieveOutputMemory failed,%x\n", runtimes_ioControl));
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, OriginalReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendOriginalReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        KdPrint(("SendOriginalReport WdfMemoryCopyFromBuffer failed,%x\n", runtimes_ioControl));
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    RegDebug(L"SendOriginalReport ok", NULL, status);
+    KdPrint(("SendOriginalReport ok,%x\n", status));
 
 exit:
     WdfRequestComplete(
@@ -4078,7 +4037,7 @@ exit:
     );
 
 cleanup:
-    RegDebug(L"SendOriginalReport end", NULL, status);
+    KdPrint(("SendOriginalReport end,%x\n", status));
     return status;
 
 }
@@ -4093,24 +4052,24 @@ SendPtpMultiTouchReport(PDEVICE_CONTEXT pDevContext, PVOID MultiTouchReport, siz
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMultiTouchReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMultiTouchReport WdfIoQueueRetrieveNextRequest failed,%x\n", runtimes_ioControl));
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMultiTouchReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMultiTouchReport WdfRequestRetrieveOutputMemory failed,%x\n", runtimes_ioControl));
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, MultiTouchReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMultiTouchReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMultiTouchReport WdfMemoryCopyFromBuffer failed,%x\n",runtimes_ioControl));
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    RegDebug(L"SendPtpMultiTouchReport ok", NULL, status);
+    KdPrint(("SendPtpMultiTouchReport ok,%x\n", status));
 
 exit:
     WdfRequestComplete(
@@ -4119,7 +4078,7 @@ exit:
     );
 
 cleanup:
-    RegDebug(L"SendPtpMultiTouchReport end", NULL, status);
+    KdPrint(("SendPtpMultiTouchReport end,%x\n", status));
     return status;
 
 }
@@ -4132,28 +4091,28 @@ SendPtpMouseReport(PDEVICE_CONTEXT pDevContext, mouse_report_t* pMouseReport)
     WDFREQUEST PtpRequest;
     WDFMEMORY  memory;
     size_t     outputBufferLength = sizeof(mouse_report_t);
-    //RegDebug(L"SendPtpMouseReport pMouseReport=", pMouseReport, (ULONG)outputBufferLength);
+    //KdPrint(("SendPtpMouseReport pMouseReport=", pMouseReport, (ULONG)outputBufferLength);
 
     status = WdfIoQueueRetrieveNextRequest(pDevContext->ReportQueue, &PtpRequest);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMouseReport WdfIoQueueRetrieveNextRequest failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMouseReport WdfIoQueueRetrieveNextRequest failed,%x\n",runtimes_ioControl));
         goto cleanup;
     }
 
     status = WdfRequestRetrieveOutputMemory(PtpRequest, &memory);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMouseReport WdfRequestRetrieveOutputMemory failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMouseReport WdfRequestRetrieveOutputMemory failed,%x\n", runtimes_ioControl));
         goto exit;
     }
 
     status = WdfMemoryCopyFromBuffer(memory, 0, pMouseReport, outputBufferLength);
     if (!NT_SUCCESS(status)) {
-        RegDebug(L"SendPtpMouseReport WdfMemoryCopyFromBuffer failed", NULL, runtimes_ioControl);
+        KdPrint(("SendPtpMouseReport WdfMemoryCopyFromBuffer failed,%x\n", runtimes_ioControl));
         goto exit;
     }
 
     WdfRequestSetInformation(PtpRequest, outputBufferLength);
-    RegDebug(L"SendPtpMouseReport ok", NULL, status);
+    KdPrint(("SendPtpMouseReport ok,%x\n", status));
 
 exit:
     WdfRequestComplete(
@@ -4162,7 +4121,7 @@ exit:
     );
 
 cleanup:
-    RegDebug(L"SendPtpMouseReport end", NULL, status);
+    KdPrint(("SendPtpMouseReport end,%x\n", status));
     return status;
 
 }
@@ -4185,8 +4144,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     tp->currentFinger = *pPtpReport;
     UCHAR currentFinger_Count = tp->currentFinger.ContactCount;//当前触摸点数量
     UCHAR lastFinger_Count=tp->lastFinger.ContactCount; //上次触摸点数量
-    //RegDebug(L"MouseLikeTouchPad_parse currentFinger_Count=", NULL, currentFinger_Count);
-    //RegDebug(L"MouseLikeTouchPad_parse lastFinger_Count=", NULL, lastFinger_Count);
+    KdPrint(("MouseLikeTouchPad_parse currentFinger_Count=,%x\n", currentFinger_Count));
+    KdPrint(("MouseLikeTouchPad_parse lastFinger_Count=,%x\n", lastFinger_Count));
 
     UCHAR MAX_CONTACT_FINGER = PTP_MAX_CONTACT_POINTS;
     BOOLEAN allFingerDetached = TRUE;
@@ -4271,12 +4230,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         }     
     }
 
-    //RegDebug(L"MouseLikeTouchPad_parse traced currentFinger_Count=", NULL, currentFinger_Count);
-    //RegDebug(L"MouseLikeTouchPad_parse pDevContext->bHybrid_ReportingMode=", NULL, pDevContext->bHybrid_ReportingMode);
+    KdPrint(("MouseLikeTouchPad_parse traced currentFinger_Count=,%x\n", currentFinger_Count));
 
     if (tp->currentFinger.IsButtonClicked) {//触摸板下沿物理按键功能,切换触控板灵敏度/滚轮模式开关等参数设置,需要进行离开判定，因为按键报告会一直发送直到释放
         tp->bPhysicalButtonUp = FALSE;//物理键是否释放标志
-        RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp FALSE", NULL, FALSE);
+        KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp FALSE,%x\n", FALSE));
         //准备设置触摸板下沿物理按键相关参数
         if (currentFinger_Count == 1) {//单指重按触控板左下角物理键为鼠标的后退功能键，单指重按触控板右下角物理键为鼠标的前进功能键，单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），
             if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
@@ -4296,7 +4254,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
     else {
         if (!tp->bPhysicalButtonUp) {
             tp->bPhysicalButtonUp = TRUE;
-            RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp TRUE", NULL, TRUE);
+            KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp TRUE,%x\n", TRUE));
             if (currentFinger_Count == 1) {//单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），鼠标的后退/前进功能键不需要判断会自动释放)，
 
                 //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
@@ -4310,34 +4268,34 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
                 //不采用3指滚轮方式因为判断区分双指先接触的操作必须加大时间阈值使得延迟太高不合适,玩游戏较少使用到滚轮功能可选择关闭切换可以极大降低玩游戏时的误操作率，所以采取开启关闭滚轮方案兼顾日常操作和游戏
 
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
-                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                KdPrint(("MouseLikeTouchPad_parse bWheelDisabled=,%x\n", pDevContext->bWheelDisabled));
                 if (!pDevContext->bWheelDisabled) {//开启滚轮功能时同时也恢复滚轮实现方式为触摸板双指滑动手势
                     pDevContext->bWheelScrollMode = FALSE;//默认初始值为触摸板双指滑动手势
-                    RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                    KdPrint(("MouseLikeTouchPad_parse bWheelScrollMode=,%x\n", pDevContext->bWheelScrollMode));
                 }
 
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
             else if (currentFinger_Count == 3) {//三指重按触控板下沿物理键时设置为切换滚轮模式bWheelScrollMode，定义鼠标滚轮实现方式，TRUE为模仿鼠标滚轮，FALSE为触摸板双指滑动手势
                 //因为日常操作滚轮更常用，所以关闭滚轮功能的状态不保存到注册表，电脑重启或休眠唤醒后恢复滚轮功能
                 //因为触摸板双指滑动手势的滚轮模式更常用，所以模仿鼠标的滚轮模式状态不保存到注册表，电脑重启或休眠唤醒后恢复到双指滑动手势的滚轮模式
                 pDevContext->bWheelScrollMode = !pDevContext->bWheelScrollMode;
-                RegDebug(L"MouseLikeTouchPad_parse bWheelScrollMode=", NULL, pDevContext->bWheelScrollMode);
+                KdPrint(("MouseLikeTouchPad_parse bWheelScrollMode=,%x\n", pDevContext->bWheelScrollMode));
 
                 //切换滚轮实现方式的同时也开启滚轮功能方便用户
                 pDevContext->bWheelDisabled = FALSE;
-                RegDebug(L"MouseLikeTouchPad_parse bWheelDisabled=", NULL, pDevContext->bWheelDisabled);
+                KdPrint(("MouseLikeTouchPad_parse bWheelDisabled=,%x\n", pDevContext->bWheelDisabled));
 
 
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
             else if (currentFinger_Count == 4) {//四指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
                 //因为原版触控板操作方式只是临时使用所以不保存到注册表，电脑重启或休眠唤醒后恢复到仿鼠标式触摸板模式
                 // 原版的PTP精确式触摸板操作方式时发送报告在本函数外部执行不需要浪费资源解析，切换回仿鼠标式触摸板模式也在本函数外部判断
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
-                RegDebug(L"MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=", NULL, pDevContext->bMouseLikeTouchPad_Mode);
+                KdPrint(("MouseLikeTouchPad_parse bMouseLikeTouchPad_Mode=,%x\n", pDevContext->bMouseLikeTouchPad_Mode));
   
-                RegDebug(L"MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=", NULL, currentFinger_Count);
+                KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
             
         }
@@ -4559,7 +4517,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         if (!tp->bMouse_Wheel_Mode) {//以指针手指释放为滚轮模式结束标志，下一帧bPtpReportCollection会设置FALSE所以只会发送一次构造的手势结束报告
             tp->bPtpReportCollection = FALSE;//PTP触摸板集合报告模式结束
             tp->bGestureCompleted = TRUE;//结束手势操作，该数据和bMouse_Wheel_Mode区分开了，因为bGestureCompleted可能会比bMouse_Wheel_Mode提前结束
-            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0", NULL, status);
+            KdPrint(("MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted0,%x\n", status));
 
             //构造全部手指释放的临时数据包,TipSwitch域归零，windows手势操作结束时需要手指离开的点xy坐标数据
             PTP_REPORT CompletedGestureReport;
@@ -4571,14 +4529,14 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             //发送ptp报告
             status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport failed", NULL, status);
+                KdPrint(("MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport failed,%x\n", status));
             }
 
         }
         else if(tp->bMouse_Wheel_Mode && currentFinger_Count == 1 && !tp->bGestureCompleted) {//滚轮模式未结束并且剩下指针手指留在触摸板上,需要配合bGestureCompleted标志判断使得构造的手势结束报告只发送一次
             tp->bPtpReportCollection = FALSE;//PTP触摸板集合报告模式结束
             tp->bGestureCompleted = TRUE;//提前结束手势操作，该数据和bMouse_Wheel_Mode区分开了，因为bGestureCompleted可能会比bMouse_Wheel_Mode提前结束
-            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1", NULL, status);
+            KdPrint(("MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted1,%x\n", status));
 
             //构造指针手指释放的临时数据包,TipSwitch域归零，windows手势操作结束时需要手指离开的点xy坐标数据
             PTP_REPORT CompletedGestureReport2;
@@ -4588,16 +4546,16 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             //发送ptp报告
             status = SendPtpMultiTouchReport(pDevContext, &CompletedGestureReport2, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport2 failed", NULL, status);
+                KdPrint(("MouseLikeTouchPad_parse SendPtpMultiTouchReport CompletedGestureReport2 failed,%x\n", status));
             }
         }
 
         if (!tp->bGestureCompleted) {//手势未结束，正常发送报告
-            RegDebug(L"MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted2", NULL, status);
+            KdPrint(("MouseLikeTouchPad_parse bPtpReportCollection bGestureCompleted2,%x\n", status));
             //发送ptp报告
             status = SendPtpMultiTouchReport(pDevContext, pPtpReport, sizeof(PTP_REPORT));
             if (!NT_SUCCESS(status)) {
-                RegDebug(L"MouseLikeTouchPad_parse SendPtpMultiTouchReport failed", NULL, status);
+                KdPrint(("MouseLikeTouchPad_parse SendPtpMultiTouchReport failed,%x\n", status));
             }
         }
     }
@@ -4606,7 +4564,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //发送鼠标报告
         status = SendPtpMouseReport(pDevContext, &mReport);
         if (!NT_SUCCESS(status)) {
-            RegDebug(L"MouseLikeTouchPad_parse SendPtpMouseReport failed", NULL, status);
+            KdPrint(("MouseLikeTouchPad_parse SendPtpMouseReport failed,%x\n", status));
         }
     }
     
@@ -4683,15 +4641,15 @@ void SetNextSensitivity(PDEVICE_CONTEXT pDevContext)
     NTSTATUS status = SetRegisterMouseSensitivity(pDevContext, ms_idx);//MouseSensitivityTable存储表的序号值
     if (!NT_SUCCESS(status))
     {
-        RegDebug(L"SetNextSensitivity SetRegisterMouseSensitivity err", NULL, status);
+        KdPrint(("SetNextSensitivity SetRegisterMouseSensitivity err,%x\n", status));
         return;
     }
 
     pDevContext->MouseSensitivity_Index = ms_idx;
     pDevContext->MouseSensitivity_Value = MouseSensitivityTable[ms_idx];
-    RegDebug(L"SetNextSensitivity pDevContext->MouseSensitivity_Index", NULL, pDevContext->MouseSensitivity_Index);
+    KdPrint(("SetNextSensitivity pDevContext->MouseSensitivity_Index,%x\n", pDevContext->MouseSensitivity_Index));
 
-    RegDebug(L"SetNextSensitivity ok", NULL, status);
+    KdPrint(("SetNextSensitivity ok,%x\n", status));
 }
 
 
@@ -4714,7 +4672,7 @@ NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)/
     if (NT_SUCCESS(status)) {
         status = WdfRegistryAssignULong(hKey, &ValueNameString, ms_idx);
         if (!NT_SUCCESS(status)) {
-            RegDebug(L"SetRegisterMouseSensitivity WdfRegistryAssignULong err", NULL, status);
+            KdPrint(("SetRegisterMouseSensitivity WdfRegistryAssignULong err,%x\n", status));
             return status;
         }    
     }
@@ -4723,7 +4681,7 @@ NTSTATUS SetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG ms_idx)/
         WdfObjectDelete(hKey);
     }
 
-    RegDebug(L"SetRegisterMouseSensitivity ok", NULL, status);
+    KdPrint(("SetRegisterMouseSensitivity ok,%x\n", status));
     return status;
 }
 
@@ -4752,23 +4710,21 @@ NTSTATUS GetRegisterMouseSensitivity(PDEVICE_CONTEXT pDevContext, ULONG* ms_idx)
         status = WdfRegistryQueryULong(hKey, &ValueNameString, ms_idx);
     }
     else {
-        RegDebug(L"GetRegisterMouseSensitivity err", NULL, status);
+        KdPrint(("GetRegisterMouseSensitivity err,%x\n", status));
     }
 
     if (hKey) {
         WdfObjectDelete(hKey);
     }
 
-    RegDebug(L"GetRegisterMouseSensitivity end", NULL, status);
+    KdPrint(("GetRegisterMouseSensitivity end,%x\n", status));
     return status;
 }
 
 
 //
 VOID
-OnDeviceResetNotificationRequestCancel(
-    _In_  WDFREQUEST FxRequest
-)
+OnDeviceResetNotificationRequestCancel(_In_  WDFREQUEST FxRequest)
 /*++
 Routine Description:
 
@@ -4815,4 +4771,15 @@ Return Value:
     // Simply complete the request here.
     //
     WdfRequestComplete(FxRequest, status);
+}
+
+
+
+VOID KdPrintDataFun(CHAR* pChars, PUCHAR DataBuffer, ULONG DataSize)
+{
+    DbgPrint(pChars);
+    for (UINT i = 0; i < DataSize; i++) {
+        DbgPrint("% x,", DataBuffer[i]);
+    }
+    DbgPrint("\n");
 }

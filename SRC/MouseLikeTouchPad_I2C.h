@@ -441,7 +441,6 @@ ULONG runtimes_HidEvtResetTimerFired = 0;
 ULONG runtimes_IOCTL_HID_READ_REPORT = 0;
 
 
-VOID RegDebug(WCHAR* strValueName, PVOID dataValue, ULONG datasizeValue);
 
 EXTERN_C DRIVER_INITIALIZE                  DriverEntry;
 EXTERN_C EVT_WDF_DRIVER_DEVICE_ADD          OnDeviceAdd;
@@ -1235,5 +1234,4 @@ OnDeviceResetNotificationRequestCancel(
 );
 
 
-
-
+VOID KdPrintDataFun(CHAR* pChars, PUCHAR DataBuffer, ULONG DataSize);

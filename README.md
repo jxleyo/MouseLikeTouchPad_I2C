@@ -19,7 +19,7 @@ https://github.com/jxleyo/MouseLikeTouchPad_I2C/releases
 
 安装和卸载方法：
 手动安装方法为先准备一个外置鼠标避免安装过程中失败无法操作电脑，
-下载的zip文件驱动程序压缩包解压到任意位置后打开，进入MouseLikeTouchPad_I2C_Driver子文件夹，双击SetSensitivity.reg文件导入注册表设置，安装/卸载驱动分别打开InstallDriver.bat/UninstallDriver.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载，弹出的数字签名证书安装窗口选择信任。
+下载的zip文件驱动程序压缩包解压到任意位置后打开，进入MouseLikeTouchPad_I2C_Driver子文件夹，双击SetSensitivity.reg文件导入注册表设置，安装/卸载驱动分别打开InstallDriver.bat/UninstallDriver.bat文件，根据窗口文字提示操作即可完成驱动安装/卸载。
 
 
 使用操作视频教程网址：
@@ -51,7 +51,7 @@ Select different installation package versions to download directly
 
 Installation and uninstallation methods:
 The manual installation method is to prepare an external mouse first to avoid failure during the installation process and unable to operate the computer,
-Unzip the downloaded zip file driver package to any location and open it to enter MouseLikeTouchPad_ I2C_ Driver subfolder, double-click the SetSensitivity.reg file to import registry settings, and open the InstallDriver.bat/UninstallDriver.bat file for driver installation/uninstallation. Follow the text prompts in the window to complete driver installation/uninstallation. The digital signature certificate installation window pops up and select Trust.
+Unzip the downloaded zip file driver package to any location and open it to enter MouseLikeTouchPad_ I2C_ Driver subfolder, double-click the SetSensitivity.reg file to import registry settings, and open the InstallDriver.bat/UninstallDriver.bat file for driver installation/uninstallation. Follow the text prompts in the window to complete driver installation/uninstallation. 
 
 
 the operation video tutorial website:
