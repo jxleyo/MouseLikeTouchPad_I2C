@@ -3,8 +3,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TestCertificate>
     </TestCertificate>
-    <SignMode>Off</SignMode>
-    <ProductionCertificate>False</ProductionCertificate>
+    <SignMode>TestSign</SignMode>
+    <ProductionCertificate>
+    </ProductionCertificate>
     <CrossCertificateFile>
     </CrossCertificateFile>
   </PropertyGroup>
