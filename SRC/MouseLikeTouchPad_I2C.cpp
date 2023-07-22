@@ -3088,7 +3088,7 @@ OnInterruptIsr(
                     tps->bPhysicalButtonUp = TRUE;
                     KdPrint(("OnInterruptIsr bPhysicalButtonUp TRUE,%x\n", TRUE));
 
-                    if (ptpReport.ContactCount == 4 && !pDevContext->bMouseLikeTouchPad_Mode) {//四指按压触控板物理按键时，切换回仿鼠标式触摸板模式，
+                    if (ptpReport.ContactCount == 5 && !pDevContext->bMouseLikeTouchPad_Mode) {//五指按压触控板物理按键时，切换回仿鼠标式触摸板模式，
                         pDevContext->bMouseLikeTouchPad_Mode = TRUE;
                         KdPrint(("OnInterruptIsr bMouseLikeTouchPad_Mode TRUE,%x\n", status));
 
@@ -4289,7 +4289,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
-            else if (currentFinger_Count == 4) {//四指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
+            else if (currentFinger_Count == 5) {//五指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
                 //因为原版触控板操作方式只是临时使用所以不保存到注册表，电脑重启或休眠唤醒后恢复到仿鼠标式触摸板模式
                 // 原版的PTP精确式触摸板操作方式时发送报告在本函数外部执行不需要浪费资源解析，切换回仿鼠标式触摸板模式也在本函数外部判断
                 pDevContext->bMouseLikeTouchPad_Mode = FALSE;
