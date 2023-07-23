@@ -44,7 +44,7 @@ typedef struct _ACPI_DEVICE_SETTINGS
 #define STABLE_INTERVAL_FingerClosed_MSEC      100   // 手指并拢按到触摸板的稳定时间间隔 
 
 #define MouseReport_INTERVAL_MSEC         8   // 鼠标报告间隔时间ms，以频率125hz为基准
-#define ButtonPointer_Interval_MSEC      150   // 鼠标左中右键与指针操作间隔时间ms，
+#define ButtonPointer_Interval_MSEC      200   // 鼠标左中右键与指针操作间隔时间ms，150-200ms都可以
 
 #define Jitter_Offset         10    // 修正触摸点轻微抖动的位移阈值
 

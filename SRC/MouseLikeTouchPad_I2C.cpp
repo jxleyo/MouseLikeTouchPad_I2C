@@ -4307,8 +4307,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //指针触摸点压力、接触面长宽比阈值特征区分判定手掌打字误触和正常操作,压力越小接触面长宽比阈值越大、长度阈值越小
         for (UCHAR i = 0; i < currentFinger_Count; i++) {
             //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
-            if (tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch\
-                && tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT) {//起点坐标在误触横竖线以内
+            if (tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch) {//起点坐标在误触横竖线以内&& tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT
                 tp->nMouse_Pointer_CurrentIndex = i;  //首个触摸点作为指针
                 tp->MousePointer_DefineTime = tp->current_Ticktime;//定义当前指针起始时间
                 break;
