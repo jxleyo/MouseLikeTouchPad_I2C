@@ -76,6 +76,8 @@ typedef struct _PTP_REPORT {
 CHAR UnitExponent_Table[16] ={0,1,2,3,4,5,6,7,-8,-7,-6,-5,-4,-3,-2,1};
 
 double MouseSensitivityTable[3] = { 0.8,1.0,1.25};
+double ThumbScaleTable[3] = { 0.8,1.0,1.25 };////默认ThumbScale=1.0时以中指宽度18mm宽thumb_Width为基准
+
 
 
 typedef struct _PTP_PARSER {
@@ -287,6 +289,9 @@ typedef struct _DEVICE_CONTEXT
 
     UCHAR MouseSensitivity_Index;
     double MouseSensitivity_Value;
+
+    UCHAR ThumbScale_Index;
+    double ThumbScale_Value;
     
     BOOLEAN bWheelDisabled;//当前滚轮功能开启关闭状态
     BOOLEAN bWheelScrollMode;//定义鼠标滚轮实现方式，TRUE为模仿鼠标滚轮，FALSE为触摸板双指滑动手势
@@ -1211,6 +1216,13 @@ SendPtpMultiTouchReport(PDEVICE_CONTEXT pDevContext, PVOID MultiTouchReport, siz
 void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext);
 
 void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport);
+
+
+void SetNextThumbScale(PDEVICE_CONTEXT pDevContext);
+
+NTSTATUS SetRegisterThumbScale(PDEVICE_CONTEXT pDevContext, ULONG ts_idx);
+NTSTATUS GetRegisterThumbScale(PDEVICE_CONTEXT pDevContext, ULONG* ts_idx);
+
 
 void SetNextSensitivity(PDEVICE_CONTEXT pDevContext);
 

@@ -1189,6 +1189,46 @@ NTSTATUS OnD0Entry(_In_  WDFDEVICE FxDevice, _In_  WDF_POWER_DEVICE_STATE  FxPre
     pDevContext->strCurrentUserSID.Length = 0;
     pDevContext->strCurrentUserSID.MaximumLength = 0;
 
+    pDevContext->ThumbScale_Index = 1;
+    pDevContext->ThumbScale_Value = ThumbScaleTable[pDevContext->ThumbScale_Index];
+
+    //读取指头大小设置
+    ULONG ts_idx;
+    status = GetRegisterThumbScale(pDevContext, &ts_idx);
+    if (!NT_SUCCESS(status))
+    {
+        if (status == STATUS_OBJECT_NAME_NOT_FOUND)//     ((NTSTATUS)0xC0000034L)
+        {
+            KdPrint(("OnPrepareHardware GetRegisterThumbScale STATUS_OBJECT_NAME_NOT_FOUND,%x\n", status));
+            status = SetRegisterThumbScale(pDevContext, pDevContext->ThumbScale_Index);//初始默认设置
+            if (!NT_SUCCESS(status)) {
+                KdPrint(("OnPrepareHardware SetRegisterThumbScale err,%x\n", status));
+            }
+        }
+        else
+        {
+            KdPrint(("OnPrepareHardware GetRegisterThumbScale err,%x\n", status));
+        }
+    }
+    else {
+        if (ts_idx > 2) {//如果读取的数值错误
+            ts_idx = pDevContext->ThumbScale_Index;//恢复初始默认值
+        }
+        pDevContext->ThumbScale_Index = (UCHAR)ts_idx;
+        pDevContext->ThumbScale_Value = ThumbScaleTable[pDevContext->ThumbScale_Index];
+        KdPrint(("OnPrepareHardware GetRegisterThumbScale ThumbScale_Index=,%x\n", pDevContext->ThumbScale_Index));
+    }
+
+    PTP_PARSER* tp = &pDevContext->tp_settings;
+    //动态调整手指头大小常量
+    tp->thumb_Scale = pDevContext->ThumbScale_Index;//手指头尺寸缩放比例，
+    tp->FingerMinDistance = 12 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义有效的相邻手指最小距离
+    tp->FingerClosedThresholdDistance = 16 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义相邻手指合拢时的最小距离
+    tp->FingerMaxDistance = tp->FingerMinDistance * 4;//定义有效的相邻手指最大距离(FingerMinDistance*4) 
+
+
+
+    //
     pDevContext->MouseSensitivity_Index = 1;//默认初始值为MouseSensitivityTable存储表的序号1项
     pDevContext->MouseSensitivity_Value = MouseSensitivityTable[pDevContext->MouseSensitivity_Index];//默认初始值为1.0
 
@@ -3970,12 +4010,6 @@ AnalyzeHidReportDescriptor(
     KdPrint(("AnalyzeHidReportDescriptor TouchPad_DPMM_x=,%x\n", (ULONG)tp->TouchPad_DPMM_x));
     KdPrint(("AnalyzeHidReportDescriptor TouchPad_DPMM_y=,%x\n", (ULONG)tp->TouchPad_DPMM_y));
 
-    //动态调整手指头大小常量
-    tp->thumb_Width = 18;//手指头宽度,默认以中指18mm宽为基准
-    tp->thumb_Scale = 1.0;//手指头尺寸缩放比例，
-    tp->FingerMinDistance = 12 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义有效的相邻手指最小距离
-    tp->FingerClosedThresholdDistance = 16 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义相邻手指合拢时的最小距离
-    tp->FingerMaxDistance = tp->FingerMinDistance * 4;//定义有效的相邻手指最大距离(FingerMinDistance*4) 
 
     tp->PointerSensitivity_x = tp->TouchPad_DPMM_x / 25;
     tp->PointerSensitivity_y = tp->TouchPad_DPMM_y / 25;
@@ -4238,11 +4272,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //准备设置触摸板下沿物理按键相关参数
         if (currentFinger_Count == 1) {//单指重按触控板左下角物理键为鼠标的后退功能键，单指重按触控板右下角物理键为鼠标的前进功能键，单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），
             if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y / 2) && tp->currentFinger.Contacts[0].X < tp->StartX_LEFT) {//首个触摸点坐标在左下角
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y *3 / 4) && tp->currentFinger.Contacts[0].X < tp->StartX_LEFT) {//首个触摸点坐标在左下角
                 bMouse_BButton_Status = 1;//鼠标侧面的后退键按下
             }
             else if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y / 2) && tp->currentFinger.Contacts[0].X > tp->StartX_RIGHT) {//首个触摸点坐标在右下角
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X > tp->StartX_RIGHT) {//首个触摸点坐标在右下角
                 bMouse_FButton_Status = 1;//鼠标侧面的前进键按下
             }
             else {//切换鼠标DPI灵敏度，放在物理键释放时执行判断
@@ -4259,13 +4293,13 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
                 if (tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                    && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y/2) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
+                    && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
                     //切换鼠标DPI灵敏度
                     SetNextSensitivity(pDevContext);//循环设置灵敏度
                 }          
             }
             else if (currentFinger_Count == 2) {//双指重按触控板下沿物理键时设置为开启/关闭双指滚轮功能
-                //不采用3指滚轮方式因为判断区分双指先接触的操作必须加大时间阈值使得延迟太高不合适,玩游戏较少使用到滚轮功能可选择关闭切换可以极大降低玩游戏时的误操作率，所以采取开启关闭滚轮方案兼顾日常操作和游戏
+                //不采用3指滚轮方式因为判断区分双指先接触的操作必须加大时间阈值使得延迟太高不合适并且不如双指操作舒适,玩游戏较少使用到滚轮功能可选择关闭切换可以极大降低玩游戏时的误操作率，所以采取开启关闭滚轮方案兼顾日常操作和游戏
 
                 pDevContext->bWheelDisabled = !pDevContext->bWheelDisabled;
                 KdPrint(("MouseLikeTouchPad_parse bWheelDisabled=,%x\n", pDevContext->bWheelDisabled));
@@ -4289,6 +4323,13 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
+            else if (currentFinger_Count == 4) {//四指按压触控板物理按键时为切换3段手指宽度大小设置并生效，方便用户适配鼠标中键功能。
+                SetNextThumbScale(pDevContext); //动态调整手指头大小常量
+                
+                KdPrint(("MouseLikeTouchPad_parse SetNextFingerSize thumb_Scale=,%x\n", pDevContext->thumb_Scale));
+
+                KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
+            }
             else if (currentFinger_Count == 5) {//五指按压触控板物理按键时切换仿鼠标式触摸板与windows原版的PTP精确式触摸板操作方式
                 //因为原版触控板操作方式只是临时使用所以不保存到注册表，电脑重启或休眠唤醒后恢复到仿鼠标式触摸板模式
                 // 原版的PTP精确式触摸板操作方式时发送报告在本函数外部执行不需要浪费资源解析，切换回仿鼠标式触摸板模式也在本函数外部判断
@@ -4307,7 +4348,8 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //指针触摸点压力、接触面长宽比阈值特征区分判定手掌打字误触和正常操作,压力越小接触面长宽比阈值越大、长度阈值越小
         for (UCHAR i = 0; i < currentFinger_Count; i++) {
             //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
-            if (tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch) {//起点坐标在误触横竖线以内&& tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT
+            if (tp->currentFinger.Contacts[i].Confidence && tp->currentFinger.Contacts[i].TipSwitch\
+                && tp->currentFinger.Contacts[i].Y > tp->StartY_TOP && tp->currentFinger.Contacts[i].X > tp->StartX_LEFT && tp->currentFinger.Contacts[i].X < tp->StartX_RIGHT) {//起点坐标在误触横竖线以内
                 tp->nMouse_Pointer_CurrentIndex = i;  //首个触摸点作为指针
                 tp->MousePointer_DefineTime = tp->current_Ticktime;//定义当前指针起始时间
                 break;
@@ -4624,6 +4666,108 @@ void MouseLikeTouchPad_parse_init(PDEVICE_CONTEXT pDevContext)
     KeQueryTickCount(&tp->last_Ticktime);
 
     tp->bPhysicalButtonUp = TRUE;
+}
+
+
+void SetNextThumbScale(PDEVICE_CONTEXT pDevContext)
+{
+    UCHAR ts_idx = pDevContext->ThumbScale_Index;// thumb_Scale_Normal;//thumb_Scale_Little//thumb_Scale_Big
+
+    ts_idx++;
+    if (ts_idx == 3) {//灵敏度循环设置
+        ts_idx = 0;
+    }
+
+    //保存注册表灵敏度设置数值
+    NTSTATUS status = SetRegisterThumbScale(pDevContext, ts_idx);//MouseSensitivityTable存储表的序号值
+    if (!NT_SUCCESS(status))
+    {
+        KdPrint(("SetNextThumbScale SetRegisterThumbScale err,%x\n", status));
+        return;
+    }
+
+    pDevContext->ThumbScale_Index = ts_idx;
+    pDevContext->ThumbScale_Value = ThumbScaleTable[ts_idx];
+
+    PTP_PARSER* tp = &pDevContext->tp_settings;
+    //动态调整手指头大小常量
+    tp->thumb_Scale = (float)(pDevContext->ThumbScale_Value);//手指头尺寸缩放比例，
+    tp->FingerMinDistance = 12 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义有效的相邻手指最小距离
+    tp->FingerClosedThresholdDistance = 16 * tp->TouchPad_DPMM_x * tp->thumb_Scale;//定义相邻手指合拢时的最小距离
+    tp->FingerMaxDistance = tp->FingerMinDistance * 4;//定义有效的相邻手指最大距离(FingerMinDistance*4) 
+
+    KdPrint(("SetNextThumbScale pDevContext->ThumbScale_Index,%x\n", pDevContext->ThumbScale_Index));
+
+    KdPrint(("SetNextThumbScale ok,%x\n", status));
+
+}
+
+
+NTSTATUS SetRegisterThumbScale(PDEVICE_CONTEXT pDevContext, ULONG ts_idx)//保存设置到注册表
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ThumbScale_Index");
+
+    WDFKEY hKey = NULL;
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_WRITE,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status)) {
+        status = WdfRegistryAssignULong(hKey, &ValueNameString, ts_idx);
+        if (!NT_SUCCESS(status)) {
+            KdPrint(("SetRegisterThumbScale WdfRegistryAssignULong err,%x\n", status));
+            return status;
+        }
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    KdPrint(("SetRegisterThumbScale ok,%x\n", status));
+    return status;
+}
+
+
+NTSTATUS GetRegisterThumbScale(PDEVICE_CONTEXT pDevContext, ULONG* ts_idx)//从注册表读取设置
+{
+
+    NTSTATUS status = STATUS_SUCCESS;
+    WDFDEVICE device = pDevContext->FxDevice;
+
+    WDFKEY hKey = NULL;
+    *ts_idx = 0;
+
+    DECLARE_CONST_UNICODE_STRING(ValueNameString, L"ThumbScale_Index");
+
+    status = WdfDeviceOpenRegistryKey(
+        device,
+        PLUGPLAY_REGKEY_DEVICE,//1
+        KEY_READ,
+        WDF_NO_OBJECT_ATTRIBUTES,
+        &hKey);
+
+    if (NT_SUCCESS(status))
+    {
+        status = WdfRegistryQueryULong(hKey, &ValueNameString, ts_idx);
+    }
+    else {
+        KdPrint(("GetRegisterThumbScale err,%x\n", status));
+    }
+
+    if (hKey) {
+        WdfObjectDelete(hKey);
+    }
+
+    KdPrint(("GetRegisterThumbScale end,%x\n", status));
+    return status;
 }
 
 

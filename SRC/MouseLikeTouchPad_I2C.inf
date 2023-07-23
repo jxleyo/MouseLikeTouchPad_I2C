@@ -61,6 +61,7 @@ HKR,,"DeviceResetNotificationEnabled",0x00010001,1
 HKR,,"LegacyTouchScaling",0x00010001,0
 HKR,,"DoNotWaitForResetResponse",0x00010001,0
 HKR,,"MouseSensitivity_Index",0x00010001,1
+HKR,,"ThumbScale_Index",0x00010001,1
 
 
 ;-------------- Service installation
