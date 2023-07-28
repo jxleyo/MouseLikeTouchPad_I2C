@@ -141,8 +141,12 @@ typedef struct _PTP_PARSER {
     float PointerSensitivity_y;//定义指针灵敏度即指针点移动量缩放比例
 
     ULONG StartY_TOP; //起点误触横线Y值为距离触摸板顶部10mm处的Y坐标
-    ULONG StartX_LEFT; //起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
-    ULONG StartX_RIGHT; //起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
+    ULONG StartX_LEFT; //起点误触竖线X值为距离触摸板中心线左右侧处的X坐标
+    ULONG StartX_RIGHT; //起点误触竖线X值为距离触摸板中心线左右侧处的X坐标
+
+    ULONG CornerX_LEFT; //触摸板边角功能键区域边界的X坐标
+    ULONG CornerX_RIGHT; //触摸板边角功能键区域边界的X坐标
+
     BOOLEAN bPhysicalButtonUp;//物理按键状态
 
 } PTP_PARSER, * PPTP_PARSER;

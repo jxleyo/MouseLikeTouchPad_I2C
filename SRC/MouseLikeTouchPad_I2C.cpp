@@ -4015,20 +4015,46 @@ AnalyzeHidReportDescriptor(
     tp->PointerSensitivity_y = tp->TouchPad_DPMM_y / 25;
 
     tp->StartY_TOP = (ULONG)(10 * tp->TouchPad_DPMM_y);////起点误触横线Y值为距离触摸板顶部10mm处的Y坐标
-    ULONG halfwidth = (ULONG)(43.2 * tp->TouchPad_DPMM_x);//起点误触竖线X值为距离触摸板中心线左右侧43.2mm处的X坐标
 
-    if (tp->logicalMax_X / 2 > halfwidth) {//触摸板宽度大于正常触摸起点区域宽度
-        tp->StartX_LEFT = tp->logicalMax_X / 2 - halfwidth;
-        tp->StartX_RIGHT = tp->logicalMax_X / 2 + halfwidth;
+    //触摸板中心线较空格键中心线偏右10mm，然后不同的触摸板尺寸以此中心线为对称轴设计位置布局，DisabledX_RIGHT触摸板右侧区域防误触范围更大，
+    ULONG Offset = (ULONG)(10 * tp->TouchPad_DPMM_x);//触摸板中心线较空格键中心线偏右10mm，
+    ULONG SpaceCenterline = (ULONG)(40 * tp->TouchPad_DPMM_x);//起点误触竖线X值为距离空格键中心线左右侧40mm处的X坐标,
+    ULONG HalfWidthX = tp->logicalMax_X / 2;//触摸板一半宽度数值
+
+    LONG DisabledX_LEFT = HalfWidthX - SpaceCenterline - Offset;
+    ULONG DisabledX_RIGHT = HalfWidthX + SpaceCenterline - Offset;
+
+    if (DisabledX_LEFT < 0) {
+        tp->StartX_LEFT = 0;
     }
     else {
-        tp->StartX_LEFT = 0;
+        tp->StartX_LEFT = DisabledX_LEFT;
+    }
+
+    if (DisabledX_RIGHT > tp->logicalMax_X) {
         tp->StartX_RIGHT = tp->logicalMax_X;
+    }
+    else {
+        tp->StartX_RIGHT = DisabledX_RIGHT;
+    }
+
+    //触摸板边角功能键区域坐标
+    if (HalfWidthX > SpaceCenterline) {
+        //
+        tp->CornerX_LEFT = HalfWidthX - SpaceCenterline;
+        tp->CornerX_RIGHT = HalfWidthX + SpaceCenterline;
+    }
+    else {
+        tp->CornerX_LEFT = Offset;
+        tp->CornerX_RIGHT = tp->logicalMax_X- Offset;
     }
     
     KdPrint(("AnalyzeHidReportDescriptor tp->StartTop_Y =,%x\n", tp->StartY_TOP));
     KdPrint(("AnalyzeHidReportDescriptor tp->StartX_LEFT =,%x\n", tp->StartX_LEFT));
     KdPrint(("AnalyzeHidReportDescriptor tp->StartX_RIGHT =,%x\n", tp->StartX_RIGHT));
+
+    KdPrint(("AnalyzeHidReportDescriptor tp->CornerX_LEFT =,%x\n", tp->CornerX_LEFT));
+    KdPrint(("AnalyzeHidReportDescriptor tp->CornerX_RIGHT =,%x\n", tp->CornerX_RIGHT));
 
     KdPrint(("AnalyzeHidReportDescriptor end,%x\n", status));
     return status;
@@ -4272,11 +4298,11 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
         //准备设置触摸板下沿物理按键相关参数
         if (currentFinger_Count == 1) {//单指重按触控板左下角物理键为鼠标的后退功能键，单指重按触控板右下角物理键为鼠标的前进功能键，单指重按触控板下沿中间物理键为调节鼠标灵敏度（慢/中等/快3段灵敏度），
             if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y *3 / 4) && tp->currentFinger.Contacts[0].X < tp->StartX_LEFT) {//首个触摸点坐标在左下角
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y *3 / 4) && tp->currentFinger.Contacts[0].X < tp->CornerX_LEFT) {//首个触摸点坐标在左下角
                 bMouse_BButton_Status = 1;//鼠标侧面的后退键按下
             }
             else if (tp->currentFinger.Contacts[0].ContactID == 0 && tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X > tp->StartX_RIGHT) {//首个触摸点坐标在右下角
+                && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X > tp->CornerX_RIGHT) {//首个触摸点坐标在右下角
                 bMouse_FButton_Status = 1;//鼠标侧面的前进键按下
             }
             else {//切换鼠标DPI灵敏度，放在物理键释放时执行判断
@@ -4293,7 +4319,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
 
                 //tp->currentFinger.Contacts[0].ContactID不一定为0所以不能作为判断条件
                 if (tp->currentFinger.Contacts[0].Confidence && tp->currentFinger.Contacts[0].TipSwitch\
-                    && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X >  tp->StartX_LEFT && tp->currentFinger.Contacts[0].X < tp->StartX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
+                    && tp->currentFinger.Contacts[0].Y > (tp->logicalMax_Y * 3 / 4) && tp->currentFinger.Contacts[0].X >  tp->CornerX_LEFT && tp->currentFinger.Contacts[0].X < tp->CornerX_RIGHT) {//首个触摸点坐标在触摸板下沿中间
                     //切换鼠标DPI灵敏度
                     SetNextSensitivity(pDevContext);//循环设置灵敏度
                 }          
