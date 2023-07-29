@@ -4352,7 +4352,7 @@ void MouseLikeTouchPad_parse(PDEVICE_CONTEXT pDevContext, PTP_REPORT* pPtpReport
             else if (currentFinger_Count == 4) {//四指按压触控板物理按键时为切换3段手指宽度大小设置并生效，方便用户适配鼠标中键功能。
                 SetNextThumbScale(pDevContext); //动态调整手指头大小常量
                 
-                KdPrint(("MouseLikeTouchPad_parse SetNextFingerSize thumb_Scale=,%x\n", pDevContext->thumb_Scale));
+                KdPrint(("MouseLikeTouchPad_parse SetNextFingerSize thumb_Scale=,%x\n", tp->thumb_Scale));
 
                 KdPrint(("MouseLikeTouchPad_parse bPhysicalButtonUp currentFinger_Count=,%x\n", currentFinger_Count));
             }
